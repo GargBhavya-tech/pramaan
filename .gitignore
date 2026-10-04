@@ -1,0 +1,63 @@
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+*.swp
+
+# ---- Claude Code ----
+.claude/
+.code-review-graph/
+code-review-graph/
+
+# ---- Python (training, harness, tooling) ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.hypothesis/
+*.egg-info/
+
+# ---- Java / Gradle / Maven (desktop engine, Android) ----
+target/
+build/
+.gradle/
+local.properties
+*.iml
+.idea/
+
+# ---- Models and large binaries (tracked via a model registry, not git) ----
+*.onnx
+*.tflite
+*.task
+*.pt
+*.pth
+*.caffemodel
+*.zip
+
+# ---- Evaluation corpus and outputs (biometric data must never be committed) ----
+# Anchored to the repository root: an unanchored "corpus/" also matched the harness's own source package
+# harness/src/main/java/pramaan/harness/corpus/, silently leaving its code out of git.
+/corpus/
+/data/
+harness/out/
+reports/*.html
+!reports/.gitkeep
+
+# ---- Secrets / keys ----
+*.pem
+*.key
+*.jks
+*.keystore
+.env
+
+# Tiny synthetic test models we generate ourselves (tools/make_*.py) are fixtures, not model binaries.
+!core/src/test/resources/models/*.onnx
+
+# ---- Third-party checkouts and tools (MOSIP mock SBI, Maven) - fetched, never committed ----
+third_party/
+
+# SBI fixtures that contain a face image (MOSIP test data shows a real person). Regenerate with
+# `python tools/capture_sbi_fixtures.py`; discovery/deviceinfo/request/meta carry no biometrics and are kept.
+sbi/testdata/rcapture-face.json
+sbi/testdata/*.mjpeg
+.venv-*/
