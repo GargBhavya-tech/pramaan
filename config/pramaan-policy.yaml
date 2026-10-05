@@ -1,0 +1,83 @@
+# PRAMAAN liveness policy (Bible Part 17.1; Build Map #9).
+#
+# Strict: unknown fields, duplicate keys and wrong types are errors, and the engine refuses to start.
+# There are no score thresholds here on purpose - each profile names an operating point, whose thresholds
+# come from the evaluation harness and are bound to a model hash (Bible Part 9).
+pramaan:
+  policyVersion: 1
+  enabled: true
+  stalePolicyMaxAgeDays: 30
+  diagnosticMode: false
+
+  profiles:
+    RESIDENT:
+      operatingPoint: resident-default     # inclusive: BPCER <= 3% at APCER <= 5%
+      activeEnabled: true
+      auditChallengeProbability: 0.15
+      minCues: 2
+      challenge:
+        pool: [TURN, EYES_CLOSED, BLINK, SMILE, GAZE, FLASH]
+        minSteps: 1
+        maxSteps: 3
+        stepTimeoutMs: 5000
+        onsetMinMs: 250
+      retries: { max: 3, backoffBaseMs: 2000 }
+      onLockout: EXCEPTION_FLOW
+
+    OPERATOR:
+      operatingPoint: operator-strict      # APCER <= 1% on the worst attack species
+      activeEnabled: true
+      auditChallengeProbability: 0.5
+      minCues: 3
+      challenge:
+        pool: [TURN, EYES_CLOSED, BLINK, GAZE, FLASH]
+        minSteps: 2
+        maxSteps: 3
+        stepTimeoutMs: 5000
+        onsetMinMs: 250
+      retries: { max: 3, backoffBaseMs: 4000 }
+      onLockout: LOCK_15_MIN_AND_ALERT
+
+    SUPERVISOR:
+      operatingPoint: supervisor-strictest # APCER <= 0.5% on the worst attack species
+      activeEnabled: true
+      auditChallengeProbability: 1.0
+      minCues: 3
+      challenge:
+        pool: [TURN, EYES_CLOSED, BLINK, GAZE, FLASH]
+        minSteps: 3
+        maxSteps: 3
+        stepTimeoutMs: 5000
+        onsetMinMs: 250
+      retries: { max: 2, backoffBaseMs: 8000 }
+      onLockout: LOCK_AND_ALERT
+
+  accessibilityProfiles: [INFANT, NO_VISION, FACIAL_MOTOR, LIMITED_MOTION, FACE_COVERING_CONTEXT]
+
+  exceptionFlow:
+    requireSupervisor: true
+    maxPerOperatorPerDay: 5
+    maxPerCentrePerDay: 20
+    supervisorVerdictMaxAgeMs: 600000    # a supervisor's passing session is good for 10 minutes, once
+
+  session:                              # Bible Part 12; Build Map #48
+    acquireTimeoutMs: 20000
+    passiveWindowMs: 1500
+    decisionGraceMs: 2000
+    captureTimeoutMs: 15000
+    bindingTimeoutMs: 5000
+    bindingWindowMs: 2000                # lock 4: last verified frame to capture request (Bible Part 13)
+    captureMaxSkewMs: 30000              # lock 1: device's signed timestamp vs receipt
+
+  rateLimits:                           # every attempt counts, whatever its outcome (Build Map #49)
+    perSubjectPerHour: 10
+    perOperatorPerHour: 60
+    perDevicePerHour: 60
+
+  injection:
+    virtualCameraDenylistVersion: 1
+    vetoOnBoundVirtualCamera: true
+
+  evidence:
+    sampleFrames: 4
+    cropSize: 112
