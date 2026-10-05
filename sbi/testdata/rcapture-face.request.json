@@ -1,0 +1,21 @@
+{
+  "env": "Staging",
+  "purpose": "Registration",
+  "specVersion": "0.9.5",
+  "timeout": "10000",
+  "captureTime": "2026-09-22T18:35:35Z",
+  "transactionId": "e1712b6847e5b1e420a938bbf231ab6a",
+  "bio": [
+    {
+      "type": "Face",
+      "count": "1",
+      "bioSubType": [],
+      "exception": [],
+      "requestedScore": "40",
+      "deviceId": "3",
+      "deviceSubId": "0",
+      "previousHash": ""
+    }
+  ],
+  "customOpts": null
+}

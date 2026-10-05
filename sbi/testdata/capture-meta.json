@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-09-22T18:35:38.507220+00:00",
+  "port": 4501,
+  "faceDeviceId": "3",
+  "nonce": "e1712b6847e5b1e420a938bbf231ab6a",
+  "rcaptureMillis": 164,
+  "streamContentType": "multipart/x-mixed-replace; boundary=--BoundaryString",
+  "streamSeconds": 3.0,
+  "streamBytes": 2497733,
+  "streamJpegFrames": 63,
+  "streamFps": 21.0
+}
