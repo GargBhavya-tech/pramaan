@@ -1,0 +1,36 @@
+{
+  "tableVersion": 1,
+  "provisional": true,
+  "generatedBy": "Hand-written from Bible Part 9 (weights, resident thresholds) before any corpus exists. NOT MEASURED. Replace with harness output (#69).",
+  "models": {
+    "face_detection_yunet_2023mar.onnx": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4",
+    "mediapipe_face_landmarks_detector.onnx": "b8b8ea16213c5f5f93517cc4d9a13f22f9859588851de64a0914e1d66f02c9f8",
+    "mediapipe_face_blendshapes.onnx": "baafa07fdf2bc17d3ca3f1079c315b8d0da73e55863b6c0a0fce700aa595ac95",
+    "minifasnet_v1se_4.0_80x80.onnx": "17246cc267b4b3d23e49966f2062650dc4e6fe3f1a3c7ecc3ae7b0f67ad1aec4",
+    "minifasnet_v2_2.7_80x80.onnx": "eb0feb2c6896cf52755d71b38888ea1ef56ceb266d9583ba64de30ea66f7717b",
+    "face_recognition_sface_2021dec.onnx": "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79"
+  },
+  "fusion": {
+    "cues": {
+      "passive":      { "wPos": 1.0, "wNeg": 1.0, "physiological": false },
+      "colorTexture": { "wPos": 0.8, "wNeg": 0.8, "physiological": false },
+      "moire":        { "wPos": 0.8, "wNeg": 0.8, "physiological": false },
+      "flatness":     { "wPos": 1.2, "wNeg": 1.2, "physiological": false },
+      "deformation":  { "wPos": 1.0, "wNeg": 1.0, "physiological": true },
+      "flash":        { "wPos": 1.5, "wNeg": 1.5, "physiological": false },
+      "rppg":         { "wPos": 0.3, "wNeg": 0.3, "physiological": true }
+    },
+    "bias": { "L0": -0.5, "L1": 0.0 },
+    "disagreementLogitGap": 4.0
+  },
+  "binding": {
+    "thetaSame": 0.363
+  },
+  "deviceClasses": {
+    "default": {
+      "resident-default":     { "tauAccept": 0.85, "tauReject": 0.20, "target": "BPCER <= 3% at APCER <= 5% (not yet measured)" },
+      "operator-strict":      { "tauAccept": 0.95, "tauReject": 0.40, "target": "APCER <= 1% on the worst PAIS (not yet measured)" },
+      "supervisor-strictest": { "tauAccept": 0.97, "tauReject": 0.50, "target": "APCER <= 0.5% on the worst PAIS (not yet measured)" }
+    }
+  }
+}
