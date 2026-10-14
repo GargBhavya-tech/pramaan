@@ -940,6 +940,16 @@ Tests: `SceneContextTest`, `BackdropToolTest`, `StationWiringEngineTest` (withou
 `BackdropSubtractionSegmenter` (scaffold `--segmenter backdrop`) that also finds people walking behind, and a
 model-ready `OnnxPersonSegmenter`, scored on synthetic scenes with known truth (`SegmentationBench`). **Still not
 built:** a chosen, pinned and licensed segmentation model, and any measurement on real rooms.
+**Learned fusion and conformal cut-offs since built:** `FusionLearner` (harness) learns `wPos`/`wNeg`/bias in the engine's own
+shape (non-negative, abstentions excluded, physiological `wNeg` zero), by class-balanced logistic regression shrunk
+toward the hand-set weights with a proximal step; `ConformalThreshold` (core) picks the cut-off as the k-th smallest genuine
+score, `k = floor(alpha (n + 1))`, so a fresh genuine resident is rejected with probability at most `k/(n+1)` for any
+distribution and any n (`ConformalThresholdTest` checks it empirically on three distributions), refuses to promise
+anything with fewer than `ceil(1/alpha) - 1` genuine samples, and calibrates per group. On a **synthetic** corpus with one
+cue the attacks fool, held-out AUC went 0.953 (hand-set) to 0.968 (learned), and at a guaranteed 5% BPCER attacks passed
+23.6% (hand) vs 16.3% (learned), the learner having cut the fooled cue's weight. **Not shipped:** weights learned from
+synthetic attacks must never reach `operating-points.json`; this waits for the corpus (#65), and the conformal guarantee needs
+the calibration set to be drawn like the station's real residents.
 **Station self-test since built:** `StationSelfTest` (`./gradlew :harness:stationSelfTest --args="--photo room.jpg"`) runs controls and
 attacks made from the station's own empty-room photo through the real scene and moire cues (a screen replay of the right room
 fools the scene cue by construction, so the moire cue has to catch it, and at R-01's blind pitches it does not). It found
