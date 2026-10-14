@@ -1,0 +1,95 @@
+# PRAMAAN red-team log (Build Map #95)
+
+Purpose: spend a day attacking our own system with everything we have, log every success, and **fix it or disclose
+it** before the evaluation report is generated — never after. Build Map #96 reads this log; `docs/claim-sheet.md`
+quotes its limits.
+
+**Honest status of this file.** The attack list and the procedure are ready. The *physical* attacks have **not been
+run**: that needs people, prints, phones, a mask and a camera (`docs/hardware-testing-guide.md`). Rows marked
+`NOT RUN` are blank on purpose. Rows marked `TEST-BACKED` are code-level controls whose tests pass in
+`./gradlew test`; that proves the control behaves as designed on synthetic inputs, not that a real attacker fails.
+
+## 1. Rules for the day
+
+1. One attack per row, one attempt per line. **Log every attempt, successes first.**
+2. Run each attack against the **resident** policy and the **operator** policy (Bible Part 9: they differ).
+3. Record the generic message the attacker saw **and** what Diagnostics/audit showed. If the two differ in a way an
+   attacker could exploit (an oracle), that is a finding.
+4. A success is either **FIXED** (commit hash, re-run result) or **DISCLOSED** (the claim sheet gets a limit).
+   There is no third state.
+5. Do not change a threshold to make an attack fail unless the change is justified by the corpus. A threshold tuned
+   on the day's attacks is not held-out evidence.
+6. Take photographs or short clips of each setup (no faces of third parties without consent: `docs/consent-form.md`).
+
+## 2. Setup checklist
+
+| Item | Have it? | Notes |
+|---|---|---|
+| Printed photo, matte | | |
+| Printed photo, glossy | | |
+| Printed photo, curved (bent) | | |
+| Printed photo, cut-out eyes with a live eye behind | | |
+| Phone/tablet showing a still | | |
+| Phone/tablet replaying a video of the target blinking, smiling, turning | | |
+| 3-D mask (paper / resin / silicone), if obtainable | | |
+| OBS Virtual Camera (or ManyCam) installed | | |
+| A deepfake / face-reenactment tool and the target's consented source footage | | |
+| A second webcam (stereo cue), a resident-facing light (flash cue) | | |
+| MockMDS patched to return a different signed face (capture swap) | | |
+| A supervisor's photo and video (operator-impersonation) | | |
+
+## 3. Attack catalogue (Bible Part 2.2) and what is already covered
+
+| # | Attack | Control | Code-level status | Physical result |
+|---|---|---|---|---|
+| A1 | Printed photo (matte, glossy, cut-out eyes, curved) | Passive scorer, colour-texture\*, flatness, challenges | Cue and challenge logic: `CueBankTest`, `ActionDetectorsTest`, `LivenessEngineTest`. \*Colour-texture abstains `UNTRAINED` until the corpus exists. | **NOT RUN** |
+| A2 | Screen showing a photo | Moiré, colour cues, flatness, challenge | Moiré: `CueBankTest`; synthetic recapture scores above bona fide: `SyntheticAttackFactoryTest` | **NOT RUN** |
+| A3 | Screen replaying a video | Moiré, unpredictable challenge, flash | Challenge entropy and uniformity: `ChallengeGeneratorTest`; wrong-action / latency: `ActionDetectorsTest`. Flash cue is **not wired** into fusion. | **NOT RUN** |
+| A4 | 3-D mask | Passive, rPPG\*\*, deformation, flash shading, stereo | Deformation and stereo cues tested on synthetic data only. \*\*rPPG abstains on the SBI stream. Projection-on-mask is **unquantified**. | **NOT RUN** |
+| A5 | Virtual camera / injected feed | Injection guard (denylist veto), flash, stream tag chain | `InjectionGuardTest`, `InjectionGuardEngineTest`. The denylist matches *reported* device metadata only. The tag chain needs a device with the Liveness Profile: `SignedStreamLockTest`. | **NOT RUN** |
+| A6 | Real-time deepfake | Flash correlation, latency, artefact cue | Flash cue on synthetic traces: `FlashReflectionCueTest`. No deepfake-artefact cue exists. | **NOT RUN** |
+| A7 | Capture swap | Four binding locks | `BindingAttacksTest`, `CaptureBinderTest` | **TEST-BACKED** — re-run physically with a patched MockMDS |
+| A8 | Replay of signed SBI data | Nonce as `transactionId`, timestamp window | `CaptureBinderTest`, `BindingAttacksTest`, `SessionNonceTest` | **TEST-BACKED** |
+| A9 | Challenge pre-recording | High-entropy, CSPRNG-seeded challenges | `ChallengeGeneratorTest`, `NoInsecureRandomTest` | **TEST-BACKED** (entropy only; the attacker's actual library cost is not measured) |
+| A10 | Oracle probing | Random audit challenges, generic messages, rate limits | `RiskFusionTest`, `ErrorTaxonomyTest`, `HindiCatalogueTest` (one string for every security failure in both languages), `AccessibilityAndAttemptTest` | **TEST-BACKED** — probe by hand: retry 20 times at the edge of the threshold and look for any difference in message or timing |
+| A11 | Config/model tampering, clock rollback | Signed bundles, anti-rollback | `BundleManifestTest`, `EngineBundleSignedTest`, `SignBundleTest` | **TEST-BACKED** — edit a threshold in the shipped YAML by hand and confirm startup refuses |
+| A12 | Adversarial patches / makeup / glasses against the CNN | Cue ensemble, server re-check | `RecheckVerifierTest`, `RetroactiveRescanTest` (re-scoring works); no adversarial robustness test exists | **NOT RUN** |
+| A13 | Operator enrols own face / same face across residents | Operator-face lock, fraud analytics | `CaptureBinderTest` (operator lock), `FraudAnalyticsTest`, `FraudReportTest` | **TEST-BACKED** |
+| A14 | Exception-path abuse | Dual control, rate limits, analytics | `ExceptionFlowTest`, `AccessibilityAndAttemptTest`, `PacketApprovalTest` | **TEST-BACKED** |
+
+## 4. Attempt log (fill in on the day)
+
+| Time | Attack # | Variant (print finish, phone model, mask type...) | Policy (resident / operator) | Attempts | Successes | Generic message seen | Diagnostics showed | Outcome (FIXED / DISCLOSED) | Commit / claim-sheet line |
+|---|---|---|---|---|---|---|---|---|---|
+| | | | | | | | | | |
+| | | | | | | | | | |
+| | | | | | | | | | |
+| | | | | | | | | | |
+
+## 5. Findings (one block per success or oracle)
+
+```
+Finding R-01
+Attack:        A? ...
+How it worked: ...
+Why the controls missed it: ...
+Decision:      FIXED  |  DISCLOSED
+Fix / limit:   commit ...  |  claim-sheet line L...
+Re-run result: ...
+```
+
+## 6. Summary (write last)
+
+| Attack | Attempts | Successes | Success rate (95 % Clopper–Pearson) | Status |
+|---|---|---|---|---|
+| | | | | |
+
+Use `Binomial` from the harness for the interval. A small number of attempts gives a wide interval: say it. "0 of 10"
+still allows a true rate above 25 %.
+
+## 7. Done when
+
+- [ ] Every row of section 3 has a physical result, or an explicit "cannot run: reason".
+- [ ] Every success is FIXED with a re-run, or DISCLOSED in `docs/claim-sheet.md`.
+- [ ] The summary table is filled in with intervals.
+- [ ] You know your own weaknesses better than the judges do.
