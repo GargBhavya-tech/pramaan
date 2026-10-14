@@ -18,7 +18,12 @@
       "flatness":     { "wPos": 1.2, "wNeg": 1.2, "physiological": false },
       "deformation":  { "wPos": 1.0, "wNeg": 1.0, "physiological": true },
       "flash":        { "wPos": 1.5, "wNeg": 1.5, "physiological": false },
-      "rppg":         { "wPos": 0.3, "wNeg": 0.3, "physiological": true }
+      "rppg":         { "wPos": 0.3, "wNeg": 0.3, "physiological": true },
+      "stereo":       { "wPos": 1.2, "wNeg": 1.2, "physiological": false },
+      "plr":          { "wPos": 1.0, "wNeg": 0.0, "physiological": true },
+      "scene":        { "wPos": 0.6, "wNeg": 0.6, "physiological": false },
+      "lightDirection": { "wPos": 0.4, "wNeg": 0.4, "physiological": false },
+      "whitePoint":   { "wPos": 0.5, "wNeg": 0.5, "physiological": false }
     },
     "bias": { "L0": -0.5, "L1": 0.0 },
     "disagreementLogitGap": 4.0
