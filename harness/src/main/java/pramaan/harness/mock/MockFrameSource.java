@@ -99,6 +99,11 @@ public final class MockFrameSource implements FaceFrameSource {
     private Instant actionStartsAt;
     private byte[] lastFrame;
     private Thread pacer;
+    private final boolean livenessProfile;
+    private final long injectFromFrame;
+    private final boolean wrongStreamHead;
+    private MockLivenessProfile profile;
+    private pramaan.core.binding.SignedStreamLock streamLock;
 
     private MockFrameSource(Builder b) throws GeneralSecurityException {
         this.clock = b.clock;
@@ -115,6 +120,9 @@ public final class MockFrameSource implements FaceFrameSource {
         this.mode = b.mode;
         this.reactionDelay = b.reactionDelay;
         this.faults = b.faults;
+        this.livenessProfile = b.livenessProfile;
+        this.injectFromFrame = b.injectFromFrame;
+        this.wrongStreamHead = b.wrongStreamHead;
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
         generator.initialize(2048);
         this.keys = generator.generateKeyPair();
@@ -136,7 +144,19 @@ public final class MockFrameSource implements FaceFrameSource {
 
     @Override
     public DeviceCapabilities discover() {
-        return new DeviceCapabilities(device, capabilities.isEmpty() ? EnumSet.noneOf(Capability.class) : capabilities);
+        Set<Capability> declared = capabilities.isEmpty() ? EnumSet.noneOf(Capability.class) : EnumSet.copyOf(capabilities);
+        if (livenessProfile) {
+            declared.add(Capability.SIGNED_STREAM);
+            declared.add(Capability.CAPTURE_BURST);
+            declared.add(Capability.SENSOR_TIMESTAMPS);
+        }
+        return new DeviceCapabilities(device, declared);
+    }
+
+    /** The authenticated-stream lock, when this mock was built to speak the SBI Liveness Profile (Bible Part 41). */
+    @Override
+    public synchronized java.util.Optional<pramaan.core.binding.SignedStreamLock> streamLock() {
+        return java.util.Optional.ofNullable(streamLock);
     }
 
     @Override
@@ -145,6 +165,9 @@ public final class MockFrameSource implements FaceFrameSource {
             throw new IllegalStateException("already started");
         }
         this.sink = Objects.requireNonNull(frameSink, "sink");
+        if (livenessProfile) {
+            startProfile(session);
+        }
         running = true;
         sink.onDeviceEvent(new DeviceEvent(DeviceEvent.Type.CONNECTED, device.toString(), clock.instant()));
         if (realTime) {
@@ -197,7 +220,27 @@ public final class MockFrameSource implements FaceFrameSource {
                 data = new byte[16];
             }
             lastFrame = data;
-            sink.onFrame(new Frame(data, format, 0, 0, Frame.NO_SENSOR_TIMESTAMP, clock.instant(), emitted++, device));
+            Instant now = clock.instant();
+            if (profile == null) {
+                sink.onFrame(new Frame(data, format, 0, 0, Frame.NO_SENSOR_TIMESTAMP, now, emitted++, device));
+                return true;
+            }
+            // The device tags the frame it captured; an injector between device and client then alters what arrives.
+            long t = now.toEpochMilli();
+            byte[] tag = profile.tag(data, t);
+            byte[] arriving = data;
+            if (emitted >= injectFromFrame) {
+                arriving = data.clone();
+                arriving[arriving.length - 1] ^= 0x01; // the device's own capture still comes from the original frame
+            }
+            streamLock.observe(arriving, t, tag);
+            String checkpoint = null;
+            if ((emitted + 1) % CHECKPOINT_EVERY == 0) {
+                checkpoint = profile.checkpoint();
+                streamLock.acceptCheckpoint(checkpoint, trust());
+            }
+            sink.onFrame(new Frame(arriving, format, 0, 0, Frame.NO_SENSOR_TIMESTAMP, now, emitted++, device, tag, t,
+                    checkpoint));
             return true;
         }
     }
@@ -265,6 +308,15 @@ public final class MockFrameSource implements FaceFrameSource {
             payload.put("requestedScore", Integer.toString(request.requestedScore()));
             payload.put("deviceCode", device.deviceCode());
             payload.put("deviceServiceVersion", "pramaan-mock");
+            if (profile != null) {
+                // Profile addition 3: the signed capture names the head of the stream it was taken from.
+                byte[] head = profile.streamTagHead();
+                if (wrongStreamHead) {
+                    head = head.clone();
+                    head[0] ^= 0x55;
+                }
+                payload.put("streamTagHead", MockLivenessProfile.hex(head));
+            }
             String jws = Jws.signRs256(JSON.writeValueAsBytes(payload), KEY_ID, keys.getPrivate());
 
             // Behave like a real source: verify before returning, and read claims only from the verified payload.
@@ -284,6 +336,24 @@ public final class MockFrameSource implements FaceFrameSource {
         if (pacer != null) {
             pacer.interrupt();
             pacer = null;
+        }
+    }
+
+    /** Frames between signed checkpoints (the Bible's N = 30). */
+    static final int CHECKPOINT_EVERY = 30;
+
+    /** The key agreement of profile addition 2, run in-process: this mock is both the device and (for its own tests) the client. */
+    private void startProfile(SessionContext session) {
+        String transactionId = session != null ? session.nonce().value() : "00000000000000000000000000000000";
+        profile = new MockLivenessProfile(keys.getPrivate(), KEY_ID);
+        java.security.KeyPair client = pramaan.core.binding.StreamKeyAgreement.newEphemeral();
+        String answer = profile.answerKeyAgreement(transactionId, client.getPublic().getEncoded());
+        try {
+            byte[] ks = pramaan.core.binding.StreamKeyAgreement.acceptDeviceAnswer(answer, trust(), client, transactionId);
+            streamLock = new pramaan.core.binding.SignedStreamLock(ks,
+                    transactionId.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (JwsVerificationException e) {
+            throw new IllegalStateException("the mock's own key agreement failed: " + e.getMessage(), e);
         }
     }
 
@@ -382,6 +452,27 @@ public final class MockFrameSource implements FaceFrameSource {
         private ResponseMode mode = ResponseMode.CORRECT;
         private Duration reactionDelay = Duration.ofMillis(600);
         private MockFaults faults = MockFaults.NONE;
+        private boolean livenessProfile;
+        private long injectFromFrame = Long.MAX_VALUE;
+        private boolean wrongStreamHead;
+
+        /** Speak the SBI Liveness Profile (Bible Part 41): tag every frame and name the stream head in each capture. */
+        public Builder livenessProfile(boolean enabled) {
+            this.livenessProfile = enabled;
+            return this;
+        }
+
+        /** Attack: from this frame on, an injector alters what the client receives (the device's tag is untouched). */
+        public Builder injectFromFrame(long frame) {
+            this.injectFromFrame = frame;
+            return this;
+        }
+
+        /** Attack: the signed capture names a stream head that is not this stream's. */
+        public Builder wrongStreamHead(boolean wrong) {
+            this.wrongStreamHead = wrong;
+            return this;
+        }
 
         private Builder(Clock clock) {
             this.clock = Objects.requireNonNull(clock, "clock");
