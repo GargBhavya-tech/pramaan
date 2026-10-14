@@ -1955,6 +1955,11 @@ Pupil dynamics research (e.g., Czajka's work) reports strong attack rejection, b
 
 `PupilReflexFitTest` (synthetic radius curves with known parameters + noise → recovered within tolerance), `PlrTimingLockTest` (response shifted off the random flash times → fail). Hardware test with the reference kit.
 
+**Built (#90, partial):** `PupilLightReflexCue`, covering both tests above in `PupilLightReflexCueTest`. The rule "an
+absent reflex is never evidence against a person" is implemented literally: a failed trial set *abstains*; only a
+time-locked reflex on every valid trial votes, and it votes for life. The fit's latency/time-constant ambiguity is about
+±50 ms, so a genuine reflex near the 700 ms bound can abstain. Pupil segmentation and illuminator control are not built.
+
 ---
 
 ## Part 33 — Face ↔ Iris Periocular Cross-Binding
@@ -2222,6 +2227,11 @@ Injecting into one camera leaves the other showing the real scene; the two views
 
 `StereoTriangulationTest` (synthetic 3D face + planar target projected through known cameras → expected ε), `StereoInjectionConsistencyTest` (replace one view's frames → reprojection error flag).
 
+**Built (#86, partial):** `StereoCalibration` and `StereoDepthCue` for a *rectified* pair, covered by `StereoDepthCueTest`
+(both tests above are in that one class). The injection check is the RMS row disagreement between the views, a
+reprojection-error proxy that needs no second calibration. Installation-time calibration, the auxiliary camera source
+and second-view landmark detection are not built.
+
 ---
 ## Part 39 — Focus-Sweep Depth (Depth from Focus)
 
@@ -2347,6 +2357,13 @@ Write it as a short spec document with JSON schemas, security rationale, and a t
 
 `SignedStreamLockTest` (drop/reorder/replace one frame → tag chain breaks; capture with a mismatched `streamTagHead` → reject), `MockDeviceProfileConformanceTest`.
 
+**Built (#100, draft):** `docs/sbi-liveness-profile.md` and `docs/schemas/sbi-liveness-profile.schema.json`; the client
+primitives `StreamTagChain`, `StreamKeyAgreement`, `SignedStreamLock`, `BindingLevel`; and the device side as
+`MockLivenessProfile`. Design decisions the sketch above left open: the key agreement is ephemeral **P-256** ECDH (not
+X25519, which is missing on older Android) with the device's signed answer naming the client key it answered, so a
+swapped key is detected; the checkpoint payload is `"<index>:<tag hex>"`; and a stream longer than 60 frames without a
+signed checkpoint is untrusted. Not wired into `SbiFrameSource`/`CaptureBinder`; nothing has been posted to MOSIP (Q12).
+
 ---
 
 ## Part 42 — The Evidence Transparency Log
@@ -2435,6 +2452,12 @@ rather than finding it itself, so it is a working cue with no live wiring yet: f
 capture (a real operational step per centre) before this can safely vote on a real accept/reject decision.
 `WhitePointConsistencyCueTest` reproduces the worked example above to within rounding.
 
+**Built since (#87):** part A as `SceneFingerprint`/`SceneConsistencyCue` — a colour histogram plus Harris corners with
+BRIEF descriptors in place of ORB (no image library in `core`; the rotation ORB adds is unneeded for a fixed camera),
+with an exclusion box standing in for person segmentation, and the FOV proxy as "most matches share one offset ⇒ the
+camera moved ⇒ abstain and ask for an audited re-fingerprint". Part B.2 as `LightDirectionConsistencyCue`, a 2-D
+first-order luminance-plane comparison rather than the spherical-harmonics fit. Both are unwired and provisional.
+
 ---
 
 ## Part 44 — The Attack Map: National Fraud Intelligence
@@ -2511,6 +2534,12 @@ Factory output → labelled clips → Mock Device (Part 21) → the full product
 ### How to test
 
 `MoireSimulationTest` (simulated recapture exhibits a spectral peak near the predicted beat frequency), `HalftoneTest`, `SimToRealGapReport` produced per release.
+
+**Built (#89, partial):** `pramaan.harness.factory` — `ScreenRecapture`, `PrintSimulator`, `TwoSampleKs`, `SimToRealReport` —
+with the first two tests above in `SyntheticAttackFactoryTest`. One refinement to the formula: the display grid
+aliases to `|f − round(f)|` with the sensor pitch taken as one pixel, so moiré appears when the display's projected
+pitch is close to a whole number of sensor pixels. Replay chains, digital attacks and the real-attack KS comparison are
+not built; no sim-to-real gap has been measured because no real attacks exist yet.
 
 ---
 

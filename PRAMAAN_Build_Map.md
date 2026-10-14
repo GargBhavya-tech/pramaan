@@ -828,6 +828,20 @@ Priority: 🟥 CORE · Type: Prototype · Blocked by: #41, #14
 **Watch out:** **photosensitivity** — at most 3 transitions per second, moderate luminance steps, no saturated-red alternation (Bible Part 8.6). And the flash proves "a 3-D object is here now", not "live skin": add the red/green/blue response-ratio check for mask materials.
 **Test:** a live face gives ρ ≈ 0.8; a phone replay gives ρ < 0.3; an injected stream gives ρ ≈ 0; with the light unplugged the cue abstains rather than failing anyone.
 **Done when:** the standout demo beat works in the demo room's actual lighting.
+**Built (partial):** the sequence generator already existed (`FlashSequence`, 6^8 colours, 350–500 ms steps, 700–1000 ms
+at low fps). New: `FlashSchedule` (when each colour is on screen, with a 500 ms dark lead-in for the ambient
+reference), `FlashSafety` (the independent photosensitivity gate: at most 3 changes in any second, steps of at
+least 333 ms; all 900 generated sequences at 3, 10 and 30 fps pass), and `FlashReflectionCue` with `FlashTrace`
+(per-frame normalised-rgb chroma against the *colour part* of the emitted light — white shifts no chroma — searched
+over lag 0–2 frames; nose-vs-cheek gain ratio; the blue-to-red gain ratio is **reported, not fused**).
+It abstains `CAPABILITY_MISSING` with no light, `NOT_APPLICABLE` when the face is washed out (mean brightness above
+200) or the light never changed, `INPUT_TOO_SMALL` under 12 frames; a *weak* response in normal light is a vote
+against, not an abstention — that is what an injected stream looks like. `FlashReflectionCueTest`: live ρ above
+0.7 at the right lag, phone replay ρ below 0.5, injection |ρ| below 0.45, a 3-frame delay does not pass, a flat
+print scores below a real nose. Thresholds are the Bible's worked example (ρ 0.83 / 0.21 / 0.07), **not measured**.
+**Not built:** a resident-facing display driver (the JavaFX flash window), per-frame face-region sampling from the
+live stream, and wiring the cue into `LivenessEngine`'s fusion — all need the resident-facing light the Bible says
+the desktop does not have; the spectral skin check needs the corpus (#65) and a fixed white balance.
 
 ### #86: Stereo depth cue
 Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #32
@@ -835,6 +849,17 @@ Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #32
 **Build:** Calibrate the auxiliary camera (`stereoCalibrate`), triangulate landmarks, fit a plane, report nose relief and plane residual; pair frames only within 20 ms.
 **Test:** a real face gives ~20–30 mm relief; a print gives 1–2 mm; injecting into one camera only raises the reprojection error.
 **Done when:** flat spoofs are refuted geometrically, in 3-D.
+**Built (partial):** `StereoCalibration` (focal length, baseline, principal point of a *rectified* pair;
+`Z = f b / d`, depth resolution, and `baselineFromKnownTarget`/`drift` for the Part 40 daily self-test) and
+`StereoDepthCue`: triangulate the landmarks, fit a plane by least squares, report nose relief (mean cheek depth minus
+nose-tip depth, mm), plane residual and the RMS row disagreement between the two views. Pairing is strict (frames
+more than 20 ms apart abstain `NOT_APPLICABLE`); no calibrated second camera abstains `CAPABILITY_MISSING`; a row
+error above 1.5 px (the views cannot be one scene — one camera injected) gives a vote of 0.02. `StereoDepthCueTest`
+reproduces the Bible's worked example (f 900, b 80, Z 500 → d 144 px, 1.7 mm per half pixel) and, on synthetic
+geometry, a real face at ≈25 mm relief, a flat print ≈0 mm, a curved print with no nose peak, and the injection case.
+**Not built:** the calibration itself (`stereoCalibrate`/`stereoRectify` over checkerboard views — an installation
+step needing an image library), the auxiliary camera source, and landmark detection in the second view. Thresholds
+are the Bible's, **not measured**.
 
 ### #87: Scene and illumination consistency
 Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #31
@@ -850,6 +875,19 @@ empty-room capture, person segmentation to find "the visible background") and li
 (part B.2 — a spherical-harmonics shading fit); it is not wired into `LivenessEngine`'s fusion, because that would
 need the backdrop-capture subsystem part A is (an operational decision — where and when each centre's empty room
 gets photographed — not a code decision). `WhitePointConsistencyCueTest`.
+**Built since (parts A and B.2, also unwired):** `SceneFingerprint` (colour histogram plus up to 150 Harris corners
+with 256-bit BRIEF descriptors at 160x120 — the ORB family without the rotation a fixed camera does not need — with
+an exclusion box for the resident) and `SceneConsistencyCue` (`S_bg = 0.5 HistCorr + 0.5 matched/keypoints`). A
+consistent offset shared by at least 60 % of the matches is read as a bumped camera (the Bible's FOV proxy): the cue
+abstains and reports `cameraMoved` so the caller can ask for an audited re-fingerprint instead of rejecting anyone.
+A blank wall (too few keypoints) abstains `CAPABILITY_MISSING`; a resident filling the frame abstains
+`INPUT_TOO_SMALL`. `SceneConsistencyCueTest` uses procedural rooms: the same room with a resident and a brightness
+change scores above 0.65, another room below 0.35. `LightDirectionConsistencyCue` is the 2-D, first-order form of B.2
+(a luminance plane fitted to the face and to the backdrop, compared by the cosine of the gradient directions; even
+lighting abstains) — **not** the spherical-harmonics fit on a 3-D face, and it cannot separate shading from
+albedo. `LightDirectionConsistencyCueTest` uses ramps of known direction. **Still not built:** person segmentation
+(an exclusion box stands in), MOG2-style removal of people walking behind, and the installation-time capture
+procedure. All thresholds are provisional.
 
 ### #88: Fraud analytics signals
 Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #10
@@ -873,6 +911,18 @@ Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #66
 **Watch out:** synthetic attacks expand *training* and stress tests; headline APCER always comes from real presentations.
 **Test:** simulated recaptures show a spectral peak near the predicted beat frequency, and a KS test compares their cue statistics against real attacks.
 **Done when:** attack data is no longer the bottleneck.
+**Built (partial):** `pramaan.harness.factory` — `ScreenRecapture` (display pixels as R/G/B stripes with leakage
+and a dark gap, area-sampled onto a sensor grid so moiré *emerges* from aliasing at `predictedBeat = |f − round(f)|`,
+a cool gamut shift, a glass highlight, and refresh banding of amplitude `m |sinc(f E)|`, which vanishes when the
+exposure spans whole ripple periods), `PrintSimulator` (bend, CMYK separation, cosine halftone screens at 15/75/0/45
+degrees, paper tooth, gloss), `TwoSampleKs` and `SimToRealReport` (KS statistic and asymptotic p per cue, labelled
+SYNTHETIC). `SyntheticAttackFactoryTest`: a simulated screen shows a spectral peak within 0.01 cycles/pixel of the
+predicted beat; the existing `MoireCue` scores a recapture at more than three times its bona fide source's
+peakiness; a halftoned mid-grey has period `cellPx x sqrt(2)`; coverage tracks ink; the same seed reproduces the
+same pixels. Noise is an integer hash, not a random generator, so every attack is reproducible from its parameters.
+**Not built:** the replay simulator (H.264 re-encode chains — `tools/degrade.py` already makes ffmpeg degradations),
+the digital attacks (face swap needs consented source footage), camera ISP/JPEG on the simulated output, and the
+KS comparison against *real* attacks (none exist until #65) — so no sim-to-real gap has been measured.
 
 ### #90: Pupil light reflex (hardware permitting)
 Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #85
@@ -881,6 +931,18 @@ Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #85
 **Watch out:** absence is never evidence against a person (medication, age, some blindness) — positive-only weighting (Bible Part 9).
 **Test:** synthetic radius curves recover latency and amplitude within tolerance; a printed iris gives ~0 amplitude.
 **Done when:** the no-cooperation-needed liveness proof works for infants and non-cooperative residents.
+**Built (partial):** `PupilLightReflexCue`: for each randomly timed flash, a grid fit of latency (100–800 ms) and time
+constant with the amplitude solved in closed form, then `A ≥ 0.06`, latency 150–700 ms, `R² ≥ 0.7`; a trial with
+more than 20 % missing radii (a blink) is discarded; fewer than two valid trials abstains; the reflex counts only if
+**every** valid trial passes, so a response not time-locked to each flash does not. It is **positive-only**: a
+present reflex votes 0.97, an absent one *abstains* — it never votes against anyone (medication, age, some
+blindness; Bible Part 32). `PupilLightReflexCueTest`: the Bible's worked example (280 ms, 26 %) is recovered
+within 40 ms and 0.04; a printed iris (amplitude ≈ 0), a constriction at the wrong time, and a reflex answering one
+flash of three all abstain; a sluggish old eye at 520 ms with 12 % passes. Honest limit found in testing: latency and
+time constant trade off by about ±50 ms, so an eye genuinely near 650–700 ms can fall just outside the bound and
+then abstains rather than being penalised.
+**Not built:** pupil segmentation from NIR frames (the cue takes a radius series), the consensual-reflex bonus for
+dual-iris devices, and the illuminator control that needs the Liveness Profile (or the Part 40 kit).
 
 ---
 
@@ -947,6 +1009,10 @@ Priority: 🟥 CORE · Type: Research · Blocked by: #84, #85, #58
 **Watch out:** do this **before** the report is generated, not after. Anything that works is either fixed or disclosed as a known limit.
 **Test:** every attack you can build is recorded with its outcome.
 **Done when:** you know your own weaknesses better than the judges do.
+**Built (the log, not the day):** `docs/red-team-log.md` — the rules for the day, the equipment checklist, all fourteen
+attacks of Bible Part 2.2 mapped to their controls and to the tests that cover them (`TEST-BACKED` rows), an empty
+attempt log, a findings template (fixed or disclosed — no third state) and a summary table with Clopper–Pearson
+intervals. **The physical attacks have not been run**; every `NOT RUN` row is blank on purpose.
 
 ### #96: Evaluation report generator
 Priority: 🟥 CORE · Type: Prototype · Blocked by: #70, #71, #95
@@ -967,6 +1033,10 @@ Priority: 🟥 CORE · Type: Discuss · Blocked by: #96
 **Build:** The nine scenes from Bible Part 28, each with the exact click path, the expected on-screen text and the fallback if hardware misbehaves. Rehearse it end to end at least three times.
 **Watch out:** scene 4 (phone replaying a video of a teammate) is the one that separates you from every passive-only team — rehearse it most.
 **Done when:** the demo runs without you narrating from memory.
+**Built (the script, not the rehearsals):** `docs/demo-script.md` — nine scenes, each tagged LIVE / HARNESS / HARDWARE,
+with the click path, the exact on-screen text from the message catalogue, what to say, and a fallback; two scenes carry
+**NOT YET** notes (flash in scene 5, OS-level camera enumeration in scene 6) so nothing unbuilt is demoed as built.
+Blank rehearsal logs, with a separate one for scene 4. **No rehearsal has been done.**
 
 ### #98: Claim discipline sheet
 Priority: 🟥 CORE · Type: Discuss · Blocked by: #96
@@ -974,12 +1044,21 @@ Priority: 🟥 CORE · Type: Discuss · Blocked by: #96
 **Build:** One page: every claim you will make, the number behind it, its interval, and the matching limitation. Include the ones that hurt (flash needs a resident-facing light; rPPG is off on compressed streams; projection-on-mask is unquantified; the corpus is small).
 **Watch out:** a judge who finds an overstated claim discounts everything else. Stating limits first is the stronger move.
 **Done when:** you can answer "how do you know?" for every sentence in the pitch.
+**Built:** `docs/claim-sheet.md` — sixteen limits stated first (L1: no measured APCER/BPCER; L2: synthetic never
+headline; L4/L5: flash and 3-D masks; L9: the injection guard's partial scope; L11: provisional thresholds; L13:
+nothing run on Android...), then eleven reproducible claims (C1–C11), each with its number, precision, command and
+matching limitation, then the answers to the five questions a judge will ask, and a pre-talk checklist. Every number in it
+comes from a test or from arithmetic; none comes from a real corpus, because there is none.
 
 ### #99: Deck and recorded video
 Priority: 🟥 CORE · Type: Prototype · Blocked by: #97, #98
 
 **Build:** Slides following the Bible's structure (threat model → the gap nobody names → architecture → the numbers → inclusion → the SBI proposal), plus a recorded run of the demo as insurance against hardware failure on the day.
 **Done when:** you could present with no laptop of your own.
+**Built (the content, not the artefacts):** `docs/deck-outline.md` — fifteen slides in the Bible's order with the line
+to say, the on-slide evidence and the claim-sheet reference for each (the limits slide comes before the numbers
+slide), the five questions to rehearse, and a ten-shot plan for the recorded demo. **No slides were made and no video
+was recorded.**
 
 ### #100: MOSIP contribution package
 Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #99
@@ -987,6 +1066,17 @@ Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #99
 **Build:** The SBI Liveness Profile proposal (Bible Part 41) as a short spec with JSON schemas, a reference implementation in the mock device, and a threat table — posted to the MOSIP community forum.
 **Watch out:** no public RFC process was found (Bible Q12) — ask mentors where it should go before posting.
 **Done when:** the work outlives the hackathon.
+**Built (not posted):** `docs/sbi-liveness-profile.md` (the six additions, the wire formats, the client procedure, a
+ten-row threat table, open questions O1–O5), `docs/schemas/sbi-liveness-profile.schema.json` (eight definitions; requests
+use string scalars as the SBI does), and a working reference implementation. Core: `StreamTagChain` (HMAC-SHA256
+chain from the nonce), `StreamKeyAgreement` (ephemeral P-256 ECDH with a device-signed answer that names the client
+key it answered, HKDF-SHA256 — checked against RFC 5869 test case 1; P-256 rather than X25519 to stay on every
+Android API level), `SignedStreamLock` (a `BindingLock`: a dropped, reordered, replaced or retimed frame breaks the
+chain for good; a capture naming a stale or foreign head, or none, is refused; a stream run too long without a signed
+checkpoint is untrusted) and `BindingLevel` (`HEURISTIC` vs `CRYPTOGRAPHIC`). Harness: `MockLivenessProfile`, the
+device side, whose outputs `MockDeviceProfileConformanceTest` validates against the schema. **Not done:** nothing posts
+it — Bible Q12 (how MOSIP accepts proposals) must be asked of the mentors first; `SbiFrameSource` does not yet read the
+extra stream headers and `CaptureBinder` does not yet call `SignedStreamLock`; no real device implements the profile.
 
 ---
 
