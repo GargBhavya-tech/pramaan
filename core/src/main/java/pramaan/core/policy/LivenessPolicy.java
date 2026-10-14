@@ -33,6 +33,7 @@ public final class LivenessPolicy {
     private final int evidenceCropSize;
     private final int virtualCameraDenylistVersion;
     private final boolean vetoOnBoundVirtualCamera;
+    private final boolean requireSignedStream;
     private final SessionTimeouts sessionTimeouts;
     private final RateLimits rateLimits;
     private final java.time.Duration supervisorVerdictMaxAge;
@@ -51,6 +52,7 @@ public final class LivenessPolicy {
         this.evidenceCropSize = b.evidenceCropSize;
         this.virtualCameraDenylistVersion = b.virtualCameraDenylistVersion;
         this.vetoOnBoundVirtualCamera = b.vetoOnBoundVirtualCamera;
+        this.requireSignedStream = b.requireSignedStream;
         this.sessionTimeouts = b.sessionTimeouts;
         this.rateLimits = b.rateLimits;
         this.supervisorVerdictMaxAge = b.supervisorVerdictMaxAge;
@@ -89,6 +91,7 @@ public final class LivenessPolicy {
         StrictNode injection = n.object("injection");
         b.virtualCameraDenylistVersion = injection.integer("virtualCameraDenylistVersion");
         b.vetoOnBoundVirtualCamera = injection.bool("vetoOnBoundVirtualCamera");
+        b.requireSignedStream = injection.bool("requireSignedStream");
         injection.finish();
 
         StrictNode evidence = n.object("evidence");
@@ -168,6 +171,15 @@ public final class LivenessPolicy {
         return vetoOnBoundVirtualCamera;
     }
 
+    /**
+     * Whether a capture must be bound to an authenticated preview stream (SBI Liveness Profile, Bible Part 41).
+     * When true, a device that does not offer the profile fails binding instead of being accepted at the
+     * heuristic level: hiding the profile is not a way round it.
+     */
+    public boolean requireSignedStream() {
+        return requireSignedStream;
+    }
+
     private static final class Builder {
         int policyVersion;
         boolean enabled;
@@ -180,6 +192,7 @@ public final class LivenessPolicy {
         int exceptionMaxPerCentrePerDay;
         int virtualCameraDenylistVersion;
         boolean vetoOnBoundVirtualCamera;
+        boolean requireSignedStream;
         int evidenceSampleFrames;
         int evidenceCropSize;
         SessionTimeouts sessionTimeouts;

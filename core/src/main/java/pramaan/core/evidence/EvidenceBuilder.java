@@ -68,6 +68,7 @@ public final class EvidenceBuilder {
         ObjectNode injection = policy.putObject("injection");
         injection.put("denylistVersion", bundle.policy().virtualCameraDenylistVersion());
         injection.put("vetoOnBoundVirtualCamera", bundle.policy().vetoOnBoundVirtualCamera());
+        injection.put("requireSignedStream", bundle.policy().requireSignedStream());
         injection.put("guard", "denylist");
         Map<String, CueResult> last = new LinkedHashMap<>();
         for (CueResult c : s.evidenceCues()) {
@@ -158,6 +159,7 @@ public final class EvidenceBuilder {
 
     public EvidenceBuilder binding(BindingResult r) {
         ObjectNode o = root.putObject("binding");
+        o.put("level", r.level().name()); // HEURISTIC or CRYPTOGRAPHIC: the server weights the evidence by it
         if (r.finalHash() != null) {
             o.put("finalHash", r.finalHash());
         }

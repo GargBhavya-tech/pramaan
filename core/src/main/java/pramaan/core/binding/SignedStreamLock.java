@@ -34,6 +34,11 @@ public final class SignedStreamLock implements BindingLock {
     public static final String NAME = "signedStream";
     /** Frames the device may send between signed checkpoints before the stream stops being trusted (Part 41: N = 30). */
     public static final int DEFAULT_MAX_UNSIGNED_FRAMES = 60;
+    /**
+     * The device tags a frame the moment it captures, so up to this many frames may still be in flight to the client
+     * when the capture happens: the capture may name any of the client's last few heads, never an older one.
+     */
+    public static final int HEAD_SLACK_FRAMES = 5;
 
     private final StreamTagChain chain;
     private final int maxUnsignedFrames;
@@ -57,7 +62,7 @@ public final class SignedStreamLock implements BindingLock {
      *
      * @return false if the stream is, or just became, untrustworthy
      */
-    public boolean observe(byte[] frame, long timestampMillis, byte[] deviceTag) {
+    public synchronized boolean observe(byte[] frame, long timestampMillis, byte[] deviceTag) {
         if (brokenAt >= 0) {
             return false;
         }
@@ -75,7 +80,7 @@ public final class SignedStreamLock implements BindingLock {
      *
      * @return false if the signature is untrusted or the tag differs from the client's own
      */
-    public boolean acceptCheckpoint(String signedCheckpoint, JwsTrust trust) {
+    public synchronized boolean acceptCheckpoint(String signedCheckpoint, JwsTrust trust) {
         VerifiedJws jws;
         try {
             jws = Jws.verify(signedCheckpoint, trust);
@@ -104,28 +109,38 @@ public final class SignedStreamLock implements BindingLock {
     }
 
     /** Records the {@code streamTagHead} read from the device-signed capture data; null when it carried none. */
-    public void bindCapture(byte[] streamTagHead) {
+    public synchronized void bindCapture(byte[] streamTagHead) {
         this.capturedHead = streamTagHead == null ? null : streamTagHead.clone();
     }
 
     /** The frame index at which the tag chain broke, or -1. */
-    public int brokenAt() {
+    public synchronized int brokenAt() {
         return brokenAt;
     }
 
-    public int framesObserved() {
+    public synchronized int framesObserved() {
         return heads.size() - 1;
     }
 
+    /** Whether the capture's head is the stream's head, allowing for frames still in flight when the device captured. */
+    private boolean headMatches() {
+        for (int i = heads.size() - 1; i >= Math.max(0, heads.size() - 1 - HEAD_SLACK_FRAMES); i--) {
+            if (StreamTagChain.sameTag(capturedHead, heads.get(i))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
-    public LockOutcome check(BindingInput input, VerifiedCapture current, List<VerifiedCapture> earlier) {
+    public synchronized LockOutcome check(BindingInput input, VerifiedCapture current, List<VerifiedCapture> earlier) {
         if (brokenAt >= 0) {
             return LockOutcome.fail(NAME, "STREAM_TAG_MISMATCH", brokenAt);
         }
         if (capturedHead == null) {
             return LockOutcome.fail(NAME, "STREAM_HEAD_MISSING", Double.NaN);
         }
-        if (!StreamTagChain.sameTag(capturedHead, chain.head())) {
+        if (!headMatches()) {
             return LockOutcome.fail(NAME, "STREAM_HEAD_MISMATCH", framesObserved());
         }
         if (framesObserved() - Math.max(lastCheckpoint, 0) > maxUnsignedFrames) {

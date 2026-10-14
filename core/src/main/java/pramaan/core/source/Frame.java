@@ -27,6 +27,9 @@ public final class Frame {
     private final Instant hostArrival;
     private final long index;
     private final DeviceMetadata device;
+    private final byte[] streamTag;
+    private final long streamTimeMillis;
+    private final String streamCheckpoint;
 
     /**
      * @param data                 encoded or raw pixels; ownership passes to the frame (do not modify afterwards)
@@ -37,6 +40,19 @@ public final class Frame {
      */
     public Frame(byte[] data, PixelFormat format, int width, int height, long sensorTimestampNanos, Instant hostArrival,
             long index, DeviceMetadata device) {
+        this(data, format, width, height, sensorTimestampNanos, hostArrival, index, device, null, -1, null);
+    }
+
+    /**
+     * A frame from a device that implements the SBI Liveness Profile (Bible Part 41): the authenticated-stream tag it
+     * sent with this frame, the sensor time that tag covers (milliseconds), and, every N frames, the device-signed
+     * checkpoint (a compact JWS). All three are null or -1 for a plain SBI device.
+     */
+    public Frame(byte[] data, PixelFormat format, int width, int height, long sensorTimestampNanos, Instant hostArrival,
+            long index, DeviceMetadata device, byte[] streamTag, long streamTimeMillis, String streamCheckpoint) {
+        this.streamTag = streamTag == null ? null : streamTag.clone();
+        this.streamTimeMillis = streamTimeMillis;
+        this.streamCheckpoint = streamCheckpoint;
         this.data = Objects.requireNonNull(data, "data");
         this.format = Objects.requireNonNull(format, "format");
         if (width < 0 || height < 0) {
@@ -90,5 +106,20 @@ public final class Frame {
 
     public DeviceMetadata device() {
         return device;
+    }
+
+    /** The profile tag the device sent with this frame, or null on a plain SBI stream. */
+    public byte[] streamTag() {
+        return streamTag == null ? null : streamTag.clone();
+    }
+
+    /** The sensor time covered by {@link #streamTag()}, in milliseconds, or -1. */
+    public long streamTimeMillis() {
+        return streamTimeMillis;
+    }
+
+    /** The device-signed checkpoint carried by this frame, or null. */
+    public String streamCheckpoint() {
+        return streamCheckpoint;
     }
 }

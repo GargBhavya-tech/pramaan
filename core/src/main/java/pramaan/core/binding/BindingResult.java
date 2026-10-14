@@ -20,8 +20,10 @@ public final class BindingResult {
     private final String evidenceHead;
     private final List<LockOutcome> outcomes;
     private final String finalHash;
+    private final BindingLevel level;
 
-    BindingResult(String nonce, String evidenceHead, List<LockOutcome> outcomes, String finalHash) {
+    BindingResult(String nonce, String evidenceHead, List<LockOutcome> outcomes, String finalHash, BindingLevel level) {
+        this.level = level;
         this.nonce = nonce;
         this.evidenceHead = evidenceHead;
         this.outcomes = Collections.unmodifiableList(outcomes);
@@ -30,6 +32,14 @@ public final class BindingResult {
 
     public boolean passed() {
         return outcomes.stream().allMatch(LockOutcome::passed);
+    }
+
+    /**
+     * {@link BindingLevel#CRYPTOGRAPHIC} only if the device authenticated the preview stream and the capture named
+     * it; otherwise {@link BindingLevel#HEURISTIC}. The server weights the evidence accordingly (Bible Part 41).
+     */
+    public BindingLevel level() {
+        return level;
     }
 
     public String nonce() {

@@ -77,6 +77,7 @@ pramaan:
   injection:
     virtualCameraDenylistVersion: 1
     vetoOnBoundVirtualCamera: true
+    requireSignedStream: false           # true once every device in the field offers the SBI Liveness Profile (Part 41)
 
   evidence:
     sampleFrames: 4

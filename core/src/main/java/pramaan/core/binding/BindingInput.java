@@ -31,6 +31,7 @@ public final class BindingInput {
     private final SignedCapture capture;
     private final List<SignedCapture> earlierCaptures;
     private final float[] operatorEmbedding;
+    private SignedStreamLock streamLock;
 
     /**
      * @param captureEmbedding embedding of the face in the signed capture, or null if no face was found there
@@ -108,5 +109,21 @@ public final class BindingInput {
     /** The logged-in operator's face embedding, or null. */
     public float[] operatorEmbedding() {
         return operatorEmbedding == null ? null : operatorEmbedding.clone();
+    }
+
+    /**
+     * A copy of this input that also carries the device's authenticated-stream lock (SBI Liveness Profile, Bible
+     * Part 41); the binder then adds the stream lock to the four of Part 13.
+     */
+    public BindingInput withStreamLock(SignedStreamLock lock) {
+        BindingInput copy = new BindingInput(nonce, evidenceHead, evidenceTrackId, currentTrackId, lastEvidenceFrameAt,
+                captureRequestedAt, referenceEmbeddings, captureEmbedding, capture, earlierCaptures, operatorEmbedding);
+        copy.streamLock = lock;
+        return copy;
+    }
+
+    /** The stream lock, or null when the device does not speak the profile. */
+    public SignedStreamLock streamLock() {
+        return streamLock;
     }
 }

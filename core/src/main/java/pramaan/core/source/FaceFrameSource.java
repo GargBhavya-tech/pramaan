@@ -30,6 +30,15 @@ public interface FaceFrameSource extends AutoCloseable {
     /** Stops delivery. Safe to call more than once. */
     void stop();
 
+    /**
+     * The authenticated-stream lock of this session when the device implements the SBI Liveness Profile (Bible
+     * Part 41), fed with every frame the source reads; empty for a plain SBI device. The capture binder checks it
+     * against the signed capture, so the binding level becomes {@code CRYPTOGRAPHIC} instead of {@code HEURISTIC}.
+     */
+    default java.util.Optional<pramaan.core.binding.SignedStreamLock> streamLock() {
+        return java.util.Optional.empty();
+    }
+
     @Override
     default void close() {
         stop();

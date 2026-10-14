@@ -31,6 +31,7 @@ import pramaan.core.source.SignedCapture;
 public final class CaptureBinder {
 
     private final JwsTrust trust;
+    private final boolean requireSignedStream;
     private final List<BindingLock> locks = new ArrayList<>();
 
     /**
@@ -39,6 +40,17 @@ public final class CaptureBinder {
      * @param maxSkew from policy: largest difference between the device's signed timestamp and receipt
      */
     public CaptureBinder(JwsTrust trust, double thetaSame, Duration window, Duration maxSkew) {
+        this(trust, thetaSame, window, maxSkew, false);
+    }
+
+    /**
+     * @param requireSignedStream policy: a capture whose device gave no authenticated stream (SBI Liveness Profile,
+     *     Bible Part 41) fails the {@code signedStream} lock with {@code STREAM_REQUIRED} instead of settling for
+     *     {@link BindingLevel#HEURISTIC}. This is what stops a downgrade by hiding the profile (threat T6).
+     */
+    public CaptureBinder(JwsTrust trust, double thetaSame, Duration window, Duration maxSkew,
+            boolean requireSignedStream) {
+        this.requireSignedStream = requireSignedStream;
         this.trust = Objects.requireNonNull(trust, "trust");
         locks.add(new Locks.NonceLock(maxSkew));
         locks.add(new Locks.ChainLock());
@@ -62,9 +74,20 @@ public final class CaptureBinder {
         for (BindingLock lock : locks) {
             outcomes.add(lock.check(in, current, earlier));
         }
+        BindingLevel level = BindingLevel.HEURISTIC;
+        SignedStreamLock stream = in.streamLock();
+        if (stream != null) {
+            // The device speaks the profile: the capture must name the stream this client authenticated.
+            stream.bindCapture(current == null ? null : current.streamTagHead());
+            LockOutcome o = stream.check(in, current, earlier);
+            outcomes.add(o);
+            level = SignedStreamLock.level(true, o);
+        } else if (requireSignedStream) {
+            outcomes.add(LockOutcome.fail(SignedStreamLock.NAME, "STREAM_REQUIRED", Double.NaN));
+        }
         boolean chainOk = outcomes.stream().anyMatch(o -> o.lock().equals(Locks.ChainLock.NAME) && o.passed());
         String finalHash = chainOk ? SbiCaptureChain.finalHash(in.evidenceHead(), in.capture().signedData()) : null;
-        return new BindingResult(in.nonce(), in.evidenceHead(), outcomes, finalHash);
+        return new BindingResult(in.nonce(), in.evidenceHead(), outcomes, finalHash, level);
     }
 
     private VerifiedCapture verifyOrNull(SignedCapture c) {

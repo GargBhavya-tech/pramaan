@@ -27,12 +27,15 @@ public final class VerifiedCapture {
     private final String transactionId;
     private final String timestamp;
     private final byte[] isoRecord;
+    private final byte[] streamTagHead;
 
-    private VerifiedCapture(SignedCapture capture, String transactionId, String timestamp, byte[] isoRecord) {
+    private VerifiedCapture(SignedCapture capture, String transactionId, String timestamp, byte[] isoRecord,
+            byte[] streamTagHead) {
         this.capture = capture;
         this.transactionId = transactionId;
         this.timestamp = timestamp;
         this.isoRecord = isoRecord;
+        this.streamTagHead = streamTagHead;
     }
 
     /** Verifies the signature against the device trust, then reads the payload; throws if either fails. */
@@ -41,7 +44,33 @@ public final class VerifiedCapture {
         JsonNode p = JSON.readTree(payload);
         String bio = p.path("bioValue").asText("");
         byte[] iso = bio.isEmpty() ? new byte[0] : Base64.getUrlDecoder().decode(bio.replace("=", ""));
-        return new VerifiedCapture(capture, p.path("transactionId").asText(""), p.path("timestamp").asText(""), iso);
+        return new VerifiedCapture(capture, p.path("transactionId").asText(""), p.path("timestamp").asText(""), iso,
+                hexOrNull(p.path("streamTagHead").asText("")));
+    }
+
+    /** 64 hex characters to 32 bytes; anything else is "no stream head" rather than an error. */
+    private static byte[] hexOrNull(String hex) {
+        if (hex.length() != 2 * StreamTagChain.TAG_BYTES) {
+            return null;
+        }
+        byte[] out = new byte[StreamTagChain.TAG_BYTES];
+        for (int i = 0; i < out.length; i++) {
+            int hi = Character.digit(hex.charAt(2 * i), 16);
+            int lo = Character.digit(hex.charAt(2 * i + 1), 16);
+            if (hi < 0 || lo < 0) {
+                return null;
+            }
+            out[i] = (byte) (hi << 4 | lo);
+        }
+        return out;
+    }
+
+    /**
+     * The {@code streamTagHead} the device signed into this capture (SBI Liveness Profile, Bible Part 41), or null if
+     * the capture carries none.
+     */
+    public byte[] streamTagHead() {
+        return streamTagHead == null ? null : streamTagHead.clone();
     }
 
     public SignedCapture capture() {
