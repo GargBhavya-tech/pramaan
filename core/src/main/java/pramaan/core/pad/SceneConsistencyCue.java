@@ -25,8 +25,12 @@ public final class SceneConsistencyCue {
 
     public static final String NAME = "scene";
     public static final double ALPHA = 0.5;
-    /** PROVISIONAL: S_bg at which the vote crosses 0.5. */
-    public static final double PROVISIONAL_SCORE = 0.45;
+    /**
+     * PROVISIONAL: S_bg at which the vote crosses 0.5. Above the 0.45 that a room of similar colours scores on its
+     * histogram alone (correlation about 0.9 with no keypoint matching at all), so that a room that merely looks
+     * alike does not sit on the fence.
+     */
+    public static final double PROVISIONAL_SCORE = 0.55;
     private static final double SLOPE = 0.08;
     /** Visible background below this fraction of the frame is not enough to judge. */
     public static final double MIN_VISIBLE_FRACTION = 0.25;

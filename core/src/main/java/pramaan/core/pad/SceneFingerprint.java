@@ -32,6 +32,10 @@ public final class SceneFingerprint {
     static final int W = 160;
     static final int H = 120;
     private static final int BINS = 16;
+    private static final int CELLS_X = 8;
+    private static final int CELLS_Y = 6;
+    /** A cell is compared only if at least this many of its (W/CELLS_X) x (H/CELLS_Y) pixels are visible in both images. */
+    private static final int CELL_MIN_VISIBLE = 300;
     private static final int MAX_KEYPOINTS = 150;
     private static final int BORDER = 14;
     private static final int NMS_RADIUS = 5;
@@ -88,13 +92,14 @@ public final class SceneFingerprint {
         }
     }
 
-    private final double[] hist;
+    /** Colour counts per grid cell ({@value #CELLS_X} x {@value #CELLS_Y}), over the cell's visible pixels only. */
+    private final int[][] cellHist;
     private final boolean[] valid;
     private final List<Keypoint> keypoints;
     private final double visibleFraction;
 
-    private SceneFingerprint(double[] hist, boolean[] valid, List<Keypoint> keypoints, double visibleFraction) {
-        this.hist = hist;
+    private SceneFingerprint(int[][] cellHist, boolean[] valid, List<Keypoint> keypoints, double visibleFraction) {
+        this.cellHist = cellHist;
         this.valid = valid;
         this.keypoints = keypoints;
         this.visibleFraction = visibleFraction;
@@ -127,22 +132,87 @@ public final class SceneFingerprint {
         for (boolean v : valid) {
             count += v ? 1 : 0;
         }
-        double[] hist = new double[3 * BINS];
+        int[][] cellHist = new int[CELLS_X * CELLS_Y][3 * BINS];
         for (int y = 0; y < H; y++) {
             for (int x = 0; x < W; x++) {
                 if (valid[y * W + x]) {
+                    int[] cell = cellHist[cellOf(x, y)];
                     for (int c = 0; c < 3; c++) {
-                        hist[c * BINS + small.get(x, y, c) * BINS / 256]++;
+                        cell[c * BINS + small.get(x, y, c) * BINS / 256]++;
                     }
                 }
             }
         }
-        if (count > 0) {
-            for (int i = 0; i < hist.length; i++) {
-                hist[i] /= count;
+        return new SceneFingerprint(cellHist, valid, keypoints(small, valid), (double) count / (W * H));
+    }
+
+    /**
+     * Whether the whole descriptor patch around a corner (13 pixels each way) is visible background. A corner at the
+     * edge of the resident's box has the resident inside its patch: its descriptor describes the resident, so it
+     * matches nothing and says nothing about the room.
+     */
+    private static boolean patchValid(boolean[] valid, int x, int y) {
+        int r = 12;
+        for (int dy = -r; dy <= r; dy += r) {
+            for (int dx = -r; dx <= r; dx += r) {
+                int px = Math.max(0, Math.min(W - 1, x + dx));
+                int py = Math.max(0, Math.min(H - 1, y + dy));
+                if (!valid[py * W + px]) {
+                    return false;
+                }
             }
         }
-        return new SceneFingerprint(hist, valid, keypoints(small, valid), (double) count / (W * H));
+        return true;
+    }
+
+    private static int cellOf(int x, int y) {
+        return (y * CELLS_Y / H) * CELLS_X + x * CELLS_X / W;
+    }
+
+    /** Visible pixels per grid cell. */
+    private static int[] visiblePerCell(boolean[] valid) {
+        int[] n = new int[CELLS_X * CELLS_Y];
+        for (int y = 0; y < H; y++) {
+            for (int x = 0; x < W; x++) {
+                if (valid[y * W + x]) {
+                    n[cellOf(x, y)]++;
+                }
+            }
+        }
+        return n;
+    }
+
+    /**
+     * Pearson correlation of the two images' colour histograms taken over the grid cells that are visible enough in
+     * <em>both</em>. A resident who hides half the room from the live frame does not change what the other half
+     * looks like, so the histograms must be compared over the same area — comparing the live frame's visible part
+     * with the whole empty room would score a matching room down for the resident standing in it.
+     */
+    private double cellCorrelation(SceneFingerprint live) {
+        int[] mine = visiblePerCell(valid);
+        int[] theirs = visiblePerCell(live.valid);
+        double[] a = new double[3 * BINS];
+        double[] b = new double[3 * BINS];
+        double ta = 0;
+        double tb = 0;
+        for (int cell = 0; cell < mine.length; cell++) {
+            if (mine[cell] >= CELL_MIN_VISIBLE && theirs[cell] >= CELL_MIN_VISIBLE) {
+                for (int k = 0; k < a.length; k++) {
+                    a[k] += cellHist[cell][k];
+                    b[k] += live.cellHist[cell][k];
+                    ta += cellHist[cell][k];
+                    tb += live.cellHist[cell][k];
+                }
+            }
+        }
+        if (ta == 0 || tb == 0) {
+            return 0;
+        }
+        for (int k = 0; k < a.length; k++) {
+            a[k] /= ta;
+            b[k] /= tb;
+        }
+        return pearson(a, b);
     }
 
     public int keypointCount() {
@@ -150,7 +220,7 @@ public final class SceneFingerprint {
     }
 
     private static final int MAGIC = 0x50525346; // "PRSF"
-    private static final int FORMAT = 1;
+    private static final int FORMAT = 2;
 
     /**
      * The fingerprint as stored at installation: a four-byte magic, a format number, the histogram, the visible-area
@@ -163,9 +233,11 @@ public final class SceneFingerprint {
             java.io.DataOutputStream out = new java.io.DataOutputStream(bytes);
             out.writeInt(MAGIC);
             out.writeInt(FORMAT);
-            out.writeInt(hist.length);
-            for (double h : hist) {
-                out.writeDouble(h);
+            out.writeInt(cellHist.length);
+            for (int[] cell : cellHist) {
+                for (int count : cell) {
+                    out.writeShort(count); // at most 20 x 20 pixels per cell
+                }
             }
             byte[] mask = new byte[(valid.length + 7) / 8];
             for (int i = 0; i < valid.length; i++) {
@@ -197,12 +269,15 @@ public final class SceneFingerprint {
             if (in.readInt() != MAGIC || in.readInt() != FORMAT) {
                 throw new IllegalArgumentException("not a scene fingerprint of format " + FORMAT);
             }
-            double[] hist = new double[in.readInt()];
-            if (hist.length != 3 * BINS) {
-                throw new IllegalArgumentException("unexpected histogram size " + hist.length);
+            int cellCount = in.readInt();
+            if (cellCount != CELLS_X * CELLS_Y) {
+                throw new IllegalArgumentException("unexpected grid of " + cellCount + " cells");
             }
-            for (int i = 0; i < hist.length; i++) {
-                hist[i] = in.readDouble();
+            int[][] cellHist = new int[cellCount][3 * BINS];
+            for (int[] cell : cellHist) {
+                for (int k = 0; k < cell.length; k++) {
+                    cell[k] = in.readUnsignedShort();
+                }
             }
             int cells = in.readInt();
             if (cells != W * H) {
@@ -233,7 +308,7 @@ public final class SceneFingerprint {
                 }
                 keypoints.add(new Keypoint(x, y, bits));
             }
-            return new SceneFingerprint(hist, valid, keypoints, (double) visible / cells);
+            return new SceneFingerprint(cellHist, valid, keypoints, (double) visible / cells);
         } catch (java.io.IOException e) {
             throw new IllegalArgumentException("truncated or unreadable fingerprint: " + e.getMessage(), e);
         }
@@ -245,10 +320,10 @@ public final class SceneFingerprint {
 
     /** Compares this stored fingerprint with a live frame's (usually partly occluded) one. */
     public Comparison compare(SceneFingerprint live) {
-        double corr = Math.max(0, pearson(hist, live.hist));
+        double corr = Math.max(0, cellCorrelation(live));
         List<Keypoint> inArea = new ArrayList<>();
         for (Keypoint k : keypoints) {
-            if (live.valid[k.y * W + k.x]) {
+            if (patchValid(live.valid, k.x, k.y)) {
                 inArea.add(k);
             }
         }
@@ -340,7 +415,7 @@ public final class SceneFingerprint {
             }
             int x = idx % W;
             int y = idx / W;
-            if (x < BORDER || y < BORDER || x >= W - BORDER || y >= H - BORDER || !valid[idx]) {
+            if (x < BORDER || y < BORDER || x >= W - BORDER || y >= H - BORDER || !patchValid(valid, x, y)) {
                 continue;
             }
             boolean crowded = false;
