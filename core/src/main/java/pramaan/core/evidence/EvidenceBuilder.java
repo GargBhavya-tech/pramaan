@@ -24,6 +24,7 @@ import pramaan.core.session.EngineBundle;
 import pramaan.core.session.LivenessSession;
 import pramaan.core.source.DeviceMetadata;
 import pramaan.core.source.InjectionFindings;
+import pramaan.core.source.StreamSignatureWatch;
 import pramaan.core.source.TimingWatch;
 
 /**
@@ -205,6 +206,22 @@ public final class EvidenceBuilder {
             t.put("cv", cv);
         }
         t.put("actedOn", false);
+        return this;
+    }
+
+    /**
+     * What the session's frames said about their JPEG encoder (Bible Part 5): whether a signature was enrolled, how many
+     * frames came from another encoder, and a readable summary of those.
+     */
+    public EvidenceBuilder streamSignature(StreamSignatureWatch w) {
+        ObjectNode injection = (ObjectNode) root.path("policy").path("injection");
+        ObjectNode n = injection.putObject("streamSignature");
+        n.put("enrolled", w.enrolled());
+        n.put("frames", w.frames());
+        n.put("unreadable", w.unreadable());
+        n.put("mismatching", w.mismatching());
+        ArrayNode other = n.putArray("unexpected");
+        w.unexpected().values().forEach(other::add);
         return this;
     }
 

@@ -57,3 +57,13 @@ tasks.register<JavaExec>("captureBackdrop") {
     mainClass.set("pramaan.desktop.scaffold.BackdropTool")
     workingDir = rootProject.projectDir
 }
+
+// Bible Part 5: record the JPEG header signature of this station's real camera, for the stream fingerprint.
+// ./gradlew :desktop:streamSignature --args="--from-device --device-ca ca.cer --out build/scaffold/stream-signature.json"
+tasks.register<JavaExec>("streamSignature") {
+    group = "application"
+    description = "Enrols the JPEG encoder signature of this station's camera (Bible Part 5)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.desktop.scaffold.StreamSignatureTool")
+    workingDir = rootProject.projectDir
+}

@@ -78,6 +78,7 @@ pramaan:
     virtualCameraDenylistVersion: 1
     vetoOnBoundVirtualCamera: true
     vetoOnHostVirtualCamera: false       # a virtual camera installed on the station, found in the OS camera list (Part 5)
+    vetoOnStreamSignatureMismatch: false  # frames from a JPEG encoder that was not enrolled; re-enrol after a firmware update
     requireVerifiedDeviceIdentity: false # true once devices are registered and sign their digitalId
     requireSignedStream: false           # true once every device in the field offers the SBI Liveness Profile (Part 41)
 

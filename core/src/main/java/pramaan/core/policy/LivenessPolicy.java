@@ -35,6 +35,7 @@ public final class LivenessPolicy {
     private final boolean vetoOnBoundVirtualCamera;
     private final boolean requireSignedStream;
     private final boolean vetoOnHostVirtualCamera;
+    private final boolean vetoOnStreamSignatureMismatch;
     private final boolean requireVerifiedDeviceIdentity;
     private final SessionTimeouts sessionTimeouts;
     private final RateLimits rateLimits;
@@ -56,6 +57,7 @@ public final class LivenessPolicy {
         this.vetoOnBoundVirtualCamera = b.vetoOnBoundVirtualCamera;
         this.requireSignedStream = b.requireSignedStream;
         this.vetoOnHostVirtualCamera = b.vetoOnHostVirtualCamera;
+        this.vetoOnStreamSignatureMismatch = b.vetoOnStreamSignatureMismatch;
         this.requireVerifiedDeviceIdentity = b.requireVerifiedDeviceIdentity;
         this.sessionTimeouts = b.sessionTimeouts;
         this.rateLimits = b.rateLimits;
@@ -97,6 +99,7 @@ public final class LivenessPolicy {
         b.vetoOnBoundVirtualCamera = injection.bool("vetoOnBoundVirtualCamera");
         b.requireSignedStream = injection.bool("requireSignedStream");
         b.vetoOnHostVirtualCamera = injection.bool("vetoOnHostVirtualCamera");
+        b.vetoOnStreamSignatureMismatch = injection.bool("vetoOnStreamSignatureMismatch");
         b.requireVerifiedDeviceIdentity = injection.bool("requireVerifiedDeviceIdentity");
         injection.finish();
 
@@ -199,6 +202,10 @@ public final class LivenessPolicy {
      * Whether the device's digitalId must be a JWS that chains to a trust anchor. When false, an unregistered
      * (unsigned) device is accepted and recorded; a signed digitalId that does not verify is a veto either way.
      */
+    public boolean vetoOnStreamSignatureMismatch() {
+        return vetoOnStreamSignatureMismatch;
+    }
+
     public boolean requireVerifiedDeviceIdentity() {
         return requireVerifiedDeviceIdentity;
     }
@@ -217,6 +224,7 @@ public final class LivenessPolicy {
         boolean vetoOnBoundVirtualCamera;
         boolean requireSignedStream;
         boolean vetoOnHostVirtualCamera;
+        boolean vetoOnStreamSignatureMismatch;
         boolean requireVerifiedDeviceIdentity;
         int evidenceSampleFrames;
         int evidenceCropSize;

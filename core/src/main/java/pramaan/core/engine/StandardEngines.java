@@ -139,6 +139,7 @@ public final class StandardEngines {
                 .pupil(station.pupil())
                 .knownBackdrop(station.scene() != null)
                 .hostCameras(station.hostCameras())
+                .streamSignature(station.streamSignature())
                 .capabilities(caps)
                 .random(random)
                 .listener(listener)

@@ -174,6 +174,10 @@ public final class RegistrationScaffold extends Application {
         if (config.flashScreen >= 0) {
             b.flashLight(new FlashWindow(config.flashScreen));
         }
+        if (config.streamSignature != null) {
+            b.streamSignature(pramaan.core.source.StreamSignatureProfile.fromJson(
+                    Files.readString(config.streamSignature, java.nio.charset.StandardCharsets.UTF_8)));
+        }
         if (config.backdrop != null) {
             scene = new SceneContext(SceneFingerprint.fromBytes(Files.readAllBytes(config.backdrop)),
                     config.segmenter.equals("backdrop") ? new pramaan.core.pad.BackdropSubtractionSegmenter() : null);

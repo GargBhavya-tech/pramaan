@@ -830,6 +830,15 @@ OBS install are not in a unit test, but the inventory was run on a real Windows 
 built-in webcam alone; the first version, which read only Plug-and-Play, missed it. The parse is tested on canned
 output of both sources. Still not built: PRNU, a signed
 externally maintained denylist.
+**Stream fingerprint since built:** `JpegSignature` reads a frame's encoder headers (quantisation and Huffman tables,
+sampling, marker order; no pixel decoding), `StreamSignatureProfile` is the file enrolled for the real camera
+(`./gradlew :desktop:streamSignature`, scaffold `--stream-signature`), `StreamSignatureWatch` counts frames from another
+encoder per session into the evidence (`injection.streamSignature`), and policy `vetoOnStreamSignatureMismatch`
+(default off; three frames, because a firmware update changes the headers and needs a re-enrol) makes it a veto. Tested on
+JDK-encoded JPEGs (`JpegSignatureTest`, `InjectionFindingsEngineTest`) and run on the real JPEGs MockMDS ships, where it
+separates different encoders. **Limits:** it fingerprints the encoder, not the camera: an attacker who copies the enrolled
+tables is not caught, and a pipeline that passes the camera's own JPEG through untouched is not caught either. Double-
+compression analysis (the DCT-histogram trace of re-encoding) is not built.
 
 ### #85: Flash challenge and peripheral
 Priority: 🟥 CORE · Type: Prototype · Blocked by: #41, #14

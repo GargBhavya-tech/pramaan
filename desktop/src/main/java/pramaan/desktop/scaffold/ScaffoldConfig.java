@@ -46,6 +46,8 @@ final class ScaffoldConfig {
      * these once a model has been chosen and pinned in the bundle.
      */
     String segmenter = "none";
+    /** The enrolled JPEG encoder signature of the station's camera (Bible Part 5), from {@code StreamSignatureTool}; or null. */
+    Path streamSignature;
     /** The public key (X.509 DER) the policy bundle must be signed with; null accepts an unsigned directory. */
     Path bundleKey;
     /** Highest bundle version seen, kept across runs (anti-rollback, Bible Part 17.2). */
@@ -106,6 +108,9 @@ final class ScaffoldConfig {
                     break;
                 case "--backdrop":
                     c.backdrop = Path.of(v);
+                    break;
+                case "--stream-signature":
+                    c.streamSignature = Path.of(v);
                     break;
                 case "--segmenter":
                     if (!v.equals("none") && !v.equals("backdrop")) {

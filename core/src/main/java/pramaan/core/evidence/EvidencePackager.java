@@ -85,7 +85,8 @@ public final class EvidencePackager {
         EvidenceBuilder b = EvidenceBuilder.forSession(s, engine.bundle()).device(capture.device())
                 .operator(operatorId, centreId).accessibility(engine.accessibility().profiles())
                 .injectionGuard(engine.boundVirtualCameraDetected())
-                .injectionFindings(engine.injectionFindings(), engine.timing());
+                .injectionFindings(engine.injectionFindings(), engine.timing())
+                .streamSignature(engine.streamSignature());
         engine.decision().ifPresent(b::fusion);
         engine.bindingResult().ifPresent(b::binding);
         if (engine.challengePlan().isPresent()) {

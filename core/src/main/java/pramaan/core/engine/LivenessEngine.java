@@ -72,6 +72,8 @@ import pramaan.core.source.DeviceIlluminator;
 import pramaan.core.source.HostCameraInventory;
 import pramaan.core.source.InjectionFindings;
 import pramaan.core.source.InjectionGuard;
+import pramaan.core.source.StreamSignatureProfile;
+import pramaan.core.source.StreamSignatureWatch;
 import pramaan.core.source.TimingWatch;
 import pramaan.core.source.SessionCapabilities;
 import pramaan.core.source.SignedCapture;
@@ -189,6 +191,7 @@ public final class LivenessEngine implements FrameSink {
     private final boolean boundVirtualCameraDetected;
     private final InjectionFindings injectionFindings;
     private final TimingWatch timing = new TimingWatch();
+    private final StreamSignatureWatch streamSignature;
     private long trackId;
     private SignedCapture acceptedCapture;
 
@@ -239,6 +242,7 @@ public final class LivenessEngine implements FrameSink {
         this.notRunning = Collections.unmodifiableList(skipped);
         // Bible Part 5, Build Map #84: the device bound to this capture path, checked once against the known
         // virtual-camera products. A hard veto only when policy says so; otherwise it never affects the session.
+        this.streamSignature = new StreamSignatureWatch(b.streamSignature);
         this.boundVirtualCameraDetected = InjectionGuard.denylistMatch(caps.device().device()).isPresent();
         Optional<HostCameraInventory.Cameras> hostCameras = b.hostCameras == null ? Optional.empty() : b.hostCameras.read();
         this.injectionFindings = new InjectionFindings(boundVirtualCameraDetected, hostCameras.isPresent(),
@@ -362,6 +366,11 @@ public final class LivenessEngine implements FrameSink {
         return injectionFindings;
     }
 
+    /** What the session's frames said about their JPEG encoder, against the enrolled one (Bible Part 5). */
+    public StreamSignatureWatch streamSignature() {
+        return streamSignature;
+    }
+
     /** Frame-timing statistics for the session; reported in the evidence, never used to reject (Bible Part 5.3). */
     public TimingWatch timing() {
         return timing;
@@ -410,6 +419,7 @@ public final class LivenessEngine implements FrameSink {
 
     private void step(Frame frame) throws Exception {
         timing.observe(frame);
+        streamSignature.observe(frame);
         syncAttempt();
         SessionState s = session.state();
         if (s != SessionState.ACQUIRING && s != SessionState.PASSIVE && s != SessionState.CHALLENGING) {
@@ -747,6 +757,9 @@ public final class LivenessEngine implements FrameSink {
         if (injectionFindings.hostVirtualCameraFound() && bundle.policy().vetoOnHostVirtualCamera()) {
             v.add(Veto.INJECTION);
         }
+        if (streamSignature.foreignEncoder() && bundle.policy().vetoOnStreamSignatureMismatch()) {
+            v.add(Veto.INJECTION);
+        }
         DeviceIdentity id = injectionFindings.identity();
         if (id == DeviceIdentity.FAILED // a device that signs its identity and cannot prove it is lying
                 || (bundle.policy().requireVerifiedDeviceIdentity() && id != DeviceIdentity.VERIFIED)) {
@@ -854,6 +867,7 @@ public final class LivenessEngine implements FrameSink {
         private PupilSource pupilSource;
         private boolean knownBackdrop;
         private HostCameraInventory hostCameras;
+        private StreamSignatureProfile streamSignature;
 
         private Builder(EngineBundle bundle, LivenessSession session) {
             this.bundle = Objects.requireNonNull(bundle, "bundle");
@@ -948,6 +962,12 @@ public final class LivenessEngine implements FrameSink {
         /** A calibrated second camera (Bible Part 38): the stereo-depth cue runs on every analysed frame. */
         public Builder stereo(StereoSource source) {
             this.stereoSource = source;
+            return this;
+        }
+
+        /** The JPEG encoder signature enrolled for this station's camera, or null if none was (Bible Part 5). */
+        public Builder streamSignature(StreamSignatureProfile profile) {
+            this.streamSignature = profile;
             return this;
         }
 

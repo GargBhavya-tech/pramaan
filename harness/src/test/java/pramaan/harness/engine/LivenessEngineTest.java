@@ -253,7 +253,18 @@ class LivenessEngineTest {
         /** As above, with the platform's camera list the injection guard reads (Bible Part 5, point 2). */
         Rig(EngineBundle bundle, double fps, Set<Capability> capabilities, DeviceCapabilities deviceOverride,
                 pramaan.core.source.HostCameraInventory hostCameras) {
-            MockFrameSource.Builder b = MockFrameSource.builder(clock).delayer(clock::advance).fps(fps).neutral(List.of(JPEG));
+            this(bundle, fps, capabilities, deviceOverride, hostCameras, null, null);
+        }
+
+        /**
+         * As above, with the JPEG the camera sends and the encoder signature enrolled for it (Bible Part 5): the stream
+         * fingerprint compares one with the other. Null for both leaves the fake frame and no enrolment.
+         */
+        Rig(EngineBundle bundle, double fps, Set<Capability> capabilities, DeviceCapabilities deviceOverride,
+                pramaan.core.source.HostCameraInventory hostCameras, pramaan.core.source.StreamSignatureProfile enrolled,
+                byte[] cameraJpeg) {
+            MockFrameSource.Builder b = MockFrameSource.builder(clock).delayer(clock::advance).fps(fps)
+                    .neutral(List.of(cameraJpeg != null ? cameraJpeg : JPEG));
             for (Capability c : capabilities) {
                 b.capability(c);
             }
@@ -291,6 +302,7 @@ class LivenessEngineTest {
                     .listener(listener)
                     .requestedScore(40)
                     .hostCameras(hostCameras)
+                    .streamSignature(enrolled)
                     .build();
             source.start(null, engine);
             engine.start();

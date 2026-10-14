@@ -128,6 +128,73 @@ class InjectionFindingsEngineTest {
         assertEquals(SessionState.ACCEPTED, rig.session.state(), "recorded, not acted on: " + rig.describe());
     }
 
+    // ------------------------------------------------------------------------------------------ the stream fingerprint
+
+    private static byte[] cameraJpeg(float quality) throws Exception {
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(96, 64, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.util.Random r = new java.util.Random(7);
+        for (int y = 0; y < 64; y++) {
+            for (int x = 0; x < 96; x++) {
+                img.setRGB(x, y, r.nextInt(0xFFFFFF));
+            }
+        }
+        javax.imageio.ImageWriter w = javax.imageio.ImageIO.getImageWritersByFormatName("jpeg").next();
+        javax.imageio.ImageWriteParam p = w.getDefaultWriteParam();
+        p.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+        p.setCompressionQuality(quality);
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        try (javax.imageio.stream.MemoryCacheImageOutputStream ios = new javax.imageio.stream.MemoryCacheImageOutputStream(out)) {
+            w.setOutput(ios);
+            w.write(null, new javax.imageio.IIOImage(img, null, null), p);
+        }
+        w.dispose();
+        return out.toByteArray();
+    }
+
+    private static LivenessEngineTest.Rig runWith(EngineBundle bundle, pramaan.core.source.StreamSignatureProfile enrolled,
+            byte[] cameraJpeg) {
+        LivenessEngineTest.Rig rig = new LivenessEngineTest.Rig(bundle, 10, EnumSet.noneOf(Capability.class),
+                device(DeviceIdentity.UNCHECKED), Optional::empty, enrolled, cameraJpeg);
+        rig.resident.passive = 0.97;
+        rig.resident.moire = 0.90;
+        rig.run(400);
+        return rig;
+    }
+
+    @Test
+    void framesFromTheEnrolledEncoderAreRecordedAsMatchingAndAcceptedEvenWithTheVetoOn() throws Exception {
+        pramaan.core.source.StreamSignatureProfile enrolled = pramaan.core.source.StreamSignatureProfile.enrol("cam",
+                java.time.Instant.now(), List.of(cameraJpeg(0.8f)));
+        LivenessEngineTest.Rig rig = runWith(bundle("vetoOnStreamSignatureMismatch: false",
+                "vetoOnStreamSignatureMismatch: true"), enrolled, cameraJpeg(0.8f));
+        assertTrue(rig.engine.streamSignature().enrolled());
+        assertTrue(rig.engine.streamSignature().frames() > 10);
+        assertEquals(0, rig.engine.streamSignature().mismatching());
+        assertEquals(SessionState.ACCEPTED, rig.session.state(), rig.describe());
+    }
+
+    @Test
+    void aStreamFromAnotherEncoderIsRecordedButOnlyVetoedWhereTheCentreSwitchesItOn() throws Exception {
+        pramaan.core.source.StreamSignatureProfile enrolled = pramaan.core.source.StreamSignatureProfile.enrol("cam",
+                java.time.Instant.now(), List.of(cameraJpeg(0.8f)));
+        LivenessEngineTest.Rig quiet = runWith(bundle(), enrolled, cameraJpeg(0.5f));
+        assertTrue(quiet.engine.streamSignature().foreignEncoder());
+        assertEquals(SessionState.ACCEPTED, quiet.session.state(), "recorded, not acted on: " + quiet.describe());
+
+        LivenessEngineTest.Rig strict = runWith(bundle("vetoOnStreamSignatureMismatch: false",
+                "vetoOnStreamSignatureMismatch: true"), enrolled, cameraJpeg(0.5f));
+        assertEquals(SessionState.RETRY_WAIT, strict.session.state(), strict.describe());
+        assertTrue(strict.audits.stream().anyMatch(a -> a.contains("INJECTION_DETECTED")), strict.audits.toString());
+    }
+
+    @Test
+    void aStationThatNeverEnrolledItsCameraIsNeverAccusedOfAnythingByIt() throws Exception {
+        LivenessEngineTest.Rig rig = runWith(bundle("vetoOnStreamSignatureMismatch: false",
+                "vetoOnStreamSignatureMismatch: true"), null, cameraJpeg(0.5f));
+        assertFalse(rig.engine.streamSignature().enrolled());
+        assertEquals(SessionState.ACCEPTED, rig.session.state(), rig.describe());
+    }
+
     @Test
     void timingIsCountedForTheRecordAndNeverRejectsAnyone() throws Exception {
         LivenessEngineTest.Rig rig = run(bundle(), DeviceIdentity.UNCHECKED, cameras());

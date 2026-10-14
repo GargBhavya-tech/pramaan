@@ -9,6 +9,7 @@ package pramaan.core.engine;
 import pramaan.core.source.DeviceIlluminator;
 import pramaan.core.source.FlashLight;
 import pramaan.core.source.HostCameraInventory;
+import pramaan.core.source.StreamSignatureProfile;
 import pramaan.core.source.PupilSource;
 import pramaan.core.source.StereoSource;
 
@@ -30,6 +31,7 @@ public final class Station {
     private final PupilSource pupil;
     private final SceneContext scene;
     private final HostCameraInventory hostCameras;
+    private final StreamSignatureProfile streamSignature;
 
     private Station(Builder b) {
         this.flashLight = b.flashLight;
@@ -38,6 +40,7 @@ public final class Station {
         this.pupil = b.pupil;
         this.scene = b.scene;
         this.hostCameras = b.hostCameras;
+        this.streamSignature = b.streamSignature;
     }
 
     public static Builder builder() {
@@ -65,6 +68,11 @@ public final class Station {
         return scene;
     }
 
+    /** The enrolled JPEG encoder signature of the station's camera, or null. */
+    public StreamSignatureProfile streamSignature() {
+        return streamSignature;
+    }
+
     /** The platform's camera list, or null if the station cannot enumerate it. */
     public HostCameraInventory hostCameras() {
         return hostCameras;
@@ -78,6 +86,7 @@ public final class Station {
         private PupilSource pupil;
         private SceneContext scene;
         private HostCameraInventory hostCameras;
+        private StreamSignatureProfile streamSignature;
 
         public Builder flashLight(FlashLight light) {
             this.flashLight = light;
@@ -106,6 +115,11 @@ public final class Station {
 
         public Builder hostCameras(HostCameraInventory inventory) {
             this.hostCameras = inventory;
+            return this;
+        }
+
+        public Builder streamSignature(StreamSignatureProfile profile) {
+            this.streamSignature = profile;
             return this;
         }
 
