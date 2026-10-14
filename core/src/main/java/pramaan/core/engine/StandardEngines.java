@@ -134,6 +134,7 @@ public final class StandardEngines {
                         new pramaan.core.pad.ColorTextureCue(null, 0), station.scene()),
                         new SFaceCaptureAnalyser(deviceTrust, detector, sface, images))
                 .flashLight(station.flashLight())
+                .deviceIlluminator(station.illuminator())
                 .stereo(station.stereo())
                 .pupil(station.pupil())
                 .knownBackdrop(station.scene() != null)

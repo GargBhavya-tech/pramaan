@@ -39,6 +39,15 @@ public interface FaceFrameSource extends AutoCloseable {
         return java.util.Optional.empty();
     }
 
+    /**
+     * The device's own illuminator, when its profile offers one (SBI Liveness Profile, addition 5; Bible Part 41).
+     * Empty for a plain SBI device. The flash challenge prefers it to the station's light because the device signs
+     * what it showed and when.
+     */
+    default java.util.Optional<DeviceIlluminator> illuminator() {
+        return java.util.Optional.empty();
+    }
+
     @Override
     default void close() {
         stop();

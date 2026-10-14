@@ -31,7 +31,7 @@ import pramaan.core.source.Frame;
  * an unsafe one is never displayed — the cue abstains instead. Frames without a single face are not recorded (there
  * is nothing to measure); they do not stop the clock.
  */
-final class FlashPhase implements AttemptPhase {
+final class FlashPhase implements FlashAttemptPhase {
 
     /** After the last colour, frames continue this long so a camera that lags by a frame or two is still heard. */
     static final Duration TAIL = Duration.ofMillis(600);

@@ -426,6 +426,14 @@ public final class LivenessSession {
         return true;
     }
 
+    /**
+     * Records something the engine found that is not a state change (for example, a device whose emission log did
+     * not match the schedule it was given), so a later review can see it. Changes nothing about the session.
+     */
+    public void auditFinding(String type, String detail) {
+        emit(AuditEvent.of(type).put("sessionId", context.sessionId()).put("detail", detail));
+    }
+
     /** A step failed. An early onset the first time re-prompts the same step instead (Bible Part 11). */
     public boolean challengeStepFailed(ChallengeFailure failure) {
         tick();

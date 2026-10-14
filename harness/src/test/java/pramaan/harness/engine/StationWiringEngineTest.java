@@ -26,8 +26,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import pramaan.core.Workflow;
 import pramaan.core.binding.BindingLevel;
+import pramaan.core.binding.EmissionLog;
+import pramaan.core.binding.StreamKeyAgreement;
 import pramaan.core.challenge.ChallengePrompt;
 import pramaan.core.challenge.FlashColour;
+import pramaan.core.challenge.FlashSequence;
+import pramaan.core.crypto.JwsTrust;
+import pramaan.core.crypto.JwsVerificationException;
 import pramaan.core.engine.CaptureAnalyser;
 import pramaan.core.engine.EngineListener;
 import pramaan.core.engine.FrameAnalyser;
@@ -43,6 +48,8 @@ import pramaan.core.session.SessionRegistry;
 import pramaan.core.session.SessionState;
 import pramaan.core.source.Capability;
 import pramaan.core.source.DeviceCapabilities;
+import pramaan.core.source.DeviceException;
+import pramaan.core.source.DeviceIlluminator;
 import pramaan.core.source.DeviceLevel;
 import pramaan.core.source.FlashLight;
 import pramaan.core.source.Frame;
@@ -51,6 +58,7 @@ import pramaan.core.source.SessionCapabilities;
 import pramaan.core.source.StereoSource;
 import pramaan.core.testing.TestClock;
 import pramaan.harness.mock.MockFrameSource;
+import pramaan.harness.mock.MockLivenessProfile;
 
 /**
  * Build Map #85, #86, #90, #100: the station extras are wired into the real engine — a resident-facing light plays
@@ -105,11 +113,11 @@ class StationWiringEngineTest {
      */
     private static final class ResponsiveResident implements FrameAnalyser {
         final SimulatedResident inner;
-        final FakeLight light;
+        final java.util.function.Supplier<FlashColour> light;
         double gain;
         private final Random noise = new Random(3);
 
-        ResponsiveResident(SimulatedResident inner, FakeLight light, double gain) {
+        ResponsiveResident(SimulatedResident inner, java.util.function.Supplier<FlashColour> light, double gain) {
             this.inner = inner;
             this.light = light;
             this.gain = gain;
@@ -121,7 +129,7 @@ class StationWiringEngineTest {
             if (base.gate() != FaceGate.Status.ONE_FACE) {
                 return base;
             }
-            FlashColour c = light.current;
+            FlashColour c = light.get();
             double[] e = c == null ? new double[3] : new double[] {c.r(), c.g(), c.b()};
             return base.withRegions(region(e, 1.0), region(e, 1.5), region(e, 1.0));
         }
@@ -132,6 +140,77 @@ class StationWiringEngineTest {
                 out[k] = AMBIENT[k] + gain * strength * emitted[k] * (AMBIENT[k] / 100) + noise.nextGaussian() * 0.3;
             }
             return out;
+        }
+    }
+
+    /**
+     * The device's own light (Liveness Profile, addition 5): it signs a log of what it showed, starting a little after
+     * the request, and the face answers what it really showed, which a lying device can make differ from the log.
+     */
+    private static final class FakeDeviceLight implements DeviceIlluminator {
+        static final String TXN = "0123456789abcdef0123456789abcdef";
+        final TestClock clock;
+        final MockLivenessProfile profile;
+        final JwsTrust trust;
+        long startDelayMs = 100;
+        boolean lieInLog;
+        boolean fail;
+        int calls;
+        private long firstEmissionMs = -1;
+        private List<long[]> actual = List.of();
+        private List<FlashColour> actualColours = List.of();
+
+        FakeDeviceLight(TestClock clock) throws Exception {
+            this.clock = clock;
+            java.security.KeyPairGenerator gen = java.security.KeyPairGenerator.getInstance("RSA");
+            gen.initialize(2048);
+            java.security.KeyPair key = gen.generateKeyPair();
+            this.profile = new MockLivenessProfile(key.getPrivate(), "dev");
+            this.trust = JwsTrust.builder(clock).key("dev", key.getPublic()).build();
+            profile.answerKeyAgreement(TXN, StreamKeyAgreement.newEphemeral().getPublic().getEncoded());
+        }
+
+        @Override
+        public java.util.concurrent.CompletableFuture<EmissionLog> illuminate(FlashSequence sequence) {
+            calls++;
+            if (fail) {
+                return java.util.concurrent.CompletableFuture.failedFuture(
+                        new DeviceException(DeviceException.Reason.DEVICE_ERROR, "the illuminator is not responding"));
+            }
+            firstEmissionMs = clock.millis() + startDelayMs;
+            actualColours = sequence.colours();
+            List<MockLivenessProfile.Emission> logged = new ArrayList<>();
+            List<long[]> shown = new ArrayList<>();
+            long at = 0;
+            for (int i = 0; i < actualColours.size(); i++) {
+                long d = sequence.durationsMs()[i];
+                shown.add(new long[] {at, d});
+                FlashColour claimed = lieInLog ? FlashColour.values()[(actualColours.get(i).ordinal() + 1) % 6]
+                        : actualColours.get(i);
+                logged.add(new MockLivenessProfile.Emission(claimed.name(), at, d));
+                at += d;
+            }
+            actual = shown;
+            try {
+                return java.util.concurrent.CompletableFuture.completedFuture(
+                        EmissionLog.verify(profile.emissionLog(logged), trust, TXN));
+            } catch (JwsVerificationException e) {
+                return java.util.concurrent.CompletableFuture.failedFuture(e);
+            }
+        }
+
+        /** What the light is really showing now, by the simulated clock. */
+        FlashColour showing() {
+            if (firstEmissionMs < 0) {
+                return null;
+            }
+            long ms = clock.millis() - firstEmissionMs;
+            for (int i = 0; i < actual.size(); i++) {
+                if (ms >= actual.get(i)[0] && ms < actual.get(i)[0] + actual.get(i)[1]) {
+                    return actualColours.get(i);
+                }
+            }
+            return null;
         }
     }
 
@@ -223,6 +302,11 @@ class StationWiringEngineTest {
 
         Rig(TestClock clock, EngineBundle bundle, MockFrameSource.Builder mock, boolean withLight, PupilSource pupil,
                 StereoSource stereo, double flashGain, Capability... declared) {
+            this(clock, bundle, mock, withLight, pupil, stereo, flashGain, null, declared);
+        }
+
+        Rig(TestClock clock, EngineBundle bundle, MockFrameSource.Builder mock, boolean withLight, PupilSource pupil,
+                StereoSource stereo, double flashGain, FakeDeviceLight deviceLight, Capability... declared) {
             this.clock = clock;
             this.resident = new SimulatedResident(clock);
             for (Capability c : declared) {
@@ -247,13 +331,16 @@ class StationWiringEngineTest {
             };
             LivenessEngine.Builder b = LivenessEngine.builder(bundle, session)
                     .device(source, source.trust(), DeviceLevel.L1)
-                    .analysers(new ResponsiveResident(resident, light, flashGain), captures)
+                    .analysers(new ResponsiveResident(resident, deviceLight != null ? deviceLight::showing : () -> light.current, flashGain), captures)
                     .capabilities(SessionCapabilities.of(10, device))
                     .random(new SecureRandom())
                     .listener(listener)
                     .requestedScore(40);
             if (withLight) {
                 b.flashLight(light);
+            }
+            if (deviceLight != null) {
+                b.deviceIlluminator(deviceLight);
             }
             if (pupil != null) {
                 b.pupil(pupil);
@@ -339,6 +426,70 @@ class StationWiringEngineTest {
         assertTrue(flash.abstained());
         assertEquals(CueResult.AbstainReason.NOT_APPLICABLE, flash.abstainReason(),
                 "the device claims a display but this engine has no light to drive");
+    }
+
+    // ------------------------------------------------------------------------------------------ the device's own light
+
+    @Test
+    void aLiveFaceAnswersTheDevicesLightAndTheCueIsJudgedAgainstItsSignedLog() throws Exception {
+        TestClock clock = newClock();
+        FakeDeviceLight device = new FakeDeviceLight(clock);
+        Rig rig = new Rig(clock, bundle, MockFrameSource.builder(clock), false, null, null, 25, device);
+        rig.run(600);
+        assertEquals(SessionState.ACCEPTED, rig.session.state(), rig.why());
+        assertEquals(1, device.calls, "the schedule was sent once");
+        assertEquals(0, rig.light.shows, "and the station's own light was never used");
+        CueResult flash = rig.cue("flash");
+        assertNotNull(flash, rig.why());
+        assertFalse(flash.abstained(), rig.why());
+        assertTrue(flash.pLive() > 0.8, "flash p " + flash.pLive());
+    }
+
+    @Test
+    void theDeviceLightIsPreferredWhenTheStationHasOneToo() throws Exception {
+        TestClock clock = newClock();
+        FakeDeviceLight device = new FakeDeviceLight(clock);
+        Rig rig = new Rig(clock, bundle, MockFrameSource.builder(clock), true, null, null, 25, device);
+        rig.run(600);
+        assertEquals(1, device.calls);
+        assertEquals(0, rig.light.shows);
+    }
+
+    @Test
+    void anInjectedStreamThatIgnoresTheDevicesLightVotesAgainstItself() throws Exception {
+        TestClock clock = newClock();
+        Rig rig = new Rig(clock, bundle, MockFrameSource.builder(clock), false, null, null, 0, new FakeDeviceLight(clock));
+        rig.run(600);
+        CueResult flash = rig.cue("flash");
+        assertNotNull(flash, rig.why());
+        assertFalse(flash.abstained(), rig.why());
+        assertTrue(flash.pLive() < 0.5, "flash p " + flash.pLive());
+    }
+
+    @Test
+    void aDeviceWhoseLogDiffersFromTheScheduleAbstainsAndIsAuditedNotHeldAgainstTheResident() throws Exception {
+        TestClock clock = newClock();
+        FakeDeviceLight device = new FakeDeviceLight(clock);
+        device.lieInLog = true;
+        Rig rig = new Rig(clock, bundle, MockFrameSource.builder(clock), false, null, null, 25, device);
+        rig.run(600);
+        assertEquals(SessionState.ACCEPTED, rig.session.state(), rig.why());
+        CueResult flash = rig.cue("flash");
+        assertNotNull(flash, rig.why());
+        assertTrue(flash.abstained(), rig.why());
+        assertTrue(rig.audits.stream().anyMatch(a -> a.contains("FLASH_DEVICE_LOG_PROBLEM")), rig.audits.toString());
+    }
+
+    @Test
+    void aDeviceThatCannotIlluminateAbstainsAndIsAudited() throws Exception {
+        TestClock clock = newClock();
+        FakeDeviceLight device = new FakeDeviceLight(clock);
+        device.fail = true;
+        Rig rig = new Rig(clock, bundle, MockFrameSource.builder(clock), false, null, null, 25, device);
+        rig.run(600);
+        assertEquals(SessionState.ACCEPTED, rig.session.state(), rig.why());
+        assertTrue(rig.cue("flash").abstained());
+        assertTrue(rig.audits.stream().anyMatch(a -> a.contains("FLASH_DEVICE_LOG_PROBLEM")), rig.audits.toString());
     }
 
     // ------------------------------------------------------------------------------------------ stereo, pupil

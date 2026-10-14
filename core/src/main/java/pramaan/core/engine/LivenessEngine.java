@@ -67,6 +67,7 @@ import pramaan.core.source.FaceFrameSource;
 import pramaan.core.source.Frame;
 import pramaan.core.source.FrameSink;
 import pramaan.core.source.DeviceIdentity;
+import pramaan.core.source.DeviceIlluminator;
 import pramaan.core.source.HostCameraInventory;
 import pramaan.core.source.InjectionFindings;
 import pramaan.core.source.InjectionGuard;
@@ -154,6 +155,7 @@ public final class LivenessEngine implements FrameSink {
     private final EngineBundle bundle;
     private final List<CueResult> notRunning;
     private final FlashLight flashLight;
+    private final DeviceIlluminator deviceIlluminator;
     private final StereoSource stereoSource;
     private final PupilSource pupilSource;
     private final StereoDepthCue stereoCue = new StereoDepthCue(StereoSource.NOSE_TIP, StereoSource.LEFT_CHEEK,
@@ -197,6 +199,8 @@ public final class LivenessEngine implements FrameSink {
         this.analyser = b.analyser;
         this.captureAnalyser = b.captureAnalyser;
         this.flashLight = b.flashLight;
+        this.deviceIlluminator = b.deviceIlluminator != null ? b.deviceIlluminator
+                : b.source == null ? null : b.source.illuminator().orElse(null);
         this.stereoSource = b.stereoSource;
         this.pupilSource = b.pupilSource;
         this.caps = withStationCapabilities(b);
@@ -212,7 +216,7 @@ public final class LivenessEngine implements FrameSink {
         this.bundle = bundle;
         List<CueResult> skipped = new ArrayList<>(CueRegistry.plan(CUES, caps.device().capabilities(), caps.fps()).abstentions());
         Set<String> implemented = new java.util.HashSet<>(IMPLEMENTED);
-        if (flashLight != null) {
+        if (hasFlash()) {
             implemented.add("flash");
         }
         if (stereoSource != null) {
@@ -260,6 +264,11 @@ public final class LivenessEngine implements FrameSink {
         }
     }
 
+    /** True if this attempt can play the flash: on the station's light or the device's own illuminator. */
+    private boolean hasFlash() {
+        return flashLight != null || deviceIlluminator != null;
+    }
+
     public static Builder builder(EngineBundle bundle, LivenessSession session) {
         return new Builder(bundle, session);
     }
@@ -272,7 +281,8 @@ public final class LivenessEngine implements FrameSink {
     private static SessionCapabilities withStationCapabilities(Builder b) {
         Set<Capability> all = EnumSet.noneOf(Capability.class);
         all.addAll(b.caps.device().capabilities());
-        if (b.flashLight != null) {
+        if (b.flashLight != null || b.deviceIlluminator != null
+                || (b.source != null && b.source.illuminator().isPresent())) {
             all.add(Capability.RESIDENT_DISPLAY);
         }
         if (b.stereoSource != null) {
@@ -451,7 +461,10 @@ public final class LivenessEngine implements FrameSink {
             phasesBuilt = true;
             flashStepPending = plan.flash().isPresent();
             if (adjustments.allows(ChallengeKind.FLASH)) {
-                if (flashLight != null && plan.flash().isPresent()) {
+                if (plan.flash().isPresent() && deviceIlluminator != null) {
+                    // The device signs what its light showed: better evidence than our own display's say-so.
+                    phases.add(new DeviceFlashPhase(deviceIlluminator, plan.flash().get()));
+                } else if (flashLight != null && plan.flash().isPresent()) {
                     phases.add(new FlashPhase(flashLight, plan.flash().get()));
                 }
                 if (pupilSource != null) {
@@ -461,7 +474,7 @@ public final class LivenessEngine implements FrameSink {
         }
         // The session counts the flash as the plan's last step (it allots flash time + the step timeout for it). With
         // no light to play it on, that step is passed at once so the resident is never timed out on nobody's fault.
-        if (flashStepPending && phases.stream().noneMatch(p -> p instanceof FlashPhase)) {
+        if (flashStepPending && phases.stream().noneMatch(p -> p instanceof FlashAttemptPhase)) {
             flashStepPending = false;
             session.challengeStepPassed();
         }
@@ -477,7 +490,10 @@ public final class LivenessEngine implements FrameSink {
                 return true;
             }
             phaseIndex++;
-            if (p instanceof FlashPhase && flashStepPending) {
+            if (p instanceof DeviceFlashPhase && ((DeviceFlashPhase) p).problem() != null) {
+                session.auditFinding("FLASH_DEVICE_LOG_PROBLEM", ((DeviceFlashPhase) p).problem());
+            }
+            if (p instanceof FlashAttemptPhase && flashStepPending) {
                 flashStepPending = false;
                 session.challengeStepPassed(); // the flash step is done; the cue, not the step, judges the response
             }
@@ -641,7 +657,7 @@ public final class LivenessEngine implements FrameSink {
             generator = ChallengeGenerator.fresh(random);
             ChallengePolicy cp = profile.challenge();
             List<ChallengeKind> pool = verifiable(cp.pool());
-            if (flashLight != null && cp.pool().contains(ChallengeKind.FLASH)) {
+            if (hasFlash() && cp.pool().contains(ChallengeKind.FLASH)) {
                 pool.add(ChallengeKind.FLASH); // verifiable here: FlashPhase plays it and the cue judges it
             }
             p = generator.plan(pool, cp.minSteps(), cp.maxSteps(), caps, adjustments, UNLOCKING);
@@ -813,6 +829,7 @@ public final class LivenessEngine implements FrameSink {
         private DiagnosticSink diagnostics;
         private DiagnosticGrant grant;
         private FlashLight flashLight;
+        private DeviceIlluminator deviceIlluminator;
         private StereoSource stereoSource;
         private PupilSource pupilSource;
         private boolean knownBackdrop;
@@ -895,6 +912,16 @@ public final class LivenessEngine implements FrameSink {
          */
         public Builder flashLight(FlashLight light) {
             this.flashLight = light;
+            return this;
+        }
+
+        /**
+         * The device's own illuminator (Liveness Profile, addition 5). When present it plays the flash instead of
+         * {@link #flashLight}, and the cue is lined up against the device's signed emission log. Normally taken from
+         * {@code FaceFrameSource.illuminator()}; set explicitly for tests and tools.
+         */
+        public Builder deviceIlluminator(DeviceIlluminator illuminator) {
+            this.deviceIlluminator = illuminator;
             return this;
         }
 

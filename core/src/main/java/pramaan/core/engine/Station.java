@@ -6,6 +6,7 @@
 
 package pramaan.core.engine;
 
+import pramaan.core.source.DeviceIlluminator;
 import pramaan.core.source.FlashLight;
 import pramaan.core.source.HostCameraInventory;
 import pramaan.core.source.PupilSource;
@@ -24,6 +25,7 @@ public final class Station {
     public static final Station NONE = builder().build();
 
     private final FlashLight flashLight;
+    private final DeviceIlluminator illuminator;
     private final StereoSource stereo;
     private final PupilSource pupil;
     private final SceneContext scene;
@@ -31,6 +33,7 @@ public final class Station {
 
     private Station(Builder b) {
         this.flashLight = b.flashLight;
+        this.illuminator = b.illuminator;
         this.stereo = b.stereo;
         this.pupil = b.pupil;
         this.scene = b.scene;
@@ -43,6 +46,11 @@ public final class Station {
 
     public FlashLight flashLight() {
         return flashLight;
+    }
+
+    /** The device's own illuminator, if the station sets one explicitly; otherwise the engine asks the source. */
+    public DeviceIlluminator illuminator() {
+        return illuminator;
     }
 
     public StereoSource stereo() {
@@ -65,6 +73,7 @@ public final class Station {
     /** Builder; every part is optional. */
     public static final class Builder {
         private FlashLight flashLight;
+        private DeviceIlluminator illuminator;
         private StereoSource stereo;
         private PupilSource pupil;
         private SceneContext scene;
@@ -72,6 +81,11 @@ public final class Station {
 
         public Builder flashLight(FlashLight light) {
             this.flashLight = light;
+            return this;
+        }
+
+        public Builder illuminator(DeviceIlluminator illuminator) {
+            this.illuminator = illuminator;
             return this;
         }
 
