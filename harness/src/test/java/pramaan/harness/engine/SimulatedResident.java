@@ -23,6 +23,16 @@ final class SimulatedResident implements FrameAnalyser {
 
     /** The resident's own face embedding, and {@link #embedding} for anyone else. */
     static final float[] RESIDENT = embedding(0);
+    /** Another person: the resident's embedding turned around, so the cosine is -1. */
+    static final float[] OTHER_PERSON = negate(RESIDENT);
+
+    private static float[] negate(float[] v) {
+        float[] out = new float[v.length];
+        for (int i = 0; i < v.length; i++) {
+            out[i] = -v[i];
+        }
+        return out;
+    }
 
     enum Behaviour {
         GENUINE,

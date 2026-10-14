@@ -322,7 +322,7 @@ class StationWiringEngineTest {
                     clock, new SecureRandom());
             resident.passive = 0.62;
             resident.moire = 0.70;
-            CaptureAnalyser captures = c -> SimulatedResident.RESIDENT;
+            CaptureAnalyser captures = c -> swapped(c) ? SimulatedResident.OTHER_PERSON : SimulatedResident.RESIDENT;
             EngineListener listener = new EngineListener() {
                 @Override
                 public void prompt(ChallengePrompt prompt, int step, int steps) {
@@ -377,6 +377,13 @@ class StationWiringEngineTest {
                     + session.evidenceCues().stream().map(c -> c.cue() + (c.abstained() ? ":" + c.abstainReason()
                     : ":" + String.format("%.2f", c.pLive()))).distinct().collect(Collectors.joining(","));
         }
+    }
+
+    /** A burst frame the mock marked as another person's face. */
+    private static boolean swapped(pramaan.core.source.SignedCapture c) {
+        String payload = new String(java.util.Base64.getUrlDecoder().decode(c.signedData().split("[.]")[1]),
+                StandardCharsets.UTF_8);
+        return payload.contains("\"swapped\":\"true\"");
     }
 
     private static TestClock newClock() {
@@ -490,6 +497,48 @@ class StationWiringEngineTest {
         assertEquals(SessionState.ACCEPTED, rig.session.state(), rig.why());
         assertTrue(rig.cue("flash").abstained());
         assertTrue(rig.audits.stream().anyMatch(a -> a.contains("FLASH_DEVICE_LOG_PROBLEM")), rig.audits.toString());
+    }
+
+    // ------------------------------------------------------------------------------------------ the burst
+
+    @Test
+    void aBurstOfTheSameFacePassesAndIsRecordedAsAnExtraLock() {
+        TestClock clock = newClock();
+        Rig rig = new Rig(clock, bundle, MockFrameSource.builder(clock).burst(true), false, null, null, 0);
+        rig.run(600);
+        assertEquals(SessionState.ACCEPTED, rig.session.state(), rig.why());
+        assertTrue(rig.engine.bindingResult().orElseThrow().summary().contains("burst=ok"),
+                rig.engine.bindingResult().orElseThrow().summary());
+    }
+
+    @Test
+    void aSingleSwappedFrameInTheBurstFailsBindingEvenThoughTheMainCaptureIsRight() {
+        TestClock clock = newClock();
+        Rig rig = new Rig(clock, bundle, MockFrameSource.builder(clock).burst(true).swapBurstFrame(1), false, null, null, 0);
+        rig.run(600);
+        var binding = rig.engine.bindingResult().orElseThrow();
+        assertFalse(binding.passed(), binding.summary());
+        assertTrue(binding.summary().contains("burst=burst_identity_mismatch"), binding.summary());
+        assertTrue(binding.summary().contains("identity=ok"), "the main capture alone would have passed: " + binding.summary());
+    }
+
+    @Test
+    void aDeviceThatOffersTheBurstAndThenFailsToDeliverItFailsClosed() {
+        TestClock clock = newClock();
+        Rig rig = new Rig(clock, bundle, MockFrameSource.builder(clock).burst(true).burstFails(true), false, null, null, 0);
+        rig.run(600);
+        var binding = rig.engine.bindingResult().orElseThrow();
+        assertFalse(binding.passed());
+        assertTrue(binding.summary().contains("burst=burst_failed"), binding.summary());
+    }
+
+    @Test
+    void aDeviceWithoutABurstHasNoBurstLock() {
+        TestClock clock = newClock();
+        Rig rig = new Rig(clock, bundle, MockFrameSource.builder(clock), false, null, null, 0);
+        rig.run(600);
+        assertEquals(SessionState.ACCEPTED, rig.session.state(), rig.why());
+        assertFalse(rig.engine.bindingResult().orElseThrow().summary().contains("burst"));
     }
 
     // ------------------------------------------------------------------------------------------ stereo, pupil

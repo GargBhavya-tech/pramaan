@@ -100,6 +100,10 @@ public final class MockFrameSource implements FaceFrameSource {
     private byte[] lastFrame;
     private Thread pacer;
     private final boolean livenessProfile;
+    private final boolean burstOffered;
+    private final boolean burstFails;
+    private final int swapBurstFrame;
+    private volatile String lastTransactionId = "";
     private final long injectFromFrame;
     private final boolean wrongStreamHead;
     private MockLivenessProfile profile;
@@ -121,6 +125,9 @@ public final class MockFrameSource implements FaceFrameSource {
         this.reactionDelay = b.reactionDelay;
         this.faults = b.faults;
         this.livenessProfile = b.livenessProfile;
+        this.burstOffered = b.burstOffered;
+        this.burstFails = b.burstFails;
+        this.swapBurstFrame = b.swapBurstFrame;
         this.injectFromFrame = b.injectFromFrame;
         this.wrongStreamHead = b.wrongStreamHead;
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
@@ -286,6 +293,33 @@ public final class MockFrameSource implements FaceFrameSource {
 
     @Override
     public SignedCapture capture(CaptureRequest request) throws DeviceException {
+        return capture(request, Map.of());
+    }
+
+    /** The profile's burst (addition 4), when this mock was built to offer one. */
+    @Override
+    public java.util.Optional<pramaan.core.source.BurstSource> burst() {
+        return burstOffered ? java.util.Optional.of(this::burstOfSignedFrames) : java.util.Optional.empty();
+    }
+
+    private List<SignedCapture> burstOfSignedFrames(int count, Duration interval) throws DeviceException {
+        if (burstFails) {
+            throw new DeviceException(DeviceException.Reason.DEVICE_ERROR, "mock fault: captureBurst reported an error");
+        }
+        List<SignedCapture> frames = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            Map<String, String> extra = new java.util.LinkedHashMap<>();
+            extra.put("burstIndex", Integer.toString(i));
+            if (i == swapBurstFrame) {
+                extra.put("swapped", "true"); // a test analyser reads this to show another person's face
+            }
+            frames.add(capture(new CaptureRequest(lastTransactionId, "", 40, Duration.ofSeconds(5)), extra));
+        }
+        return frames;
+    }
+
+    private SignedCapture capture(CaptureRequest request, Map<String, String> extra) throws DeviceException {
+        lastTransactionId = request.transactionId();
         if (faults.captureError) {
             throw new DeviceException(DeviceException.Reason.DEVICE_ERROR, "mock fault: rcapture reported an error");
         }
@@ -308,6 +342,7 @@ public final class MockFrameSource implements FaceFrameSource {
             payload.put("requestedScore", Integer.toString(request.requestedScore()));
             payload.put("deviceCode", device.deviceCode());
             payload.put("deviceServiceVersion", "pramaan-mock");
+            extra.forEach(payload::put);
             if (profile != null) {
                 // Profile addition 3: the signed capture names the head of the stream it was taken from.
                 byte[] head = profile.streamTagHead();
@@ -453,12 +488,33 @@ public final class MockFrameSource implements FaceFrameSource {
         private Duration reactionDelay = Duration.ofMillis(600);
         private MockFaults faults = MockFaults.NONE;
         private boolean livenessProfile;
+        private boolean burstOffered;
+        private boolean burstFails;
+        private int swapBurstFrame = -1;
         private long injectFromFrame = Long.MAX_VALUE;
         private boolean wrongStreamHead;
 
         /** Speak the SBI Liveness Profile (Bible Part 41): tag every frame and name the stream head in each capture. */
         public Builder livenessProfile(boolean enabled) {
             this.livenessProfile = enabled;
+            return this;
+        }
+
+        /** Offer the profile's captureBurst (addition 4): signed frames carrying {@code burstIndex}. */
+        public Builder burst(boolean offered) {
+            this.burstOffered = offered;
+            return this;
+        }
+
+        /** Fault: the device advertises the burst and then fails to deliver it. */
+        public Builder burstFails(boolean fails) {
+            this.burstFails = fails;
+            return this;
+        }
+
+        /** Attack: this burst frame is marked {@code swapped}, for a test analyser to show another person. */
+        public Builder swapBurstFrame(int index) {
+            this.swapBurstFrame = index;
             return this;
         }
 

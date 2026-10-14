@@ -31,6 +31,7 @@ import pramaan.core.source.DeviceIlluminator;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import pramaan.core.source.BurstSource;
 import pramaan.core.source.Capability;
 import pramaan.core.source.CaptureRequest;
 import pramaan.core.source.DeviceCapabilities;
@@ -128,6 +129,15 @@ public final class SbiFrameSource implements FaceFrameSource {
                 throw new CompletionException(e);
             }
         }, ILLUMINATE_POOL));
+    }
+
+    /** The device's burst call, when its profile offers one (addition 4). */
+    @Override
+    public synchronized Optional<BurstSource> burst() {
+        if (face == null || !face.profileCapabilities().contains(Capability.CAPTURE_BURST)) {
+            return Optional.empty();
+        }
+        return Optional.of(this::captureBurst);
     }
 
     private EmissionLog illuminate(FlashSequence sequence) throws DeviceException {

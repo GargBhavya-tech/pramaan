@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.Set;
 import pramaan.core.binding.BindingInput;
 import pramaan.core.binding.BindingResult;
+import pramaan.core.binding.BurstEvidence;
 import pramaan.core.binding.CaptureBinder;
 import pramaan.core.binding.SignedStreamLock;
 import pramaan.core.challenge.AccessibilityAdjustments;
@@ -183,6 +184,8 @@ public final class LivenessEngine implements FrameSink {
     private long promptShownMs;
     private StepVerifier verifier;
     private FaceGate.Status gate = FaceGate.Status.NO_FACE;
+    private static final int BURST_FRAMES = 3;
+    private static final Duration BURST_INTERVAL = Duration.ofMillis(200);
     private final boolean boundVirtualCameraDetected;
     private final InjectionFindings injectionFindings;
     private final TimingWatch timing = new TimingWatch();
@@ -703,11 +706,28 @@ public final class LivenessEngine implements FrameSink {
         if (streamLock.isPresent()) {
             input = input.withStreamLock(streamLock.get()); // the device authenticated the preview: add the fifth lock
         }
+        java.util.Optional<pramaan.core.source.BurstSource> burst = source.burst();
+        if (burst.isPresent()) {
+            input = input.withBurst(takeBurst(burst.get()));
+        }
         BindingResult result = binder.bind(input);
         lastBinding = result;
         session.bindingVerified(result);
         if (session.state() == SessionState.ACCEPTED) {
             acceptedCapture = capture;
+        }
+    }
+
+    /** The profile's burst (addition 4): a few signed frames, each embedded; any failure is recorded, not hidden. */
+    private BurstEvidence takeBurst(pramaan.core.source.BurstSource burst) {
+        try {
+            List<float[]> embeddings = new ArrayList<>();
+            for (SignedCapture frame : burst.captureBurst(BURST_FRAMES, BURST_INTERVAL)) {
+                embeddings.add(captureAnalyser.embed(frame));
+            }
+            return BurstEvidence.of(embeddings);
+        } catch (Exception e) {
+            return BurstEvidence.failed(e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
         }
     }
 

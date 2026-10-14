@@ -1138,7 +1138,7 @@ goes into the evidence's `binding.level`, and the policy flag `injection.require
 into `STREAM_REQUIRED`. `MockFrameSource.livenessProfile(true)` runs the whole path with injection and wrong-head
 attacks. Tests: `SbiLivenessProfileTest` (stub device incl. tampered tag, no answer, untrusted answer, plain device),
 `StationWiringEngineTest` (cryptographic binding; injected frame; foreign head; hidden profile).
-**Since built:** `illuminate` (`ILLUMINATE /illuminate`, `SbiFrameSource.illuminator()`) and `captureBurst` (`CAPTUREBURST /captureburst`, verified like a capture) have client calls, tested against the stub device. **Still open:** the burst frames are not yet compared with the preview, and MockMDS has not been patched to speak any of this.
+**Since built:** `illuminate` (`ILLUMINATE /illuminate`, `SbiFrameSource.illuminator()`) and `captureBurst` (`CAPTUREBURST /captureburst`, verified like a capture) have client calls, tested against the stub device. **Burst continuity since built:** `BurstSource`, `BurstEvidence`, a `burst` lock in `CaptureBinder` (three frames, every usable one must match; a failing burst fails closed). **Still open:** MockMDS has not been patched to speak any of this.
 
 ---
 

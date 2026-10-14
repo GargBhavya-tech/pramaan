@@ -48,6 +48,14 @@ public interface FaceFrameSource extends AutoCloseable {
         return java.util.Optional.empty();
     }
 
+    /**
+     * A burst of signed frames, when the device's profile offers it (addition 4). The engine takes one after the main
+     * capture and requires every frame to show the same face; empty for a plain SBI device.
+     */
+    default java.util.Optional<BurstSource> burst() {
+        return java.util.Optional.empty();
+    }
+
     @Override
     default void close() {
         stop();

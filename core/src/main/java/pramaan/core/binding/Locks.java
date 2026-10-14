@@ -102,6 +102,45 @@ final class Locks {
         }
     }
 
+    /**
+     * The burst lock (SBI Liveness Profile, addition 4): every signed frame the device returned in a burst must show
+     * the face this attempt verified. A capture swapped for one frame is caught by lock 3; a device that swaps only
+     * some frames, or only the burst, is caught here. At least two usable frames are needed, so one face-less frame
+     * is forgiven and a burst of nothing is not.
+     */
+    static final class BurstLock implements BindingLock {
+        static final String NAME = "burst";
+        private final double thetaSame;
+
+        BurstLock(double thetaSame) {
+            this.thetaSame = thetaSame;
+        }
+
+        @Override
+        public LockOutcome check(BindingInput in, VerifiedCapture current, List<VerifiedCapture> earlier) {
+            BurstEvidence burst = in.burst();
+            if (burst.failure() != null) {
+                return LockOutcome.fail(NAME, "BURST_FAILED", Double.NaN);
+            }
+            if (in.referenceEmbeddings().isEmpty()) {
+                return LockOutcome.fail(NAME, "NO_REFERENCE_EMBEDDINGS", Double.NaN);
+            }
+            float[] reference = Embeddings.median(in.referenceEmbeddings());
+            int usable = 0;
+            double lowest = Double.POSITIVE_INFINITY;
+            for (float[] e : burst.embeddings()) {
+                if (e != null) {
+                    usable++;
+                    lowest = Math.min(lowest, Embeddings.cosine(e, reference));
+                }
+            }
+            if (usable < Math.min(2, burst.embeddings().size()) || usable == 0) {
+                return LockOutcome.fail(NAME, "NO_FACE_IN_BURST", Double.NaN);
+            }
+            return lowest >= thetaSame ? LockOutcome.pass(NAME, lowest) : LockOutcome.fail(NAME, "BURST_IDENTITY_MISMATCH", lowest);
+        }
+    }
+
     /** Lock 4 (#57): the face was live-verified no more than the window before the capture was requested. */
     static final class TimeLock implements BindingLock {
         static final String NAME = "time";

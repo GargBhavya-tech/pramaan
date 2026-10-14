@@ -32,6 +32,7 @@ public final class BindingInput {
     private final List<SignedCapture> earlierCaptures;
     private final float[] operatorEmbedding;
     private SignedStreamLock streamLock;
+    private BurstEvidence burst;
 
     /**
      * @param captureEmbedding embedding of the face in the signed capture, or null if no face was found there
@@ -116,9 +117,31 @@ public final class BindingInput {
      * Part 41); the binder then adds the stream lock to the four of Part 13.
      */
     public BindingInput withStreamLock(SignedStreamLock lock) {
+        BindingInput copy = copy();
+        copy.streamLock = lock;
+        return copy;
+    }
+
+    /**
+     * A copy that also carries what a burst of signed frames showed (SBI Liveness Profile, addition 4); the binder
+     * then adds the {@code burst} lock. Not calling this means the device offered no burst.
+     */
+    public BindingInput withBurst(BurstEvidence evidence) {
+        BindingInput copy = copy();
+        copy.burst = Objects.requireNonNull(evidence, "evidence");
+        return copy;
+    }
+
+    /** The burst, or null when the device offers none. */
+    public BurstEvidence burst() {
+        return burst;
+    }
+
+    private BindingInput copy() {
         BindingInput copy = new BindingInput(nonce, evidenceHead, evidenceTrackId, currentTrackId, lastEvidenceFrameAt,
                 captureRequestedAt, referenceEmbeddings, captureEmbedding, capture, earlierCaptures, operatorEmbedding);
-        copy.streamLock = lock;
+        copy.streamLock = streamLock;
+        copy.burst = burst;
         return copy;
     }
 

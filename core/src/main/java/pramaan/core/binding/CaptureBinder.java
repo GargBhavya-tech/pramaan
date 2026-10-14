@@ -32,6 +32,7 @@ public final class CaptureBinder {
 
     private final JwsTrust trust;
     private final boolean requireSignedStream;
+    private final BindingLock burstLock;
     private final List<BindingLock> locks = new ArrayList<>();
 
     /**
@@ -51,6 +52,7 @@ public final class CaptureBinder {
     public CaptureBinder(JwsTrust trust, double thetaSame, Duration window, Duration maxSkew,
             boolean requireSignedStream) {
         this.requireSignedStream = requireSignedStream;
+        this.burstLock = new Locks.BurstLock(thetaSame);
         this.trust = Objects.requireNonNull(trust, "trust");
         locks.add(new Locks.NonceLock(maxSkew));
         locks.add(new Locks.ChainLock());
@@ -73,6 +75,9 @@ public final class CaptureBinder {
         List<LockOutcome> outcomes = new ArrayList<>();
         for (BindingLock lock : locks) {
             outcomes.add(lock.check(in, current, earlier));
+        }
+        if (in.burst() != null) {
+            outcomes.add(burstLock.check(in, current, earlier));
         }
         BindingLevel level = BindingLevel.HEURISTIC;
         SignedStreamLock stream = in.streamLock();

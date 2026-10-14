@@ -204,6 +204,9 @@ the one generic security message at the user interface — differing text would 
 * The log gives times relative to the first emission, not the host clock, so the client anchors them to the moment it
   sent the request. The flash cue's lag search (up to two frames) absorbs the device's start-up delay; at 3 fps that is
   about 670 ms of slack. A device that also gives sensor timestamps could tighten the anchor; nothing does yet.
-* Not wired: nothing uses the burst frames beyond returning them verified. They are not yet compared with the preview
-  for identity continuity.
+* The burst is used: after the main capture the engine takes three frames 200 ms apart (`FaceFrameSource.burst()`),
+  embeds each, and the binder adds a `burst` lock - every usable frame must match the session's verified face at the
+  same threshold as the main capture, and at least two must show a face. A device that advertises the burst and
+  then fails to deliver it fails the lock (`BURST_FAILED`), like a hidden signed stream. Tested in
+  `StationWiringEngineTest` (same face; one swapped frame; a failing burst; no burst offered).
 * The JSON schemas are checked against the mock by a small in-test validator, not by a full JSON Schema engine.
