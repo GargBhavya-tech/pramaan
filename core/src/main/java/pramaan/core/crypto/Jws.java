@@ -57,6 +57,30 @@ public final class Jws {
         return input + "." + b64(signer.sign());
     }
 
+    /**
+     * Signs a payload with RS256 and an {@code x5c} header carrying only the signer's own certificate, the shape MOSIP
+     * devices use: the verifier chains it to its anchor, which is never sent. For development devices and tests.
+     */
+    public static String signRs256(byte[] payload, X509Certificate signerCertificate, PrivateKey key)
+            throws GeneralSecurityException {
+        Objects.requireNonNull(payload, "payload");
+        ObjectNode header = JSON.createObjectNode();
+        header.put("alg", "RS256");
+        header.put("typ", "JWT");
+        header.putArray("x5c").add(Base64.getEncoder().encodeToString(
+                Objects.requireNonNull(signerCertificate, "signerCertificate").getEncoded()));
+        String input;
+        try {
+            input = b64(JSON.writeValueAsBytes(header)) + "." + b64(payload);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("cannot serialise a JWS header", e);
+        }
+        Signature signer = Signature.getInstance("SHA256withRSA");
+        signer.initSign(Objects.requireNonNull(key, "key"));
+        signer.update(input.getBytes(StandardCharsets.US_ASCII));
+        return input + "." + b64(signer.sign());
+    }
+
     /** Verifies a compact JWS against the trust set; returns it only if it may be believed. */
     public static VerifiedJws verify(String compact, JwsTrust trust) throws JwsVerificationException {
         Objects.requireNonNull(trust, "trust");

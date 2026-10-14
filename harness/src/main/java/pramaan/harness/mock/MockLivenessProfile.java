@@ -42,15 +42,23 @@ public final class MockLivenessProfile {
     public static final String VERSION = "0.1";
     private static final ObjectMapper JSON = new ObjectMapper();
 
-    private final PrivateKey deviceKey;
-    private final String kid;
+    /** How the device signs what it sends. */
+    public interface Signer {
+        String sign(byte[] payload) throws GeneralSecurityException;
+    }
+
+    private final Signer signer;
     private String transactionId;
     private StreamTagChain chain;
 
     /** @param deviceKey the device's signing key, whose public half the client trusts under {@code kid} */
     public MockLivenessProfile(PrivateKey deviceKey, String kid) {
-        this.deviceKey = deviceKey;
-        this.kid = kid;
+        this(payload -> Jws.signRs256(payload, kid, deviceKey));
+    }
+
+    /** @param signer signs with whatever the device's trust expects, for example an x5c chain */
+    public MockLivenessProfile(Signer signer) {
+        this.signer = signer;
     }
 
     /** The {@code livenessProfile} object of the device-info response. */
@@ -158,7 +166,7 @@ public final class MockLivenessProfile {
 
     private String sign(String payload) {
         try {
-            return Jws.signRs256(payload.getBytes(StandardCharsets.UTF_8), kid, deviceKey);
+            return signer.sign(payload.getBytes(StandardCharsets.UTF_8));
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("the mock device cannot sign: " + e.getMessage(), e);
         }

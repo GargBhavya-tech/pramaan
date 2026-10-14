@@ -209,4 +209,11 @@ the one generic security message at the user interface — differing text would 
   same threshold as the main capture, and at least two must show a face. A device that advertises the burst and
   then fails to deliver it fails the lock (`BURST_FAILED`), like a hidden signed stream. Tested in
   `StationWiringEngineTest` (same face; one swapped frame; a failing burst; no burst offered).
+* A runnable device exists: `./gradlew :harness:runProfileDevice --args="--port 4501 --frame some-face.jpg"` starts
+  `ProfileStubDevice`, which speaks the whole profile over loopback HTTP - a signed `digitalId`, the key agreement,
+  the tagged and checkpointed stream, signed captures naming the stream head, `ILLUMINATE` and `CAPTUREBURST` - and
+  signs through a throwaway CA made with the JDK's `keytool` (nothing is checked in), printing the CA file to give
+  a client as `--device-ca`. Its "camera" is one still photograph, so a flash never gets an answer: that is the right
+  verdict on a photograph, and it means this is a reference for the transport and the cryptography, not a sensor.
+  `ProfileStubDeviceTest` drives it with the real `SbiFrameSource` over a socket and a certificate chain.
 * The JSON schemas are checked against the mock by a small in-test validator, not by a full JSON Schema engine.

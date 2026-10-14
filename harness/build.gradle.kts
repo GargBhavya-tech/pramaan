@@ -103,3 +103,13 @@ tasks.register<JavaExec>("evaluate") {
 tasks.withType<Test>().configureEach {
     testLogging { showStandardStreams = true }
 }
+
+// A runnable device that speaks the whole SBI Liveness Profile over loopback HTTP, signed through a throwaway CA.
+// ./gradlew :harness:runProfileDevice --args="--port 4501 --frame some-face.jpg"
+tasks.register<JavaExec>("runProfileDevice") {
+    group = "application"
+    description = "Runs a development SBI device that implements the Liveness Profile (Build Map #100)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.harness.mock.ProfileStubDevice")
+    workingDir = rootProject.projectDir
+}
