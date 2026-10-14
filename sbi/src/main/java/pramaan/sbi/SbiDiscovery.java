@@ -17,7 +17,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import pramaan.core.crypto.JwsTrust;
 import pramaan.core.source.DeviceException;
+import pramaan.core.source.DeviceIdentity;
 import pramaan.core.source.DeviceLevel;
 
 /**
@@ -31,7 +33,8 @@ final class SbiDiscovery {
     private SbiDiscovery() {
     }
 
-    static List<DiscoveredDevice> discover(SbiHttp http, int firstPort, int lastPort, Duration perPortTimeout)
+    static List<DiscoveredDevice> discover(SbiHttp http, int firstPort, int lastPort, Duration perPortTimeout,
+            JwsTrust identityTrust)
             throws DeviceException {
         ExecutorService pool = Executors.newFixedThreadPool(Math.min(16, lastPort - firstPort + 1), r -> {
             Thread t = new Thread(r, "sbi-discovery");
@@ -42,7 +45,7 @@ final class SbiDiscovery {
             List<CompletableFuture<List<DiscoveredDevice>>> probes = new ArrayList<>();
             for (int port = firstPort; port <= lastPort; port++) {
                 final int p = port;
-                probes.add(CompletableFuture.supplyAsync(() -> probe(http, p, perPortTimeout), pool));
+                probes.add(CompletableFuture.supplyAsync(() -> probe(http, p, perPortTimeout, identityTrust), pool));
             }
             List<DiscoveredDevice> found = new ArrayList<>();
             for (CompletableFuture<List<DiscoveredDevice>> probe : probes) {
@@ -54,16 +57,21 @@ final class SbiDiscovery {
         }
     }
 
-    private static List<DiscoveredDevice> probe(SbiHttp http, int port, Duration timeout) {
+    private static List<DiscoveredDevice> probe(SbiHttp http, int port, Duration timeout, JwsTrust identityTrust) {
         try {
             byte[] body = http.call(port, "MOSIPDISC", "/device", SbiRequests.discovery(), timeout);
-            return parse(port, body);
+            return parse(port, body, identityTrust);
         } catch (DeviceException | IOException e) {
             return new ArrayList<>();
         }
     }
 
     static List<DiscoveredDevice> parse(int port, byte[] body) throws IOException {
+        return parse(port, body, null);
+    }
+
+    /** @param identityTrust checks each device's digitalId against these anchors; null leaves identities UNCHECKED */
+    static List<DiscoveredDevice> parse(int port, byte[] body, JwsTrust identityTrust) throws IOException {
         JsonNode root = JSON.readTree(body);
         List<DiscoveredDevice> out = new ArrayList<>();
         if (!root.isArray()) {
@@ -83,7 +91,7 @@ final class SbiDiscovery {
                     d.path("purpose").asText(""), DeviceLevel.fromSbi(d.path("certification").asText("")),
                     digital.path("type").asText(""), d.path("deviceCode").asText(""), digital.path("make").asText(""),
                     digital.path("model").asText(""), digital.path("serialNo").asText(""), specs,
-                    d.path("livenessProfile")));
+                    d.path("livenessProfile")).withIdentity(DeviceIdentity.check(d.path("digitalId").asText(""), identityTrust)));
         }
         return out;
     }

@@ -26,11 +26,12 @@ import java.util.Optional;
  *   <li>{@link #duplicateFrame}: two consecutive frames with identical bytes, which a live sensor does not send.</li>
  * </ol>
  *
- * <p><strong>Not built:</strong> real OS video-device enumeration (DirectShow/Media Foundation, V4L2), device-identity
- * certificate-chain verification against a MOSIP device-provider root, and the PRNU sensor fingerprint (Part 5,
- * point 4 — explicitly STRETCH). {@link #denylistMatch} works only on the device metadata the SBI device service
- * itself reports, which a sufficiently capable attacker's virtual-camera driver could misreport; it closes the
- * common case (an off-the-shelf virtual-camera product used as-is), not the targeted one.
+ * <p>Also built: {@link #hostVirtualCameras} over a platform's {@link HostCameraInventory} (the OS's own camera list,
+ * which catches a virtual camera that is installed even when the SBI device does not name it) and {@link DeviceIdentity} (the
+ * digitalId's certificate chain). <strong>Not built:</strong> the PRNU sensor fingerprint (Part 5, point 4 —
+ * explicitly STRETCH), and a signed, externally maintained denylist. {@link #denylistMatch} on the SBI device's own
+ * reported name closes the common case (an off-the-shelf virtual-camera product used as-is), not the targeted one;
+ * the host list and the identity check narrow it, and none of them was tried against a real attacker.
  */
 public final class InjectionGuard {
 
@@ -76,6 +77,28 @@ public final class InjectionGuard {
     /** As {@link #denylistMatch(DeviceMetadata, List)} against {@link #KNOWN_VIRTUAL_CAMERA_PRODUCTS}. */
     public static Optional<String> denylistMatch(DeviceMetadata device) {
         return denylistMatch(device, KNOWN_VIRTUAL_CAMERA_PRODUCTS);
+    }
+
+    /**
+     * The denylisted products among the host's own camera list (Bible Part 5, point 2): a virtual camera installed
+     * on the station even if the SBI device does not name it. Each product is reported once.
+     */
+    public static List<String> hostVirtualCameras(List<String> hostCameraNames, List<String> denylist) {
+        Objects.requireNonNull(hostCameraNames, "hostCameraNames");
+        Objects.requireNonNull(denylist, "denylist");
+        java.util.LinkedHashSet<String> found = new java.util.LinkedHashSet<>();
+        for (String name : hostCameraNames) {
+            if (name == null) {
+                continue;
+            }
+            String lower = name.toLowerCase(Locale.ROOT);
+            for (String product : denylist) {
+                if (lower.contains(product.toLowerCase(Locale.ROOT))) {
+                    found.add(product);
+                }
+            }
+        }
+        return Collections.unmodifiableList(new java.util.ArrayList<>(found));
     }
 
     /**

@@ -68,7 +68,7 @@ public final class SbiFrameSource implements FaceFrameSource {
     @Override
     public synchronized DeviceCapabilities discover() throws DeviceException {
         List<DiscoveredDevice> devices = SbiDiscovery.discover(http, config.firstPort(), config.lastPort(),
-                config.probeTimeout());
+                config.probeTimeout(), config.trust());
         face = null;
         for (DiscoveredDevice d : devices) {
             if (d.isFace()) {

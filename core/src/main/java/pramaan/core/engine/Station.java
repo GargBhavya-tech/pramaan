@@ -7,6 +7,7 @@
 package pramaan.core.engine;
 
 import pramaan.core.source.FlashLight;
+import pramaan.core.source.HostCameraInventory;
 import pramaan.core.source.PupilSource;
 import pramaan.core.source.StereoSource;
 
@@ -26,12 +27,14 @@ public final class Station {
     private final StereoSource stereo;
     private final PupilSource pupil;
     private final SceneContext scene;
+    private final HostCameraInventory hostCameras;
 
     private Station(Builder b) {
         this.flashLight = b.flashLight;
         this.stereo = b.stereo;
         this.pupil = b.pupil;
         this.scene = b.scene;
+        this.hostCameras = b.hostCameras;
     }
 
     public static Builder builder() {
@@ -54,12 +57,18 @@ public final class Station {
         return scene;
     }
 
+    /** The platform's camera list, or null if the station cannot enumerate it. */
+    public HostCameraInventory hostCameras() {
+        return hostCameras;
+    }
+
     /** Builder; every part is optional. */
     public static final class Builder {
         private FlashLight flashLight;
         private StereoSource stereo;
         private PupilSource pupil;
         private SceneContext scene;
+        private HostCameraInventory hostCameras;
 
         public Builder flashLight(FlashLight light) {
             this.flashLight = light;
@@ -78,6 +87,11 @@ public final class Station {
 
         public Builder scene(SceneContext context) {
             this.scene = context;
+            return this;
+        }
+
+        public Builder hostCameras(HostCameraInventory inventory) {
+            this.hostCameras = inventory;
             return this;
         }
 

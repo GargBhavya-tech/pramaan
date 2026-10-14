@@ -34,6 +34,8 @@ public final class LivenessPolicy {
     private final int virtualCameraDenylistVersion;
     private final boolean vetoOnBoundVirtualCamera;
     private final boolean requireSignedStream;
+    private final boolean vetoOnHostVirtualCamera;
+    private final boolean requireVerifiedDeviceIdentity;
     private final SessionTimeouts sessionTimeouts;
     private final RateLimits rateLimits;
     private final java.time.Duration supervisorVerdictMaxAge;
@@ -53,6 +55,8 @@ public final class LivenessPolicy {
         this.virtualCameraDenylistVersion = b.virtualCameraDenylistVersion;
         this.vetoOnBoundVirtualCamera = b.vetoOnBoundVirtualCamera;
         this.requireSignedStream = b.requireSignedStream;
+        this.vetoOnHostVirtualCamera = b.vetoOnHostVirtualCamera;
+        this.requireVerifiedDeviceIdentity = b.requireVerifiedDeviceIdentity;
         this.sessionTimeouts = b.sessionTimeouts;
         this.rateLimits = b.rateLimits;
         this.supervisorVerdictMaxAge = b.supervisorVerdictMaxAge;
@@ -92,6 +96,8 @@ public final class LivenessPolicy {
         b.virtualCameraDenylistVersion = injection.integer("virtualCameraDenylistVersion");
         b.vetoOnBoundVirtualCamera = injection.bool("vetoOnBoundVirtualCamera");
         b.requireSignedStream = injection.bool("requireSignedStream");
+        b.vetoOnHostVirtualCamera = injection.bool("vetoOnHostVirtualCamera");
+        b.requireVerifiedDeviceIdentity = injection.bool("requireVerifiedDeviceIdentity");
         injection.finish();
 
         StrictNode evidence = n.object("evidence");
@@ -180,6 +186,23 @@ public final class LivenessPolicy {
         return requireSignedStream;
     }
 
+    /**
+     * Whether a virtual camera merely <em>installed</em> on the station (found in the operating system's camera list,
+     * not necessarily the one the SBI device uses) is a veto. Off by default: an operator may have OBS installed for
+     * an unrelated reason, so this is a finding first and a veto only where the centre decides it should be.
+     */
+    public boolean vetoOnHostVirtualCamera() {
+        return vetoOnHostVirtualCamera;
+    }
+
+    /**
+     * Whether the device's digitalId must be a JWS that chains to a trust anchor. When false, an unregistered
+     * (unsigned) device is accepted and recorded; a signed digitalId that does not verify is a veto either way.
+     */
+    public boolean requireVerifiedDeviceIdentity() {
+        return requireVerifiedDeviceIdentity;
+    }
+
     private static final class Builder {
         int policyVersion;
         boolean enabled;
@@ -193,6 +216,8 @@ public final class LivenessPolicy {
         int virtualCameraDenylistVersion;
         boolean vetoOnBoundVirtualCamera;
         boolean requireSignedStream;
+        boolean vetoOnHostVirtualCamera;
+        boolean requireVerifiedDeviceIdentity;
         int evidenceSampleFrames;
         int evidenceCropSize;
         SessionTimeouts sessionTimeouts;

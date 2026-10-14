@@ -820,6 +820,13 @@ certificate-chain verification (Part 5, point 1) and OS-level camera enumeration
 opposed to matching on reported metadata) remain not built; PRNU (point 4) remains explicitly STRETCH.
 `InjectionGuardTest` and `InjectionGuardEngineTest` (a denylisted device is vetoed with `INJECTION_DETECTED`
 before fusion runs; a genuine device is not).
+**Built since:** OS camera enumeration (`HostCameraInventory`, `WindowsCameraInventory`, policy `vetoOnHostVirtualCamera`,
+default off because an operator may have OBS installed for another reason), device-identity checking (`DeviceIdentity`,
+`DeviceMetadata.identity`, policy `requireVerifiedDeviceIdentity`; a signed digitalId that fails is always a veto), and
+`TimingWatch` into the evidence (`injection.timing`, `actedOn: false`). Tested in `DeviceIdentityTest`,
+`TimingWatchTest`, `WindowsCameraInventoryTest` and `InjectionFindingsEngineTest`. The real PowerShell call and a real
+OBS install were not tried in a test; the Windows parse is tested on canned output. Still not built: PRNU, a signed
+externally maintained denylist.
 
 ### #85: Flash challenge and peripheral
 Priority: 🟥 CORE · Type: Prototype · Blocked by: #41, #14

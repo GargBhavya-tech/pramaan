@@ -247,6 +247,12 @@ class LivenessEngineTest {
          * guard, #84, against a device the mock source itself would never report); null uses the mock's own.
          */
         Rig(EngineBundle bundle, double fps, Set<Capability> capabilities, DeviceCapabilities deviceOverride) {
+            this(bundle, fps, capabilities, deviceOverride, null);
+        }
+
+        /** As above, with the platform's camera list the injection guard reads (Bible Part 5, point 2). */
+        Rig(EngineBundle bundle, double fps, Set<Capability> capabilities, DeviceCapabilities deviceOverride,
+                pramaan.core.source.HostCameraInventory hostCameras) {
             MockFrameSource.Builder b = MockFrameSource.builder(clock).delayer(clock::advance).fps(fps).neutral(List.of(JPEG));
             for (Capability c : capabilities) {
                 b.capability(c);
@@ -284,6 +290,7 @@ class LivenessEngineTest {
                     .random(new SecureRandom())
                     .listener(listener)
                     .requestedScore(40)
+                    .hostCameras(hostCameras)
                     .build();
             source.start(null, engine);
             engine.start();

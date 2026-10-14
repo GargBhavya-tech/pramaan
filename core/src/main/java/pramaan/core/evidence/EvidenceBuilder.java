@@ -23,6 +23,8 @@ import pramaan.core.policy.AccessibilityProfile;
 import pramaan.core.session.EngineBundle;
 import pramaan.core.session.LivenessSession;
 import pramaan.core.source.DeviceMetadata;
+import pramaan.core.source.InjectionFindings;
+import pramaan.core.source.TimingWatch;
 
 /**
  * Assembles an evidence record from what the engine actually used (Bible Part 14; Build Map #59). The
@@ -178,6 +180,29 @@ public final class EvidenceBuilder {
     /** Whether the device bound to this capture path matched the virtual-camera denylist (Bible Part 5, Build Map #84). */
     public EvidenceBuilder injectionGuard(boolean virtualCameraDetected) {
         ((ObjectNode) root.path("policy").path("injection")).put("detected", virtualCameraDetected);
+        return this;
+    }
+
+    /**
+     * The injection guard's full findings (Bible Part 5): the host camera list, the device identity check and the
+     * frame-timing statistics. Timing is a diagnostic: it is recorded and never acted on.
+     */
+    public EvidenceBuilder injectionFindings(InjectionFindings f, TimingWatch timing) {
+        ObjectNode injection = (ObjectNode) root.path("policy").path("injection");
+        injection.put("guard", "denylist+host+identity");
+        injection.put("hostEnumerated", f.hostEnumerated());
+        ArrayNode host = injection.putArray("hostVirtualCameras");
+        f.hostVirtualCameras().forEach(host::add);
+        injection.put("deviceIdentity", f.identity().name());
+        ObjectNode t = injection.putObject("timing");
+        t.put("frames", timing.frames());
+        t.put("duplicateFrames", timing.duplicateFrames());
+        t.put("source", timing.usesSensorTimestamps() ? "sensor" : "host");
+        double cv = timing.coefficientOfVariation();
+        if (!Double.isNaN(cv)) {
+            t.put("cv", cv);
+        }
+        t.put("actedOn", false);
         return this;
     }
 

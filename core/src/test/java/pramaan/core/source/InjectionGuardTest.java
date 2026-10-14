@@ -44,6 +44,22 @@ class InjectionGuardTest {
         assertTrue(InjectionGuard.denylistMatch(d, List.of()).isEmpty());
     }
 
+    // ---------------------------------------------------------------- hostVirtualCameras
+    @Test
+    void anInstalledVirtualCameraIsFoundInTheHostsOwnList() {
+        List<String> found = InjectionGuard.hostVirtualCameras(
+                List.of("Integrated Webcam", "OBS Virtual Camera", "Logitech BRIO", "obs virtual camera (2)"),
+                InjectionGuard.KNOWN_VIRTUAL_CAMERA_PRODUCTS);
+        assertEquals(List.of("OBS Virtual Camera"), found);
+    }
+
+    @Test
+    void anOrdinaryCameraListFindsNothingAndAnEmptyListFindsNothing() {
+        assertTrue(InjectionGuard.hostVirtualCameras(List.of("Integrated Webcam", "USB2.0 HD UVC WebCam"),
+                InjectionGuard.KNOWN_VIRTUAL_CAMERA_PRODUCTS).isEmpty());
+        assertTrue(InjectionGuard.hostVirtualCameras(List.of(), InjectionGuard.KNOWN_VIRTUAL_CAMERA_PRODUCTS).isEmpty());
+    }
+
     // ---------------------------------------------------------------- timingCoefficientOfVariation
     @Test
     void perfectlyRegularTimestampsHaveZeroVariation() {

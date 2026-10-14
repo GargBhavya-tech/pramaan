@@ -71,6 +71,7 @@ import pramaan.core.engine.Station;
 import pramaan.core.pad.SceneFingerprint;
 import pramaan.desktop.capture.DesktopEngines;
 import pramaan.desktop.capture.FlashWindow;
+import pramaan.desktop.capture.WindowsCameraInventory;
 import pramaan.desktop.capture.DiagnosticsWindow;
 import pramaan.desktop.capture.DirectoryConfiguration;
 import pramaan.desktop.capture.FaceCaptureView;
@@ -165,7 +166,7 @@ public final class RegistrationScaffold extends Application {
      * or a backdrop check must not quietly run without it.
      */
     private Station station() throws IOException {
-        Station.Builder b = Station.builder();
+        Station.Builder b = Station.builder().hostCameras(new WindowsCameraInventory());
         if (config.flashScreen >= 0) {
             b.flashLight(new FlashWindow(config.flashScreen));
         }

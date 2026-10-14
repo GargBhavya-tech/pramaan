@@ -12,6 +12,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import pramaan.core.source.Capability;
+import pramaan.core.source.DeviceIdentity;
 import pramaan.core.source.DeviceLevel;
 import pramaan.core.source.DeviceMetadata;
 
@@ -31,6 +32,7 @@ public final class DiscoveredDevice {
     private final String serialNo;
     private final List<String> specVersions;
     private final JsonNode livenessProfile;
+    private DeviceIdentity identity = DeviceIdentity.UNCHECKED;
 
     DiscoveredDevice(int port, String deviceId, List<String> deviceSubIds, String status, String purpose, DeviceLevel level,
             String type, String deviceCode, String make, String model, String serialNo, List<String> specVersions) {
@@ -129,6 +131,16 @@ public final class DiscoveredDevice {
         return out;
     }
 
+    /** Records what the digitalId proved; set by discovery when the client has a trust set to check it against. */
+    DiscoveredDevice withIdentity(DeviceIdentity checked) {
+        this.identity = checked;
+        return this;
+    }
+
+    public DeviceIdentity identity() {
+        return identity;
+    }
+
     public boolean isFace() {
         return "Face".equalsIgnoreCase(type);
     }
@@ -138,6 +150,6 @@ public final class DiscoveredDevice {
     }
 
     public DeviceMetadata metadata(String subId) {
-        return new DeviceMetadata(deviceId, subId, deviceCode, level, make, model, serialNo);
+        return new DeviceMetadata(deviceId, subId, deviceCode, level, make, model, serialNo, identity);
     }
 }

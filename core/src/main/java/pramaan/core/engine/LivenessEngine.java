@@ -66,7 +66,11 @@ import pramaan.core.source.DeviceLevel;
 import pramaan.core.source.FaceFrameSource;
 import pramaan.core.source.Frame;
 import pramaan.core.source.FrameSink;
+import pramaan.core.source.DeviceIdentity;
+import pramaan.core.source.HostCameraInventory;
+import pramaan.core.source.InjectionFindings;
 import pramaan.core.source.InjectionGuard;
+import pramaan.core.source.TimingWatch;
 import pramaan.core.source.SessionCapabilities;
 import pramaan.core.source.SignedCapture;
 
@@ -178,6 +182,8 @@ public final class LivenessEngine implements FrameSink {
     private StepVerifier verifier;
     private FaceGate.Status gate = FaceGate.Status.NO_FACE;
     private final boolean boundVirtualCameraDetected;
+    private final InjectionFindings injectionFindings;
+    private final TimingWatch timing = new TimingWatch();
     private long trackId;
     private SignedCapture acceptedCapture;
 
@@ -227,6 +233,11 @@ public final class LivenessEngine implements FrameSink {
         // Bible Part 5, Build Map #84: the device bound to this capture path, checked once against the known
         // virtual-camera products. A hard veto only when policy says so; otherwise it never affects the session.
         this.boundVirtualCameraDetected = InjectionGuard.denylistMatch(caps.device().device()).isPresent();
+        Optional<List<String>> hostCameras = b.hostCameras == null ? Optional.empty() : b.hostCameras.cameraNames();
+        this.injectionFindings = new InjectionFindings(boundVirtualCameraDetected, hostCameras.isPresent(),
+                hostCameras.map(n -> InjectionGuard.hostVirtualCameras(n, InjectionGuard.KNOWN_VIRTUAL_CAMERA_PRODUCTS))
+                        .orElse(List.of()),
+                caps.device().device().identity());
         this.profile = bundle.policy().profile(session.workflow());
         this.timeouts = bundle.policy().sessionTimeouts();
         OperatingPointTable table = bundle.table();
@@ -333,6 +344,16 @@ public final class LivenessEngine implements FrameSink {
         return adjustments;
     }
 
+    /** What the injection guard found about this session's capture path (Bible Part 5). */
+    public InjectionFindings injectionFindings() {
+        return injectionFindings;
+    }
+
+    /** Frame-timing statistics for the session; reported in the evidence, never used to reject (Bible Part 5.3). */
+    public TimingWatch timing() {
+        return timing;
+    }
+
     /**
      * Whether the device bound to this capture path matched the virtual-camera denylist (Bible Part 5; Build Map
      * #84), regardless of whether policy actually vetoes on it — for the evidence record.
@@ -375,6 +396,7 @@ public final class LivenessEngine implements FrameSink {
     // ------------------------------------------------------------------------------------------ the loop
 
     private void step(Frame frame) throws Exception {
+        timing.observe(frame);
         syncAttempt();
         SessionState s = session.state();
         if (s != SessionState.ACQUIRING && s != SessionState.PASSIVE && s != SessionState.CHALLENGING) {
@@ -686,6 +708,14 @@ public final class LivenessEngine implements FrameSink {
         if (boundVirtualCameraDetected && bundle.policy().vetoOnBoundVirtualCamera()) {
             v.add(Veto.INJECTION);
         }
+        if (injectionFindings.hostVirtualCameraFound() && bundle.policy().vetoOnHostVirtualCamera()) {
+            v.add(Veto.INJECTION);
+        }
+        DeviceIdentity id = injectionFindings.identity();
+        if (id == DeviceIdentity.FAILED // a device that signs its identity and cannot prove it is lying
+                || (bundle.policy().requireVerifiedDeviceIdentity() && id != DeviceIdentity.VERIFIED)) {
+            v.add(Veto.INJECTION);
+        }
         return v;
     }
 
@@ -786,6 +816,7 @@ public final class LivenessEngine implements FrameSink {
         private StereoSource stereoSource;
         private PupilSource pupilSource;
         private boolean knownBackdrop;
+        private HostCameraInventory hostCameras;
 
         private Builder(EngineBundle bundle, LivenessSession session) {
             this.bundle = Objects.requireNonNull(bundle, "bundle");
@@ -870,6 +901,12 @@ public final class LivenessEngine implements FrameSink {
         /** A calibrated second camera (Bible Part 38): the stereo-depth cue runs on every analysed frame. */
         public Builder stereo(StereoSource source) {
             this.stereoSource = source;
+            return this;
+        }
+
+        /** The platform's list of camera devices, read once when the engine is built (Bible Part 5, point 2). */
+        public Builder hostCameras(HostCameraInventory inventory) {
+            this.hostCameras = inventory;
             return this;
         }
 

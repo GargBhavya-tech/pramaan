@@ -364,9 +364,16 @@ SBI device's own reported make/model/code — is wired into `LivenessEngine` as 
 duplicate-frame checks are implemented and unit-tested (`InjectionGuardTest`) but **not wired into a veto or cue**:
 the honest limit this Part already names (host-side timing on the SBI path is dominated by HTTP buffering) means
 their real false-positive rate against genuine device jitter needs a corpus of real timing distributions (#65) to
-set safely — the same class of problem as every other provisional threshold in this project. Device-identity
-certificate-chain verification, real OS video-device enumeration (as opposed to matching on device-reported
-metadata, which a sufficiently capable attacker's driver could misreport), and PRNU remain not built.
+set safely — the same class of problem as every other provisional threshold in this project. 
+**Since built (same ticket):** `HostCameraInventory` (the OS's own camera list; `WindowsCameraInventory` asks
+PowerShell for the Camera and Image PnP devices once, and answers "unknown", never "none", when it cannot), recorded in
+the evidence as `policy.injection.hostVirtualCameras` and a veto only when `injection.vetoOnHostVirtualCamera` is set;
+`DeviceIdentity` (the digitalId as a JWS checked against the configured trust: `VERIFIED`, `UNSIGNED` for an
+unregistered device, `FAILED` for a signature that does not verify), where `FAILED` is always a veto and
+`requireVerifiedDeviceIdentity` makes `UNSIGNED` one too; and `TimingWatch`, which counts the frame-timing CV and
+duplicate frames into the evidence with `actedOn: false`. Still honest limits: a driver can pick any name, so the host
+list finds an installed off-the-shelf virtual camera and not one disguised as a webcam; none of this has been tried
+against a real attacker; and PRNU remains not built.
 
 ---
 

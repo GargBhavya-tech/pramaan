@@ -18,9 +18,16 @@ public final class DeviceMetadata {
     private final String make;
     private final String model;
     private final String serialNo;
+    private final DeviceIdentity identity;
 
     public DeviceMetadata(String deviceId, String deviceSubId, String deviceCode, DeviceLevel level, String make,
             String model, String serialNo) {
+        this(deviceId, deviceSubId, deviceCode, level, make, model, serialNo, DeviceIdentity.UNCHECKED);
+    }
+
+    public DeviceMetadata(String deviceId, String deviceSubId, String deviceCode, DeviceLevel level, String make,
+            String model, String serialNo, DeviceIdentity identity) {
+        this.identity = Objects.requireNonNull(identity, "identity");
         this.deviceId = Objects.requireNonNull(deviceId, "deviceId");
         this.deviceSubId = Objects.requireNonNull(deviceSubId, "deviceSubId");
         this.deviceCode = deviceCode;
@@ -56,6 +63,16 @@ public final class DeviceMetadata {
 
     public String serialNo() {
         return serialNo;
+    }
+
+    /** Whether the device's digitalId proved its maker (Bible Part 5, point 1). */
+    public DeviceIdentity identity() {
+        return identity;
+    }
+
+    /** The same device with the outcome of an identity check. */
+    public DeviceMetadata withIdentity(DeviceIdentity checked) {
+        return new DeviceMetadata(deviceId, deviceSubId, deviceCode, level, make, model, serialNo, checked);
     }
 
     @Override

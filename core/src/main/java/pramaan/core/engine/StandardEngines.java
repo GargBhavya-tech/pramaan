@@ -137,6 +137,7 @@ public final class StandardEngines {
                 .stereo(station.stereo())
                 .pupil(station.pupil())
                 .knownBackdrop(station.scene() != null)
+                .hostCameras(station.hostCameras())
                 .capabilities(caps)
                 .random(random)
                 .listener(listener)

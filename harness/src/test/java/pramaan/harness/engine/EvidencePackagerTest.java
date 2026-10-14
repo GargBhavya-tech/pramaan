@@ -80,7 +80,7 @@ class EvidencePackagerTest {
         assertTrue(verified.json().path("cues").has("passive"), verified.json().toString());
         assertTrue(verified.json().has("binding"), verified.json().toString());
         assertTrue(verified.json().has("fusion"), verified.json().toString());
-        assertEquals("denylist", verified.json().path("policy").path("injection").path("guard").asText());
+        assertEquals("denylist+host+identity", verified.json().path("policy").path("injection").path("guard").asText());
         assertFalse(verified.json().path("policy").path("injection").path("detected").asBoolean(),
                 "the mock's own device (PRAMAAN/MockFace) is not on the denylist");
         assertEquals(packet.capture().signedData(), rig.engine.acceptedCapture().orElseThrow().signedData());

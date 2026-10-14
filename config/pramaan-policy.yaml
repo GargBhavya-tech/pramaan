@@ -77,6 +77,8 @@ pramaan:
   injection:
     virtualCameraDenylistVersion: 1
     vetoOnBoundVirtualCamera: true
+    vetoOnHostVirtualCamera: false       # a virtual camera installed on the station, found in the OS camera list (Part 5)
+    requireVerifiedDeviceIdentity: false # true once devices are registered and sign their digitalId
     requireSignedStream: false           # true once every device in the field offers the SBI Liveness Profile (Part 41)
 
   evidence:
