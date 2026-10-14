@@ -109,6 +109,26 @@ class InjectionFindingsEngineTest {
     }
 
     @Test
+    void aSoftwareCameraWithAnInnocentNameIsRecordedAndDoesNotRejectAnyone() throws Exception {
+        HostCameraInventory renamed = new HostCameraInventory() {
+            @Override
+            public Optional<List<String>> cameraNames() {
+                return Optional.of(List.of("Integrated Camera", "Logitech BRIO"));
+            }
+
+            @Override
+            public Optional<List<String>> softwareCameras() {
+                return Optional.of(List.of("Logitech BRIO"));
+            }
+        };
+        LivenessEngineTest.Rig rig = run(bundle("vetoOnHostVirtualCamera: false", "vetoOnHostVirtualCamera: true"),
+                DeviceIdentity.UNCHECKED, renamed);
+        assertEquals(List.of("Logitech BRIO"), rig.engine.injectionFindings().hostSoftwareCameras());
+        assertTrue(rig.engine.injectionFindings().hostVirtualCameras().isEmpty(), "the name fooled the denylist");
+        assertEquals(SessionState.ACCEPTED, rig.session.state(), "recorded, not acted on: " + rig.describe());
+    }
+
+    @Test
     void timingIsCountedForTheRecordAndNeverRejectsAnyone() throws Exception {
         LivenessEngineTest.Rig rig = run(bundle(), DeviceIdentity.UNCHECKED, cameras());
         assertTrue(rig.engine.timing().frames() > 10);

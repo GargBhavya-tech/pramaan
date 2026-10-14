@@ -168,7 +168,9 @@ public final class RegistrationScaffold extends Application {
      * or a backdrop check must not quietly run without it.
      */
     private Station station() throws IOException {
-        Station.Builder b = Station.builder().hostCameras(new WindowsCameraInventory());
+        WindowsCameraInventory cameras = new WindowsCameraInventory();
+        cameras.warmUp(); // the slow Plug-and-Play read happens now, in the background, not at the first scan
+        Station.Builder b = Station.builder().hostCameras(cameras);
         if (config.flashScreen >= 0) {
             b.flashLight(new FlashWindow(config.flashScreen));
         }

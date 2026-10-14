@@ -25,9 +25,17 @@ public final class InjectionFindings {
     private final boolean hostEnumerated;
     private final List<String> hostVirtualCameras;
     private final DeviceIdentity identity;
+    private final List<String> hostSoftwareCameras;
 
     public InjectionFindings(boolean boundDenylisted, boolean hostEnumerated, List<String> hostVirtualCameras,
             DeviceIdentity identity) {
+        this(boundDenylisted, hostEnumerated, hostVirtualCameras, identity, List.of());
+    }
+
+    /** @param hostSoftwareCameras host cameras that are software, denylisted or not (recorded, never a veto by itself) */
+    public InjectionFindings(boolean boundDenylisted, boolean hostEnumerated, List<String> hostVirtualCameras,
+            DeviceIdentity identity, List<String> hostSoftwareCameras) {
+        this.hostSoftwareCameras = Collections.unmodifiableList(Objects.requireNonNull(hostSoftwareCameras));
         this.boundDenylisted = boundDenylisted;
         this.hostEnumerated = hostEnumerated;
         this.hostVirtualCameras = Collections.unmodifiableList(Objects.requireNonNull(hostVirtualCameras));
@@ -48,6 +56,10 @@ public final class InjectionFindings {
 
     public DeviceIdentity identity() {
         return identity;
+    }
+
+    public List<String> hostSoftwareCameras() {
+        return hostSoftwareCameras;
     }
 
     public boolean hostVirtualCameraFound() {

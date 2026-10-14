@@ -193,6 +193,8 @@ public final class EvidenceBuilder {
         injection.put("hostEnumerated", f.hostEnumerated());
         ArrayNode host = injection.putArray("hostVirtualCameras");
         f.hostVirtualCameras().forEach(host::add);
+        ArrayNode software = injection.putArray("hostSoftwareCameras");
+        f.hostSoftwareCameras().forEach(software::add);
         injection.put("deviceIdentity", f.identity().name());
         ObjectNode t = injection.putObject("timing");
         t.put("frames", timing.frames());

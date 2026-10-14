@@ -240,11 +240,11 @@ public final class LivenessEngine implements FrameSink {
         // Bible Part 5, Build Map #84: the device bound to this capture path, checked once against the known
         // virtual-camera products. A hard veto only when policy says so; otherwise it never affects the session.
         this.boundVirtualCameraDetected = InjectionGuard.denylistMatch(caps.device().device()).isPresent();
-        Optional<List<String>> hostCameras = b.hostCameras == null ? Optional.empty() : b.hostCameras.cameraNames();
+        Optional<HostCameraInventory.Cameras> hostCameras = b.hostCameras == null ? Optional.empty() : b.hostCameras.read();
         this.injectionFindings = new InjectionFindings(boundVirtualCameraDetected, hostCameras.isPresent(),
-                hostCameras.map(n -> InjectionGuard.hostVirtualCameras(n, InjectionGuard.KNOWN_VIRTUAL_CAMERA_PRODUCTS))
+                hostCameras.map(c -> InjectionGuard.hostVirtualCameras(c.names(), InjectionGuard.KNOWN_VIRTUAL_CAMERA_PRODUCTS))
                         .orElse(List.of()),
-                caps.device().device().identity());
+                caps.device().device().identity(), hostCameras.map(HostCameraInventory.Cameras::software).orElse(List.of()));
         this.profile = bundle.policy().profile(session.workflow());
         this.timeouts = bundle.policy().sessionTimeouts();
         OperatingPointTable table = bundle.table();

@@ -825,7 +825,10 @@ default off because an operator may have OBS installed for another reason), devi
 `DeviceMetadata.identity`, policy `requireVerifiedDeviceIdentity`; a signed digitalId that fails is always a veto), and
 `TimingWatch` into the evidence (`injection.timing`, `actedOn: false`). Tested in `DeviceIdentityTest`,
 `TimingWatchTest`, `WindowsCameraInventoryTest` and `InjectionFindingsEngineTest`. The real PowerShell call and a real
-OBS install were not tried in a test; the Windows parse is tested on canned output. Still not built: PRNU, a signed
+OBS install are not in a unit test, but the inventory was run on a real Windows station with OBS installed: it found
+"OBS Virtual Camera" (a DirectShow registration that Plug-and-Play never lists) in about half a second and left the
+built-in webcam alone; the first version, which read only Plug-and-Play, missed it. The parse is tested on canned
+output of both sources. Still not built: PRNU, a signed
 externally maintained denylist.
 
 ### #85: Flash challenge and peripheral

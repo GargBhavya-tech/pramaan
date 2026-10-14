@@ -365,8 +365,12 @@ duplicate-frame checks are implemented and unit-tested (`InjectionGuardTest`) bu
 the honest limit this Part already names (host-side timing on the SBI path is dominated by HTTP buffering) means
 their real false-positive rate against genuine device jitter needs a corpus of real timing distributions (#65) to
 set safely — the same class of problem as every other provisional threshold in this project. 
-**Since built (same ticket):** `HostCameraInventory` (the OS's own camera list; `WindowsCameraInventory` asks
-PowerShell for the Camera and Image PnP devices once, and answers "unknown", never "none", when it cannot), recorded in
+**Since built (same ticket):** `HostCameraInventory` (the OS's own camera list; `WindowsCameraInventory` reads the DirectShow and Media Foundation
+video-input registrations with `reg.exe` on every look, and the Plug-and-Play Camera and Image devices through
+PowerShell once in the background, and answers "unknown", never "none", when it cannot ask). Running it on a real
+station with OBS installed showed the Plug-and-Play list alone never sees OBS (it is a registered software filter, not a
+device), which is why the registry is read. The `hostSoftwareCameras` list in the evidence holds every registered
+software filter and every camera with no physical bus, denylisted or not, recorded in
 the evidence as `policy.injection.hostVirtualCameras` and a veto only when `injection.vetoOnHostVirtualCamera` is set;
 `DeviceIdentity` (the digitalId as a JWS checked against the configured trust: `VERIFIED`, `UNSIGNED` for an
 unregistered device, `FAILED` for a signature that does not verify), where `FAILED` is always a veto and
