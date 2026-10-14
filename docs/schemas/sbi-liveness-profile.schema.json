@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/pramaan/sbi-liveness-profile-0.1.schema.json",
+  "title": "SBI Liveness Profile 0.1 (proposal)",
+  "description": "Optional, backward-compatible additions to the MOSIP Secure Biometric Interface for face devices. Requests follow the SBI convention that every scalar is a JSON string; responses and signed data may use booleans and arrays where the SBI does. The $id is a placeholder until the specification has a home (Bible Part 30, Q12).",
+  "$defs": {
+    "TransactionId": {
+      "description": "SBI transactionId: letters, digits and hyphens only. PRAMAAN uses 32 lower-case hex characters.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9-]{1,64}$"
+    },
+    "Hex32": {
+      "description": "32 bytes in lower-case hex: an HMAC-SHA256 tag or a SHA-256 hash.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "DeviceInfoLivenessProfile": {
+      "description": "The livenessProfile object added to the device-info response (point 1).",
+      "type": "object",
+      "required": ["livenessProfile"],
+      "properties": {
+        "livenessProfile": {
+          "type": "object",
+          "required": ["version", "signedStream", "captureBurst", "illuminatorControl", "sensorTimestamps"],
+          "properties": {
+            "version": { "type": "string" },
+            "signedStream": { "type": "boolean", "description": "The device authenticates each preview frame (point 2)." },
+            "captureBurst": { "type": "boolean", "description": "The device supports captureBurst (point 4)." },
+            "illuminatorControl": {
+              "type": "array",
+              "items": { "enum": ["VISIBLE_WHITE", "VISIBLE_RGB", "NIR_850"] },
+              "description": "Illuminators the client may drive with illuminate (point 5). Empty if none."
+            },
+            "sensorTimestamps": { "type": "boolean", "description": "Frame times come from the sensor, not the host." },
+            "depth": { "type": "boolean" },
+            "focusControl": { "type": "boolean" },
+            "onDevicePad": {
+              "type": "object",
+              "required": ["algorithm", "version", "certification"],
+              "properties": {
+                "algorithm": { "type": "string" },
+                "version": { "type": "string" },
+                "certification": { "type": "string", "description": "For example iBeta-L2, or none." }
+              }
+            }
+          }
+        }
+      }
+    },
+    "KeyAgreementRequest": {
+      "description": "Sent with the stream-start request (point 2). The client's ephemeral P-256 key, X.509 SubjectPublicKeyInfo, standard base64.",
+      "type": "object",
+      "required": ["version", "transactionId", "clientEphemeralKey"],
+      "properties": {
+        "version": { "type": "string" },
+        "transactionId": { "$ref": "#/$defs/TransactionId" },
+        "clientEphemeralKey": { "type": "string" }
+      }
+    },
+    "KeyAgreementAnswer": {
+      "description": "The payload of the compact JWS (RS256, device certificate chain in x5c) with which the device answers. clientEphemeralKeyHash is the SHA-256 of the client key it answered, so a swapped client key is detected.",
+      "type": "object",
+      "required": ["version", "transactionId", "deviceEphemeralKey", "clientEphemeralKeyHash"],
+      "properties": {
+        "version": { "type": "string" },
+        "transactionId": { "$ref": "#/$defs/TransactionId" },
+        "deviceEphemeralKey": { "type": "string" },
+        "clientEphemeralKeyHash": { "$ref": "#/$defs/Hex32" }
+      }
+    },
+    "StreamCheckpoint": {
+      "description": "The payload of the compact JWS the device emits every N frames: '<frame index>:<tag hex>'. Frame 0 is tag_0.",
+      "type": "string",
+      "pattern": "^[0-9]+:[0-9a-f]{64}$"
+    },
+    "CaptureExtras": {
+      "description": "Fields the device adds inside the signed capture data (points 3 and 6).",
+      "type": "object",
+      "required": ["streamTagHead"],
+      "properties": {
+        "streamTagHead": { "$ref": "#/$defs/Hex32" },
+        "onDevicePad": {
+          "type": "object",
+          "required": ["algorithm", "version", "score"],
+          "properties": {
+            "algorithm": { "type": "string" },
+            "version": { "type": "string" },
+            "score": { "type": "string", "description": "Decimal, as a string (SBI convention)." }
+          }
+        }
+      }
+    },
+    "CaptureBurstRequest": {
+      "description": "captureBurst (point 4): several signed frames during a challenge. Every scalar is a string.",
+      "type": "object",
+      "required": ["transactionId", "count", "intervalMs"],
+      "properties": {
+        "transactionId": { "$ref": "#/$defs/TransactionId" },
+        "count": { "type": "string", "pattern": "^[1-9][0-9]?$" },
+        "intervalMs": { "type": "string", "pattern": "^[0-9]{2,4}$" }
+      }
+    },
+    "IlluminateRequest": {
+      "description": "illuminate (point 5): the client's random schedule. Colour changes must obey the photosensitivity limits in the specification (at most 3 per second, steps of at least 333 ms). Every scalar is a string.",
+      "type": "object",
+      "required": ["transactionId", "schedule"],
+      "properties": {
+        "transactionId": { "$ref": "#/$defs/TransactionId" },
+        "schedule": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["colour", "durationMs"],
+            "properties": {
+              "colour": { "enum": ["WHITE", "YELLOW", "GREEN", "CYAN", "BLUE", "MAGENTA"] },
+              "durationMs": { "type": "string", "pattern": "^[0-9]{3,4}$" }
+            }
+          }
+        }
+      }
+    },
+    "EmissionLog": {
+      "description": "The payload of the compact JWS with which the device reports what its illuminator actually did. atMs is relative to the first emission.",
+      "type": "object",
+      "required": ["version", "transactionId", "emissions"],
+      "properties": {
+        "version": { "type": "string" },
+        "transactionId": { "$ref": "#/$defs/TransactionId" },
+        "emissions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["colour", "atMs", "durationMs"],
+            "properties": {
+              "colour": { "type": "string" },
+              "atMs": { "type": "string" },
+              "durationMs": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
