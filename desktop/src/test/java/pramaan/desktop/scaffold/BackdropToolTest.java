@@ -75,6 +75,12 @@ class BackdropToolTest {
     }
 
     @Test
+    void theResidentsOwnScreenCanBeNamedPrimaryForTheFlash() {
+        assertEquals(0, ScaffoldConfig.parse(List.of("--flash-screen", "primary")).flashScreen);
+        assertEquals(2, ScaffoldConfig.parse(List.of("--flash-screen", "2")).flashScreen);
+    }
+
+    @Test
     void withoutThoseOptionsNeitherIsConfigured() {
         ScaffoldConfig c = ScaffoldConfig.parse(List.of());
         assertEquals(-1, c.flashScreen, "no resident light unless one is named");

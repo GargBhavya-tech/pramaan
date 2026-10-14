@@ -940,6 +940,12 @@ Tests: `SceneContextTest`, `BackdropToolTest`, `StationWiringEngineTest` (withou
 `BackdropSubtractionSegmenter` (scaffold `--segmenter backdrop`) that also finds people walking behind, and a
 model-ready `OnnxPersonSegmenter`, scored on synthetic scenes with known truth (`SegmentationBench`). **Still not
 built:** a chosen, pinned and licensed segmentation model, and any measurement on real rooms.
+**Flash on the resident's own screen since built:** `--flash-screen primary` (monitor 0) plays the flash on the screen the
+resident is already facing. Back-of-envelope, not measured: a laptop panel of ~300 nits and ~0.1 m^2 at 0.5 m gives roughly
+`E = L A / d^2 = 300 x 0.1 / 0.25 ~ 120 lux` at the face, against 300-500 lux of ambient office light, so a full-white step is a
+20-40% change and a coloured step a visible chroma shift - plausible, and untested on a real face. Limits: the guidance screen
+is covered for the 2-4 s of the flash; the colours are drawn by the host, so unlike the device's own light (emission log) the
+timing is the client's word; strong ambient light or a dim panel will make the cue abstain, never fail.
 **Learned fusion and conformal cut-offs since built:** `FusionLearner` (harness) learns `wPos`/`wNeg`/bias in the engine's own
 shape (non-negative, abstentions excluded, physiological `wNeg` zero), by class-balanced logistic regression shrunk
 toward the hand-set weights with a proximal step; `ConformalThreshold` (core) picks the cut-off as the k-th smallest genuine

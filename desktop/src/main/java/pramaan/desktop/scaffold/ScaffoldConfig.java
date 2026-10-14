@@ -104,7 +104,8 @@ final class ScaffoldConfig {
                     c.language = v;
                     break;
                 case "--flash-screen":
-                    c.flashScreen = Integer.parseInt(v);
+                    // "primary": the screen the resident is already looking at (monitor 0), so no second monitor is needed
+                    c.flashScreen = v.equals("primary") ? 0 : Integer.parseInt(v);
                     break;
                 case "--backdrop":
                     c.backdrop = Path.of(v);
