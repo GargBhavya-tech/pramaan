@@ -66,9 +66,14 @@ public final class BackdropTool {
 
     /** The fingerprint of the room in a photograph. */
     static SceneFingerprint fingerprint(Path image) throws IOException {
-        BufferedImage img = ImageIO.read(image.toFile());
+        return fingerprint(Files.readAllBytes(image));
+    }
+
+    /** The fingerprint of the room in an encoded photograph (JPEG, PNG, ...). */
+    static SceneFingerprint fingerprint(byte[] photo) throws IOException {
+        BufferedImage img = ImageIO.read(new java.io.ByteArrayInputStream(photo));
         if (img == null) {
-            throw new IOException("not an image: " + image);
+            throw new IOException("not an image");
         }
         byte[] rgb = new byte[img.getWidth() * img.getHeight() * 3];
         int k = 0;

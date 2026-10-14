@@ -102,6 +102,7 @@ public final class RegistrationScaffold extends Application {
     private final VBox form = new VBox(10);
     private final Label step = new Label();
     private final Button diagnosticsButton = new Button("Diagnostics…");
+    private final Button retakeBackdropButton = new Button("Re-take backdrop…");
     private ScaffoldConfig config;
     private volatile DesktopEngines engines;
     private volatile SceneContext scene;
@@ -130,6 +131,7 @@ public final class RegistrationScaffold extends Application {
         tag.setStyle("-fx-text-fill: #52606d;");
         step.setStyle("-fx-font-size: 14px;");
         diagnosticsButton.setOnAction(e -> activateDiagnostics());
+        retakeBackdropButton.setOnAction(e -> retakeBackdrop());
         badges.setStyle("-fx-text-fill: #2e7d32; -fx-font-size: 12px;");
         HBox topRow = new HBox(16, new VBox(2, title, tag), step, badges);
         topRow.setAlignment(Pos.CENTER_LEFT);
@@ -140,7 +142,7 @@ public final class RegistrationScaffold extends Application {
         VBox result = new VBox(6, new Label("Captured photo"), captured);
         result.setPadding(new Insets(16));
         result.setAlignment(Pos.TOP_CENTER);
-        HBox bottom = new HBox(diagnosticsButton);
+        HBox bottom = new HBox(8, retakeBackdropButton, diagnosticsButton);
         bottom.setAlignment(Pos.CENTER_RIGHT);
         bottom.setPadding(new Insets(8, 16, 12, 16));
 
@@ -468,6 +470,62 @@ public final class RegistrationScaffold extends Application {
             diagnostics.show();
         } catch (IllegalStateException refused) {
             new Alert(Alert.AlertType.INFORMATION, "Diagnostic mode is disabled by policy.").showAndWait();
+        }
+    }
+
+    // ------------------------------------------------------------------------------------------ #87 backdrop
+
+    /**
+     * Replaces the stored fingerprint of the empty backdrop (Bible Part 43): needs an administrator id, a reason, the
+     * operator's word that the room is empty, and a photograph of it. Audited whether it succeeds or not. Takes effect
+     * for the next session; one already running keeps the backdrop it started with.
+     */
+    private void retakeBackdrop() {
+        DesktopEngines current = engines;
+        if (current == null || form.isDisabled()) {
+            return;
+        }
+        if (config.backdrop == null) {
+            new Alert(Alert.AlertType.INFORMATION, "No backdrop file is configured. Start the scaffold with"
+                    + " --backdrop <file> to say where the fingerprint is kept.").showAndWait();
+            return;
+        }
+        Optional<String> admin = ask("Administrator id", "Replacing the backdrop is audited. Administrator id:");
+        Optional<String> reason = admin.isPresent() ? ask("Reason", "Why is the backdrop being re-taken?") : Optional.empty();
+        if (admin.isEmpty() || reason.isEmpty() || admin.get().isBlank() || reason.get().isBlank()) {
+            return;
+        }
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "The room must be empty, in its normal lighting, with the"
+                + " camera where it will stay. Is it?");
+        if (confirm.showAndWait().filter(b -> b == javafx.scene.control.ButtonType.OK).isEmpty()) {
+            return;
+        }
+        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
+        chooser.setTitle("Photograph of the empty room");
+        java.io.File file = chooser.showOpenDialog(null);
+        if (file == null) {
+            return;
+        }
+        try {
+            BackdropRetake.Result r = BackdropRetake.retake(Files.readAllBytes(file.toPath()), config.backdrop,
+                    admin.get().trim(), reason.get().trim(), true, clock, this::audit);
+            switch (r.outcome()) {
+                case SAVED:
+                    engines = new DesktopEngines(current.bundle(), current.deviceTrust(), random, station());
+                    cameraMoveAudited.set(false);
+                    new Alert(Alert.AlertType.INFORMATION, "Backdrop saved (" + r.corners() + " corners). It applies to the"
+                            + " next registration.").showAndWait();
+                    break;
+                case TOO_PLAIN:
+                    new Alert(Alert.AlertType.WARNING, "Only " + r.corners() + " corners: this backdrop is too plain to tell"
+                            + " from another room. Photograph a part of the room with some structure in it. Nothing was"
+                            + " changed.").showAndWait();
+                    break;
+                default:
+                    new Alert(Alert.AlertType.WARNING, "That file is not an image. Nothing was changed.").showAndWait();
+            }
+        } catch (IOException e) {
+            new Alert(Alert.AlertType.ERROR, "The backdrop could not be saved: " + e.getMessage()).showAndWait();
         }
     }
 

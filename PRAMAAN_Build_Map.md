@@ -924,8 +924,13 @@ one photograph of the empty room and refuses a blank wall; the scaffold's `--bac
 0.55 after a test showed a room with a similar palette and no matching corners sitting exactly on the old threshold.
 Tests: `SceneContextTest`, `BackdropToolTest`, `StationWiringEngineTest` (without a backdrop all three abstain
 `CAPABILITY_MISSING`). **Still not built:** person segmentation (an exclusion box stands in), MOG2-style removal of
-people walking behind, and an audited in-app re-fingerprint (the tool is a command, not a button). All thresholds are
-provisional.
+people walking behind. All thresholds are provisional.
+**Built since:** the audited in-app re-fingerprint. The scaffold's **Re-take backdrop…** button asks for an
+administrator id, a reason and the operator's word that the room is empty, takes a photograph of it, and
+`BackdropRetake` writes the new fingerprint, keeps the old one beside it as `.previous`, and audits
+`BACKDROP_RETAKEN` (with the hash of the old and new fingerprint) or `BACKDROP_RETAKE_REFUSED`. It applies from the next
+registration. Tested in `BackdropRetakeTest`; the JavaFX dialogs were not exercised, and nothing checks that the photograph
+really is an empty room.
 
 ### #88: Fraud analytics signals
 Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #10
