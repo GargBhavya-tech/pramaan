@@ -56,6 +56,38 @@ public final class WhitePointConsistencyCue {
         return CueResult.vote(NAME, Math.max(1e-6, Math.min(1 - 1e-6, p)), delta);
     }
 
+    /**
+     * As above, for a whole frame with the people marked: the room's chromaticity is taken over the pixels that are
+     * not a person, wherever they are, instead of from one margin of the frame.
+     */
+    public CueResult evaluate(RgbImage frame, PersonMask people, RgbImage faceCrop) {
+        long r = 0;
+        long g = 0;
+        long b = 0;
+        long n = 0;
+        for (int y = 0; y < frame.height(); y++) {
+            for (int x = 0; x < frame.width(); x++) {
+                if (!people.personAtFrame(x, y, frame.width(), frame.height())) {
+                    r += frame.get(x, y, 0);
+                    g += frame.get(x, y, 1);
+                    b += frame.get(x, y, 2);
+                    n++;
+                }
+            }
+        }
+        if (n < MIN_PIXELS) {
+            return CueResult.abstain(NAME, CueResult.AbstainReason.CAPABILITY_MISSING);
+        }
+        if (faceCrop == null || (long) faceCrop.width() * faceCrop.height() < MIN_PIXELS) {
+            return CueResult.abstain(NAME, CueResult.AbstainReason.INPUT_TOO_SMALL);
+        }
+        double[] bg = rg(r, g, b);
+        double[] fh = highlightChromaticity(faceCrop);
+        double delta = Math.hypot(fh[0] - bg[0], fh[1] - bg[1]);
+        double p = 1 / (1 + Math.exp(SLOPE * (delta - PROVISIONAL_THRESHOLD)));
+        return CueResult.vote(NAME, Math.max(1e-6, Math.min(1 - 1e-6, p)), delta);
+    }
+
     /** Grey-world rg-chromaticity of every pixel in the image. */
     static double[] chromaticity(RgbImage img) {
         long r = 0;

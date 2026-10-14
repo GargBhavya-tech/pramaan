@@ -14,6 +14,8 @@ import pramaan.core.image.ImageOps;
 import pramaan.core.image.RgbImage;
 import pramaan.core.pad.CueResult;
 import pramaan.core.pad.LightDirectionConsistencyCue;
+import pramaan.core.pad.PersonMask;
+import pramaan.core.pad.PersonSegmenter;
 import pramaan.core.pad.SceneConsistencyCue;
 import pramaan.core.pad.SceneFingerprint;
 import pramaan.core.pad.WhitePointConsistencyCue;
@@ -45,8 +47,25 @@ public final class SceneContext {
     private int frames;
     private volatile boolean cameraMoved;
 
+    private final PersonSegmenter segmenter;
+    private PersonMask lastPeople;
+
     public SceneContext(SceneFingerprint stored) {
+        this(stored, null);
+    }
+
+    /**
+     * @param segmenter finds the people so the cues leave out exactly them; null keeps the rectangle round the
+     *     resident (Bible Part 43)
+     */
+    public SceneContext(SceneFingerprint stored, PersonSegmenter segmenter) {
         this.stored = Objects.requireNonNull(stored, "stored");
+        this.segmenter = segmenter;
+    }
+
+    /** The people found in the last frame that was evaluated, or null with no segmenter or before the first frame. */
+    public synchronized PersonMask lastPeople() {
+        return lastPeople;
     }
 
     /** True once a frame matched the stored backdrop at a consistent offset: re-fingerprint, audited. */
@@ -64,6 +83,9 @@ public final class SceneContext {
         int y0 = Math.max(0, Math.round(face.y() - 0.4f * face.height()));
         int[] resident = {x0, y0, x1, image.height()};
 
+        if (segmenter != null) {
+            return evaluateWithMask(image, face, nativeFaceCrop);
+        }
         List<CueResult> out = new ArrayList<>();
         SceneConsistencyCue.Analysis a = scene.analyse(stored, image, resident);
         if (a.cameraMoved) {
@@ -73,6 +95,25 @@ public final class SceneContext {
         RgbImage backdrop = backdrop(image, x0, x1);
         out.add(whitePoint.evaluate(backdrop, nativeFaceCrop));
         out.add(lightDirection.evaluate(nativeFaceCrop, backdrop));
+        return out;
+    }
+
+    private List<CueResult> evaluateWithMask(RgbImage image, FaceBox face, RgbImage nativeFaceCrop) {
+        int[] faceBox = {Math.max(0, Math.round(face.x())), Math.max(0, Math.round(face.y())),
+            Math.min(image.width(), Math.round(face.x() + face.width())),
+            Math.min(image.height(), Math.round(face.y() + face.height()))};
+        PersonMask people = segmenter.segment(image, faceBox, stored);
+        synchronized (this) {
+            lastPeople = people;
+        }
+        List<CueResult> out = new ArrayList<>();
+        SceneConsistencyCue.Analysis a = scene.analyse(stored, image, people);
+        if (a.cameraMoved) {
+            cameraMoved = true;
+        }
+        out.add(a.result);
+        out.add(whitePoint.evaluate(image, people, nativeFaceCrop));
+        out.add(lightDirection.evaluate(nativeFaceCrop, image, people));
         return out;
     }
 

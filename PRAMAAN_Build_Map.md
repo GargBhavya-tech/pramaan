@@ -926,8 +926,11 @@ one photograph of the empty room and refuses a blank wall; the scaffold's `--bac
 `KNOWN_BACKDROP`, and a bumped camera is audited as `BACKDROP_CAMERA_MOVED`. `PROVISIONAL_SCORE` moved from 0.45 to
 0.55 after a test showed a room with a similar palette and no matching corners sitting exactly on the old threshold.
 Tests: `SceneContextTest`, `BackdropToolTest`, `StationWiringEngineTest` (without a backdrop all three abstain
-`CAPABILITY_MISSING`). **Still not built:** person segmentation (an exclusion box stands in), MOG2-style removal of
-people walking behind. All thresholds are provisional.
+`CAPABILITY_MISSING`). All thresholds are provisional.
+**Person segmentation since built** (`docs/person-segmentation.md`): `PersonMask`, `PersonSegmenter`, a no-model
+`BackdropSubtractionSegmenter` (scaffold `--segmenter backdrop`) that also finds people walking behind, and a
+model-ready `OnnxPersonSegmenter`, scored on synthetic scenes with known truth (`SegmentationBench`). **Still not
+built:** a chosen, pinned and licensed segmentation model, and any measurement on real rooms.
 **Built since:** the audited in-app re-fingerprint. The scaffold's **Re-take backdrop…** button asks for an
 administrator id, a reason and the operator's word that the room is empty, takes a photograph of it, and
 `BackdropRetake` writes the new fingerprint, keeps the old one beside it as `.previous`, and audits

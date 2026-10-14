@@ -133,6 +133,33 @@ class SceneContextTest {
     }
 
     @Test
+    void withASegmenterTheCuesLeaveOutThePeopleItFindsAndTheSameRoomStillVotesForLife() {
+        RgbImage faceFrame = withFace(room(1));
+        RgbImage face = ImageOps.crop(faceFrame, 120, 40, 199, 199);
+        SceneContext ctx = new SceneContext(SceneFingerprint.capture(RgbImage.of(W, H, room(1))),
+                new pramaan.core.pad.BackdropSubtractionSegmenter());
+        assertNull(ctx.lastPeople(), "nothing evaluated yet");
+        List<CueResult> out = ctx.evaluate(faceFrame, FACE, face);
+        assertEquals(3, out.size());
+        assertNotNull(ctx.lastPeople());
+        assertTrue(ctx.lastPeople().personFraction() > 0.05, "the resident's block is found");
+        assertTrue(ctx.lastPeople().personFraction() < 0.6, "and not the whole room");
+        CueResult scene = byName(out, "scene");
+        assertFalse(scene.abstained());
+        assertTrue(scene.pLive() > 0.8, "p " + scene.pLive());
+    }
+
+    @Test
+    void withASegmenterAnotherRoomStillDoesNotVoteForLife() {
+        RgbImage faceFrame = withFace(room(1));
+        RgbImage face = ImageOps.crop(faceFrame, 120, 40, 199, 199);
+        SceneContext other = new SceneContext(SceneFingerprint.capture(RgbImage.of(W, H, room(2))),
+                new pramaan.core.pad.BackdropSubtractionSegmenter());
+        CueResult elsewhere = byName(other.evaluate(faceFrame, FACE, face), "scene");
+        assertTrue(elsewhere.pLive() < 0.3, "p " + elsewhere.pLive());
+    }
+
+    @Test
     void aFaceTooCloseToTheEdgeLeavesNoBackdropToJudgeTheLight() {
         assertNull(SceneContext.backdrop(withFace(room(1)), 10, W - 10));
         assertNotNull(SceneContext.backdrop(withFace(room(1)), 100, 220));

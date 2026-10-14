@@ -113,3 +113,13 @@ tasks.register<JavaExec>("runProfileDevice") {
     mainClass.set("pramaan.harness.mock.ProfileStubDevice")
     workingDir = rootProject.projectDir
 }
+
+// Scores person segmenters (the old rectangle, the no-model subtraction, optionally a model) on synthetic scenes with
+// known truth. ./gradlew :harness:segmentationBench --args="[--model models/x.onnx --spec u2net320] [--overlay dir]"
+tasks.register<JavaExec>("segmentationBench") {
+    group = "verification"
+    description = "Compares person-segmentation routes on synthetic scenes (Bible Part 43)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.harness.factory.SegmentationBench")
+    workingDir = rootProject.projectDir
+}

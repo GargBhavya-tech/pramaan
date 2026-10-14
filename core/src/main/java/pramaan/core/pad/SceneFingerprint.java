@@ -97,37 +97,79 @@ public final class SceneFingerprint {
     private final boolean[] valid;
     private final List<Keypoint> keypoints;
     private final double visibleFraction;
+    private final int[] cellVisible;
 
     private SceneFingerprint(int[][] cellHist, boolean[] valid, List<Keypoint> keypoints, double visibleFraction) {
         this.cellHist = cellHist;
         this.valid = valid;
         this.keypoints = keypoints;
         this.visibleFraction = visibleFraction;
+        this.cellVisible = visiblePerCell(valid);
+    }
+
+    /**
+     * How common this colour was in the stored room, at this place: the share of the grid cell's visible pixels whose
+     * red, green and blue (16 levels each) match the given pixel's, taking the least common of the three channels.
+     * Near 1 in front of a plain wall for the wall's colour, near 0 for a colour the room never had there. NaN where the
+     * cell was mostly hidden when the room was fingerprinted, because then it says nothing. This is what lets a
+     * person be told from the room without a picture of the room: only colour counts per cell are kept.
+     */
+    double backgroundLikelihood(int x, int y, int r, int g, int b) {
+        int cell = cellOf(x, y);
+        if (cellVisible[cell] < CELL_MIN_VISIBLE) {
+            return Double.NaN;
+        }
+        int[] hist = cellHist[cell];
+        double least = 1;
+        int[] levels = {r, g, b};
+        for (int c = 0; c < 3; c++) {
+            least = Math.min(least, hist[c * BINS + levels[c] * BINS / 256] / (double) cellVisible[cell]);
+        }
+        return least;
+    }
+
+    /** Mean red, green and blue of the stored room's visible pixels (bin centres), for exposure matching. */
+    double[] meanColour() {
+        double[] sum = new double[3];
+        long n = 0;
+        for (int cell = 0; cell < cellHist.length; cell++) {
+            n += cellVisible[cell];
+            for (int c = 0; c < 3; c++) {
+                for (int bin = 0; bin < BINS; bin++) {
+                    sum[c] += cellHist[cell][c * BINS + bin] * ((bin + 0.5) * 256.0 / BINS);
+                }
+            }
+        }
+        for (int c = 0; c < 3; c++) {
+            sum[c] = n == 0 ? 128 : sum[c] / n;
+        }
+        return sum;
     }
 
     /** Fingerprint of an entire empty scene. */
     public static SceneFingerprint capture(RgbImage scene) {
-        return capture(scene, null);
+        return capture(scene, (int[]) null);
     }
 
     /**
      * @param exclude {@code {x0, y0, x1, y1}} in {@code scene} pixel coordinates to leave out (the resident), or null
      */
     public static SceneFingerprint capture(RgbImage scene, int[] exclude) {
-        RgbImage small = ImageOps.resize(scene, W, H);
         boolean[] valid = new boolean[W * H];
         Arrays.fill(valid, true);
         if (exclude != null) {
-            int x0 = exclude[0] * W / scene.width();
-            int y0 = exclude[1] * H / scene.height();
-            int x1 = (exclude[2] * W + scene.width() - 1) / scene.width();
-            int y1 = (exclude[3] * H + scene.height() - 1) / scene.height();
-            for (int y = Math.max(0, y0); y < Math.min(H, y1); y++) {
-                for (int x = Math.max(0, x0); x < Math.min(W, x1); x++) {
-                    valid[y * W + x] = false;
-                }
-            }
+            valid = PersonMask.ofBox(scene.width(), scene.height(), exclude).visible();
         }
+        return capture(scene, valid);
+    }
+
+    /** As above, leaving out exactly the pixels a {@link PersonMask} says are a person. */
+    public static SceneFingerprint capture(RgbImage scene, PersonMask people) {
+        return capture(scene, people.visible());
+    }
+
+    private static SceneFingerprint capture(RgbImage scene, boolean[] valid) {
+        RgbImage small = ImageOps.resize(scene, W, H);
         int count = 0;
         for (boolean v : valid) {
             count += v ? 1 : 0;

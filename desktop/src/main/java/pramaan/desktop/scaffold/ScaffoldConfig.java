@@ -40,6 +40,12 @@ final class ScaffoldConfig {
     int flashScreen = -1;
     /** The stored fingerprint of this station's empty backdrop (Bible Part 43), or null when none was ever captured. */
     Path backdrop;
+    /**
+     * How the scene cues tell people from the room: {@code none} (a rectangle round the resident, the default) or
+     * {@code backdrop} (colour subtraction against the stored backdrop; Bible Part 43). A segmentation network joins
+     * these once a model has been chosen and pinned in the bundle.
+     */
+    String segmenter = "none";
     /** The public key (X.509 DER) the policy bundle must be signed with; null accepts an unsigned directory. */
     Path bundleKey;
     /** Highest bundle version seen, kept across runs (anti-rollback, Bible Part 17.2). */
@@ -100,6 +106,12 @@ final class ScaffoldConfig {
                     break;
                 case "--backdrop":
                     c.backdrop = Path.of(v);
+                    break;
+                case "--segmenter":
+                    if (!v.equals("none") && !v.equals("backdrop")) {
+                        throw new IllegalArgumentException("--segmenter is none or backdrop, not " + v);
+                    }
+                    c.segmenter = v;
                     break;
                 case "--speech":
                     c.speech = Boolean.parseBoolean(v);

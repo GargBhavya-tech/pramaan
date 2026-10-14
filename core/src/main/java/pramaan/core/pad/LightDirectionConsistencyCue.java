@@ -55,6 +55,72 @@ public final class LightDirectionConsistencyCue {
     }
 
     /**
+     * As above, for a whole frame with the people marked: the room's luminance plane is fitted over the pixels that are
+     * not a person, wherever they are.
+     */
+    public CueResult evaluate(RgbImage faceCrop, RgbImage frame, PersonMask people) {
+        if (faceCrop == null || (long) faceCrop.width() * faceCrop.height() < MIN_PIXELS) {
+            return CueResult.abstain(NAME, CueResult.AbstainReason.INPUT_TOO_SMALL);
+        }
+        double[] room = gradient(frame, people);
+        if (room == null) {
+            return CueResult.abstain(NAME, CueResult.AbstainReason.CAPABILITY_MISSING);
+        }
+        double[] face = gradient(faceCrop);
+        double mf = Math.hypot(face[0], face[1]);
+        double mr = Math.hypot(room[0], room[1]);
+        if (mf < MIN_GRADIENT || mr < MIN_GRADIENT) {
+            return CueResult.abstain(NAME, CueResult.AbstainReason.NOT_APPLICABLE);
+        }
+        double cos = (face[0] * room[0] + face[1] * room[1]) / (mf * mr);
+        double p = 1 / (1 + Math.exp(-cos / PROVISIONAL_SLOPE));
+        return CueResult.vote(NAME, Math.max(1e-6, Math.min(1 - 1e-6, p)), cos);
+    }
+
+    /** The luminance plane over the pixels that are not a person; null if too few remain. */
+    static double[] gradient(RgbImage img, PersonMask people) {
+        float[] luma = ImageOps.luma(img);
+        int w = img.width();
+        int h = img.height();
+        double mean = 0;
+        long n = 0;
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                if (!people.personAtFrame(x, y, w, h)) {
+                    mean += luma[y * w + x];
+                    n++;
+                }
+            }
+        }
+        if (n < MIN_PIXELS) {
+            return null;
+        }
+        mean /= n;
+        double sxl = 0;
+        double syl = 0;
+        double sxx = 0;
+        double syy = 0;
+        for (int y = 0; y < h; y++) {
+            double ny = (y + 0.5) / h - 0.5;
+            for (int x = 0; x < w; x++) {
+                if (people.personAtFrame(x, y, w, h)) {
+                    continue;
+                }
+                double nx = (x + 0.5) / w - 0.5;
+                double l = luma[y * w + x] - mean;
+                sxl += nx * l;
+                syl += ny * l;
+                sxx += nx * nx;
+                syy += ny * ny;
+            }
+        }
+        if (mean <= 1e-6 || sxx <= 0 || syy <= 0) {
+            return new double[] {0, 0};
+        }
+        return new double[] {sxl / sxx / mean, syl / syy / mean};
+    }
+
+    /**
      * Least-squares luminance plane over coordinates normalised to [-0.5, 0.5], as {@code (a, b)} divided by the mean
      * luminance: the relative luminance change across the whole region, per axis. Image y grows downward.
      */

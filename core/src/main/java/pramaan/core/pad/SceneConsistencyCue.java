@@ -66,7 +66,19 @@ public final class SceneConsistencyCue {
             return new Analysis(CueResult.abstain(NAME, CueResult.AbstainReason.CAPABILITY_MISSING), Double.NaN, false,
                     null);
         }
-        SceneFingerprint live = SceneFingerprint.capture(frame, residentBox);
+        return analyseLive(stored, SceneFingerprint.capture(frame, residentBox));
+    }
+
+    /** As above, leaving out exactly the pixels a segmenter found to be people instead of a rectangle round them. */
+    public Analysis analyse(SceneFingerprint stored, RgbImage frame, PersonMask people) {
+        if (stored == null || stored.keypointCount() < MIN_FINGERPRINT_KEYPOINTS) {
+            return new Analysis(CueResult.abstain(NAME, CueResult.AbstainReason.CAPABILITY_MISSING), Double.NaN, false,
+                    null);
+        }
+        return analyseLive(stored, SceneFingerprint.capture(frame, people));
+    }
+
+    private Analysis analyseLive(SceneFingerprint stored, SceneFingerprint live) {
         SceneFingerprint.Comparison cmp = stored.compare(live);
         if (cmp.visibleFraction < MIN_VISIBLE_FRACTION) {
             return new Analysis(CueResult.abstain(NAME, CueResult.AbstainReason.INPUT_TOO_SMALL), Double.NaN, false,

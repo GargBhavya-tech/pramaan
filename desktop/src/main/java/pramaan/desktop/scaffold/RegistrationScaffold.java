@@ -175,7 +175,8 @@ public final class RegistrationScaffold extends Application {
             b.flashLight(new FlashWindow(config.flashScreen));
         }
         if (config.backdrop != null) {
-            scene = new SceneContext(SceneFingerprint.fromBytes(Files.readAllBytes(config.backdrop)));
+            scene = new SceneContext(SceneFingerprint.fromBytes(Files.readAllBytes(config.backdrop)),
+                    config.segmenter.equals("backdrop") ? new pramaan.core.pad.BackdropSubtractionSegmenter() : null);
             b.scene(scene);
         }
         return b.build();
