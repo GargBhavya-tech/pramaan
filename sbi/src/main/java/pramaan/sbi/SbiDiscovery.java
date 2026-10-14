@@ -82,7 +82,8 @@ final class SbiDiscovery {
             out.add(new DiscoveredDevice(port, d.path("deviceId").asText(""), subIds, d.path("deviceStatus").asText(""),
                     d.path("purpose").asText(""), DeviceLevel.fromSbi(d.path("certification").asText("")),
                     digital.path("type").asText(""), d.path("deviceCode").asText(""), digital.path("make").asText(""),
-                    digital.path("model").asText(""), digital.path("serialNo").asText(""), specs));
+                    digital.path("model").asText(""), digital.path("serialNo").asText(""), specs,
+                    d.path("livenessProfile")));
         }
         return out;
     }

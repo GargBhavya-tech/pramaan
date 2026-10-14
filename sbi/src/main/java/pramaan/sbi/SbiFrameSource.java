@@ -11,9 +11,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
+import java.util.Base64;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import pramaan.core.binding.SignedStreamLock;
+import pramaan.core.binding.StreamKeyAgreement;
 import pramaan.core.crypto.Jws;
 import pramaan.core.crypto.JwsVerificationException;
 import pramaan.core.crypto.VerifiedJws;
@@ -49,6 +56,7 @@ public final class SbiFrameSource implements FaceFrameSource {
     private volatile DropOldestQueue<Frame> queue;
     private volatile String endReason = "stream ended";
     private volatile boolean stopping;
+    private volatile SignedStreamLock streamLock;
     private Thread reader;
     private Thread delivery;
 
@@ -77,8 +85,18 @@ public final class SbiFrameSource implements FaceFrameSource {
             throw new DeviceException(DeviceException.Reason.BUSY, "face device status is '" + face.status() + "'");
         }
         subId = face.deviceSubIds().isEmpty() ? "0" : face.deviceSubIds().get(0);
-        // Plain SBI declares none of the optional capabilities; the SBI Liveness Profile (Bible Part 41) would.
-        return new DeviceCapabilities(face.metadata(subId), EnumSet.noneOf(Capability.class));
+        // Plain SBI declares none of the optional capabilities; a device that offers the SBI Liveness Profile
+        // (Bible Part 41) declares the ones its profile block names. The block is unsigned, so this only makes the
+        // client *try* the handshake; trust comes from the device-signed answer, never from this advertisement.
+        Set<Capability> declared = EnumSet.noneOf(Capability.class);
+        declared.addAll(face.profileCapabilities());
+        return new DeviceCapabilities(face.metadata(subId), declared);
+    }
+
+    /** The authenticated-stream lock of the running session, if the device agreed a key (Bible Part 41). */
+    @Override
+    public Optional<SignedStreamLock> streamLock() {
+        return Optional.ofNullable(streamLock);
     }
 
     @Override
@@ -89,8 +107,33 @@ public final class SbiFrameSource implements FaceFrameSource {
         }
         // A source restarted after stop() must report a real disconnect again.
         stopping = false;
-        HttpResponse<InputStream> response = http.openStream(face.port(),
-                SbiRequests.stream(face.deviceId(), subId, config.streamTimeout().toMillis()), config.streamTimeout());
+        KeyPair clientKey = null;
+        String transactionId = session.nonce().value();
+        byte[] request = SbiRequests.stream(face.deviceId(), subId, config.streamTimeout().toMillis());
+        if (face.signedStream()) {
+            clientKey = StreamKeyAgreement.newEphemeral();
+            request = SbiRequests.streamWithProfile(face.deviceId(), subId, config.streamTimeout().toMillis(),
+                    transactionId, Base64.getEncoder().encodeToString(clientKey.getPublic().getEncoded()));
+        }
+        streamLock = null;
+        HttpResponse<InputStream> response = http.openStream(face.port(), request, config.streamTimeout());
+        if (clientKey != null) {
+            // The device said it speaks the profile: it must prove it. No signed answer, or one we cannot verify,
+            // ends the session here - falling back to the plain stream would let a downgrade look like a quirk.
+            String answer = response.headers().firstValue("X-SBI-LP-Answer").orElse(null);
+            try {
+                if (answer == null) {
+                    throw new JwsVerificationException("the device offered the liveness profile but sent no signed answer");
+                }
+                byte[] ks = StreamKeyAgreement.acceptDeviceAnswer(answer, config.trust(), clientKey, transactionId);
+                streamLock = new SignedStreamLock(ks, transactionId.getBytes(StandardCharsets.UTF_8));
+            } catch (JwsVerificationException e) {
+                closeQuietly(response.body());
+                throw new DeviceException(DeviceException.Reason.UNTRUSTED,
+                        "liveness-profile key agreement rejected: " + e.getMessage(), e);
+            }
+        }
+        final SignedStreamLock lock = streamLock;
         String contentType = response.headers().firstValue("Content-Type").orElse("");
         if (!contentType.toLowerCase(java.util.Locale.ROOT).startsWith("multipart/")) {
             closeQuietly(response.body());
@@ -101,7 +144,7 @@ public final class SbiFrameSource implements FaceFrameSource {
         MjpegStreamReader mjpeg = new MjpegStreamReader(stream, contentType, config.clock(), face.metadata(subId));
         DropOldestQueue<Frame> q = queue;
 
-        reader = new Thread(() -> readLoop(mjpeg, q, sink), "sbi-stream-reader");
+        reader = new Thread(() -> readLoop(mjpeg, q, sink, lock), "sbi-stream-reader");
         delivery = new Thread(() -> deliveryLoop(q, sink), "sbi-stream-delivery");
         reader.setDaemon(true);
         delivery.setDaemon(true);
@@ -111,11 +154,19 @@ public final class SbiFrameSource implements FaceFrameSource {
         delivery.start();
     }
 
-    private void readLoop(MjpegStreamReader mjpeg, DropOldestQueue<Frame> q, FrameSink sink) {
+    private void readLoop(MjpegStreamReader mjpeg, DropOldestQueue<Frame> q, FrameSink sink, SignedStreamLock lock) {
         String reason = "stream ended";
         try {
             Frame frame;
             while ((frame = mjpeg.next()) != null) {
+                if (lock != null) {
+                    // Every frame the device sent, as it arrives and before the drop-oldest queue can lose one: a
+                    // frame dropped for being slow is still part of the chain the device tagged.
+                    lock.observe(frame.copyBytes(), frame.streamTimeMillis(), frame.streamTag());
+                    if (frame.streamCheckpoint() != null) {
+                        lock.acceptCheckpoint(frame.streamCheckpoint(), config.trust());
+                    }
+                }
                 q.offer(frame);
             }
             if (mjpeg.truncated()) {

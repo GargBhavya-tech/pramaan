@@ -41,6 +41,24 @@ public final class SbiRequests {
         return bytes(body);
     }
 
+    /**
+     * A stream request for a device that offers the SBI Liveness Profile (Bible Part 41): the usual fields plus the
+     * transaction id and the client's ephemeral key, every scalar a string (docs/schemas/sbi-liveness-profile.schema.json,
+     * {@code KeyAgreementRequest}).
+     */
+    public static byte[] streamWithProfile(String deviceId, String deviceSubId, long timeoutMillis, String transactionId,
+            String clientEphemeralKeyBase64) {
+        ObjectNode body = JSON.createObjectNode();
+        body.put("deviceId", deviceId);
+        body.put("deviceSubId", deviceSubId);
+        body.put("timeout", Long.toString(timeoutMillis));
+        ObjectNode profile = body.putObject("livenessProfile");
+        profile.put("version", "0.1");
+        profile.put("transactionId", transactionId);
+        profile.put("clientEphemeralKey", clientEphemeralKeyBase64);
+        return bytes(body);
+    }
+
     public static byte[] rcaptureFace(CaptureRequest request, String deviceId, String deviceSubId, String env,
             String specVersion, Clock clock) {
         ObjectNode body = JSON.createObjectNode();

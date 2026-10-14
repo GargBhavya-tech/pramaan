@@ -91,6 +91,9 @@ public final class MjpegStreamReader {
 
         int contentLength = -1;
         String partType = "";
+        byte[] profileTag = null;
+        long profileTime = -1;
+        String profileCheckpoint = null;
         while (true) {
             String header = readLine();
             if (header == null) {
@@ -118,6 +121,16 @@ public final class MjpegStreamReader {
                 }
             } else if (name.equals("content-type")) {
                 partType = value.toLowerCase(Locale.ROOT);
+            } else if (name.equals("x-sbi-lp-tag")) {
+                profileTag = unhex(value); // SBI Liveness Profile (Bible Part 41); null if malformed, which breaks the chain
+            } else if (name.equals("x-sbi-lp-time")) {
+                try {
+                    profileTime = Long.parseLong(value);
+                } catch (NumberFormatException e) {
+                    profileTime = -1;
+                }
+            } else if (name.equals("x-sbi-lp-checkpoint")) {
+                profileCheckpoint = value;
             }
         }
 
@@ -130,7 +143,25 @@ public final class MjpegStreamReader {
         if (!partType.isEmpty() && !partType.startsWith("image/jpeg")) {
             throw new IOException("unexpected part type '" + partType + "' in an M-JPEG stream");
         }
-        return new Frame(body, PixelFormat.JPEG, 0, 0, Frame.NO_SENSOR_TIMESTAMP, clock.instant(), index++, device);
+        return new Frame(body, PixelFormat.JPEG, 0, 0, Frame.NO_SENSOR_TIMESTAMP, clock.instant(), index++, device,
+                profileTag, profileTime, profileCheckpoint);
+    }
+
+    /** 64 hex characters to 32 bytes, or null for anything else. */
+    static byte[] unhex(String hex) {
+        if (hex.length() != 64) {
+            return null;
+        }
+        byte[] out = new byte[32];
+        for (int i = 0; i < out.length; i++) {
+            int hi = Character.digit(hex.charAt(2 * i), 16);
+            int lo = Character.digit(hex.charAt(2 * i + 1), 16);
+            if (hi < 0 || lo < 0) {
+                return null;
+            }
+            out[i] = (byte) (hi << 4 | lo);
+        }
+        return out;
     }
 
     /** True if the stream ended in the middle of a part. */
