@@ -940,6 +940,12 @@ Tests: `SceneContextTest`, `BackdropToolTest`, `StationWiringEngineTest` (withou
 `BackdropSubtractionSegmenter` (scaffold `--segmenter backdrop`) that also finds people walking behind, and a
 model-ready `OnnxPersonSegmenter`, scored on synthetic scenes with known truth (`SegmentationBench`). **Still not
 built:** a chosen, pinned and licensed segmentation model, and any measurement on real rooms.
+**Physics-supervised labels since built (machinery only):** `PseudoLabeler` labels a session LIVE or ATTACK only when the flash
+cue is confident, queues every session where another cue disagrees (the teacher's likely blind spots) plus a random audit
+share for a human, estimates the teacher's own error from the random audit with a 95% interval (the disagreement queue
+overstates it, a test shows how much), and refuses to call a set trainable until that error is bounded. No student model was
+trained: that needs a consented corpus of frames. **Challenge-conditioned verifier:** written up as a falsifiable plan, not
+built (`docs/research-plan-real-data.md`), together with the one experiment (E1, a laptop and a person) that has to come first.
 **Flash on the resident's own screen since built:** `--flash-screen primary` (monitor 0) plays the flash on the screen the
 resident is already facing. Back-of-envelope, not measured: a laptop panel of ~300 nits and ~0.1 m^2 at 0.5 m gives roughly
 `E = L A / d^2 = 300 x 0.1 / 0.25 ~ 120 lux` at the face, against 300-500 lux of ambient office light, so a full-white step is a
