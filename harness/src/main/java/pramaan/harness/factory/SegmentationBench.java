@@ -148,8 +148,12 @@ public final class SegmentationBench {
         Path model = null;
         String spec = "u2net320";
         Path overlay = null;
+        Path photo = null;
         for (int i = 0; i + 1 < args.length; i += 2) {
             switch (args[i]) {
+                case "--photo":
+                    photo = Path.of(args[i + 1]);
+                    break;
                 case "--model":
                     model = Path.of(args[i + 1]);
                     break;
@@ -171,6 +175,11 @@ public final class SegmentationBench {
                     : OnnxPersonSegmenter.Spec.u2net320();
             methods.put("model", OnnxPersonSegmenter.of(OnnxModel.load(Files.readAllBytes(model)), s));
         }
+        if (photo != null) {
+            realPhoto(photo, methods, overlay == null ? Path.of("build", "segmentation") : overlay);
+            return;
+        }
+        timing(methods);
         System.out.println("SYNTHETIC scenes, held-out rooms. recall = person pixels caught; room kept = room pixels"
                 + " left usable; IoU = overlap.");
         for (long seed : new long[] {101, 202, 303}) {
@@ -190,6 +199,71 @@ public final class SegmentationBench {
                     }
                 }
                 System.out.println();
+            }
+        }
+    }
+
+    /** Milliseconds per call on a 640 x 480 frame, after a warm-up, so the routes' cost can be compared. */
+    private static void timing(Map<String, PersonSegmenter> methods) {
+        Scenario s = scenarios(101).get(0);
+        RgbImage frame = s.live.image();
+        SceneFingerprint stored = SceneFingerprint.capture(s.empty.image());
+        for (Map.Entry<String, PersonSegmenter> m : methods.entrySet()) {
+            if (m.getValue() == null) {
+                continue;
+            }
+            for (int i = 0; i < 3; i++) {
+                m.getValue().segment(frame, s.faceBox, stored);
+            }
+            long t = System.nanoTime();
+            int n = 20;
+            for (int i = 0; i < n; i++) {
+                m.getValue().segment(frame, s.faceBox, stored);
+            }
+            System.out.printf("%-12s %.1f ms per frame%n", m.getKey(), (System.nanoTime() - t) / 1e6 / n);
+        }
+        System.out.println();
+    }
+
+    /**
+     * What each route that can run without a stored room does to one real photograph. There is no truth to score
+     * against, so this only writes overlays to look at. The face box is a guess at the middle of the frame.
+     */
+    private static void realPhoto(Path photo, Map<String, PersonSegmenter> methods, Path dir) throws IOException {
+        BufferedImage in = ImageIO.read(photo.toFile());
+        byte[] px = new byte[in.getWidth() * in.getHeight() * 3];
+        int k = 0;
+        for (int y = 0; y < in.getHeight(); y++) {
+            for (int x = 0; x < in.getWidth(); x++) {
+                int p = in.getRGB(x, y);
+                px[k++] = (byte) (p >> 16);
+                px[k++] = (byte) (p >> 8);
+                px[k++] = (byte) p;
+            }
+        }
+        RgbImage frame = RgbImage.of(in.getWidth(), in.getHeight(), px);
+        int[] face = {frame.width() * 38 / 100, frame.height() * 12 / 100, frame.width() * 62 / 100,
+            frame.height() * 45 / 100};
+        Files.createDirectories(dir);
+        for (Map.Entry<String, PersonSegmenter> m : methods.entrySet()) {
+            if (m.getKey().equals("model")) {
+                PersonMask found = m.getValue().segment(frame, face, null);
+                BufferedImage out = new BufferedImage(frame.width(), frame.height(), BufferedImage.TYPE_INT_RGB);
+                for (int y = 0; y < frame.height(); y++) {
+                    for (int x = 0; x < frame.width(); x++) {
+                        int r = frame.get(x, y, 0);
+                        int g = frame.get(x, y, 1);
+                        int b = frame.get(x, y, 2);
+                        if (found.personAtFrame(x, y, frame.width(), frame.height())) {
+                            r = (r + 255) / 2;
+                            g /= 2;
+                            b /= 2;
+                        }
+                        out.setRGB(x, y, (r << 16) | (g << 8) | b);
+                    }
+                }
+                ImageIO.write(out, "png", dir.resolve("photo-model.png").toFile());
+                System.out.printf("model: %.0f%% of the photograph is a person%n", 100 * found.personFraction());
             }
         }
     }

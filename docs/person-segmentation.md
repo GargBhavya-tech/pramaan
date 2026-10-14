@@ -47,7 +47,53 @@ rectangle masks the whole box whatever the colour, at the price of throwing away
   was not tuned.
 * Synthetic people are flat-coloured shapes on a flat wall. Real skin, hair, shadows, fabric texture, auto-exposure and
   auto-white-balance are all harder. Nothing here predicts the real-room error rate.
-* No real model has been run, so there is no Route B column.
+* Route B was run with **U²-Net-P** (`u2netp.onnx`, 4.4 MB; see below), the only model tried.
+
+## Route B measured: U²-Net-P, same scenes
+
+`./gradlew :harness:segmentationBench --args="--model models/u2netp.onnx --spec u2net320"`. Typical room, recall / kept:
+
+| Situation | Rectangle | Route A (no model) | Route B (U²-Net-P) |
+|---|---|---|---|
+| contrasting shirt, centred | 0.97 / 0.89 | 1.00 / 0.95 | 1.00 / 0.95 |
+| person off to the left | 0.97 / 0.89 | 1.00 / 0.95 | 1.00 / 0.82-0.96 |
+| far away (smaller) | 0.94 / 0.96 | 0.99 / 0.98 | 0.99-1.00 / 0.95-0.99 |
+| **someone walking behind** | 0.64 / 0.87 | **0.99-1.00** / 0.94 | **0.66** / 0.96 |
+| 15% brighter / 25% darker | 0.97 / 0.89 | 1.00 / 0.93-0.95 | 1.00 / 0.95-0.96 |
+| a poster moved since set-up | 0.97 / 0.89 | 1.00 / 0.87-0.93 | 1.00 / 0.83-0.93 |
+| **shirt the colour of the wall** | 0.97 / 0.89 | **0.82-0.88** / 0.95 | **0.81-1.00** / 0.92-0.96 |
+
+Cost per frame on this machine (640 x 480, CPU): Route A **4.5 ms**, Route B **about 430 ms**. The scene cues run on every
+fifth frame, so B would spend a tenth of a second of every second of a 10 fps stream; on a slow station it matters.
+
+What the run shows:
+* **Wall-coloured clothes:** the model catches them in two of three rooms (1.00) and not in the third (0.81); the
+  no-model route stays at 0.82-0.88. The model is better here, but not reliably, and it was not trained on this kind of
+  picture.
+* **A person walking behind:** U²-Net-P finds only the main subject, so it misses the second person completely (0.66,
+  no better than the rectangle). **It is a salient-object network, not a person detector.** Route A finds the walker
+  because anything the room never had is a person.
+* **Moved poster / person off to one side:** the model sometimes takes a vivid object for the subject, which costs
+  background (kept 0.82-0.87 in some rooms); Route A over-masks only the changed patch.
+* **On a real photograph** (`MockMDS` face image, one person): the model cuts out head, shoulders and torso cleanly and
+  leaves the wall and monitor alone. Route A cannot be tried on a single photograph; it needs the empty room.
+
+Not tried: a true person-segmentation network (PP-HumanSeg, MODNet, selfie segmenters), which would probably find a
+walker that U²-Net-P cannot. The model is on disk (gitignored) for evaluation only: it is not in the verified bundle,
+and its training-data terms were not checked (`docs/licences.md`).
+
+## Verdict
+
+| | Route A, no model | Route B, U²-Net-P |
+|---|---|---|
+| Better at | speed (100x cheaper), walkers behind, no new file to ship, no model to license, adapts to any room it has a fingerprint of | wall-coloured clothes (often), real photographs without any stored room |
+| Worse at | wall-coloured clothes; lighting or furniture changes beyond its exposure gain read as people | a second person; vivid objects mistaken for the subject; 430 ms per frame; a model to pin, certify and license |
+| Needs | nothing beyond the backdrop already stored | model file in the bundle, hash pin, licence answer for training data |
+
+**Recommendation:** use Route A. It is faster, cheaper to ship, and was better on the case that matters most to the scene
+cue's honesty (a second person in the frame), and its weakness (wall-coloured clothes) is partly covered by the torso
+column. The model route would only be worth its cost with a true person-segmentation network, and only if real-room
+tests show wall-coloured clothes are common at the station. Both conclusions rest on synthetic scenes and one real photo.
 
 ## Using it
 
