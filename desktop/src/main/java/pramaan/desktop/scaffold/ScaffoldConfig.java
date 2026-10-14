@@ -33,6 +33,13 @@ final class ScaffoldConfig {
     String language = "";
     /** Read every headline aloud with the platform's voice (Build Map #91). */
     boolean speech;
+    /**
+     * Index of the monitor that faces the resident (Bible Part 8.6), or -1 for none. With one, the flash challenge may
+     * be drawn and plays on it; without one it is never drawn.
+     */
+    int flashScreen = -1;
+    /** The stored fingerprint of this station's empty backdrop (Bible Part 43), or null when none was ever captured. */
+    Path backdrop;
     /** The public key (X.509 DER) the policy bundle must be signed with; null accepts an unsigned directory. */
     Path bundleKey;
     /** Highest bundle version seen, kept across runs (anti-rollback, Bible Part 17.2). */
@@ -87,6 +94,12 @@ final class ScaffoldConfig {
                     break;
                 case "--lang":
                     c.language = v;
+                    break;
+                case "--flash-screen":
+                    c.flashScreen = Integer.parseInt(v);
+                    break;
+                case "--backdrop":
+                    c.backdrop = Path.of(v);
                     break;
                 case "--speech":
                     c.speech = Boolean.parseBoolean(v);

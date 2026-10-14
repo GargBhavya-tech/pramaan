@@ -66,7 +66,11 @@ import pramaan.core.source.SignedCapture;
 import pramaan.desktop.IsoFaceDecoder;
 import pramaan.desktop.capture.CaptureScreenModel;
 import pramaan.desktop.capture.CaptureSession;
+import pramaan.core.engine.SceneContext;
+import pramaan.core.engine.Station;
+import pramaan.core.pad.SceneFingerprint;
 import pramaan.desktop.capture.DesktopEngines;
+import pramaan.desktop.capture.FlashWindow;
 import pramaan.desktop.capture.DiagnosticsWindow;
 import pramaan.desktop.capture.DirectoryConfiguration;
 import pramaan.desktop.capture.FaceCaptureView;
@@ -99,6 +103,8 @@ public final class RegistrationScaffold extends Application {
     private final Button diagnosticsButton = new Button("Diagnostics…");
     private ScaffoldConfig config;
     private volatile DesktopEngines engines;
+    private volatile SceneContext scene;
+    private final AtomicBoolean cameraMoveAudited = new AtomicBoolean();
     private OperatorGallery gallery;
     private AuditLog audit;
     private FaceCaptureView view;
@@ -152,6 +158,32 @@ public final class RegistrationScaffold extends Application {
 
     // ------------------------------------------------------------------------------------------ start-up
 
+    /**
+     * What this workstation has around the SBI device (Bible Part 31.2): the monitor facing the resident, if one is
+     * configured, and the stored fingerprint of the empty backdrop, if one exists. A configured part that cannot be
+     * had — no such monitor, an unreadable fingerprint — stops the start-up: a station that was set up for a flash
+     * or a backdrop check must not quietly run without it.
+     */
+    private Station station() throws IOException {
+        Station.Builder b = Station.builder();
+        if (config.flashScreen >= 0) {
+            b.flashLight(new FlashWindow(config.flashScreen));
+        }
+        if (config.backdrop != null) {
+            scene = new SceneContext(SceneFingerprint.fromBytes(Files.readAllBytes(config.backdrop)));
+            b.scene(scene);
+        }
+        return b.build();
+    }
+
+    /** A camera that has been moved since the backdrop was fingerprinted needs an audited re-fingerprint (Part 43). */
+    private void noteCameraMoved() {
+        SceneContext s = scene;
+        if (s != null && s.cameraMoved() && cameraMoveAudited.compareAndSet(false, true)) {
+            audit(AuditEvent.of("BACKDROP_CAMERA_MOVED").put("backdrop", config.backdrop.toString()).build());
+        }
+    }
+
     /** Configuration (#78: read at run time, never built in), table and models are verified once, off the UI thread. */
     private void loadEngine() {
         try {
@@ -170,7 +202,7 @@ public final class RegistrationScaffold extends Application {
                 bundle = DesktopEngines.loadBundle(source, config.modelsDir);
             }
             JwsTrust trust = deviceTrust();
-            engines = new DesktopEngines(bundle, trust, random);
+            engines = new DesktopEngines(bundle, trust, random, station());
             evidence = new EvidenceStore(config.evidenceDir, bundle, trust, random, clock);
             audit(AuditEvent.of("CONFIGURATION_LOADED").put("source", source.describe())
                     .put("policySha256", bundle.policySha256()).put("operatingPointsSha256", bundle.operatingPointsSha256())
@@ -474,6 +506,7 @@ public final class RegistrationScaffold extends Application {
                 Platform.runLater(() -> {
                     LivenessEngine engine = cs[0] == null ? null : cs[0].engine().orElse(null);
                     closeCapture();
+                    noteCameraMoved();
                     form.setDisable(false);
                     done.accept(engine);
                 });

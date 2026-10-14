@@ -47,3 +47,13 @@ tasks.register<JavaExec>("runScaffold") {
     mainClass.set("pramaan.desktop.scaffold.ScaffoldLauncher")
     workingDir = rootProject.projectDir
 }
+
+// Bible Part 43, Build Map #87: fingerprint this station's empty backdrop from one photograph of the empty room.
+// ./gradlew :desktop:captureBackdrop --args="--image empty-room.jpg --out build/scaffold/backdrop.bin"
+tasks.register<JavaExec>("captureBackdrop") {
+    group = "application"
+    description = "Fingerprints the empty backdrop of this station for the scene and illumination cues (Build Map #87)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.desktop.scaffold.BackdropTool")
+    workingDir = rootProject.projectDir
+}
