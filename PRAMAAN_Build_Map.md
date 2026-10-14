@@ -940,6 +940,9 @@ Tests: `SceneContextTest`, `BackdropToolTest`, `StationWiringEngineTest` (withou
 `BackdropSubtractionSegmenter` (scaffold `--segmenter backdrop`) that also finds people walking behind, and a
 model-ready `OnnxPersonSegmenter`, scored on synthetic scenes with known truth (`SegmentationBench`). **Still not
 built:** a chosen, pinned and licensed segmentation model, and any measurement on real rooms.
+**Automated red team since built:** `RedTeamFuzz` (`./gradlew :harness:redTeam`, `--map` for the pitch sweep) searches the
+recapture simulator against the moire cue with an evolution strategy; it found blind pitches (red-team log R-01, claim
+sheet L19). Synthetic; combinations with the flash, scene and stereo cues are not yet searched.
 **Built since:** the audited in-app re-fingerprint. The scaffold's **Re-take backdrop…** button asks for an
 administrator id, a reason and the operator's word that the room is empty, takes a photograph of it, and
 `BackdropRetake` writes the new fingerprint, keeps the old one beside it as `.previous`, and audits

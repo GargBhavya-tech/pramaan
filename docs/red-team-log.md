@@ -68,8 +68,28 @@ run**: that needs people, prints, phones, a mask and a camera (`docs/hardware-te
 
 ## 5. Findings (one block per success or oracle)
 
+**Finding found by the automated red team before the physical day (SYNTHETIC):**
+
 ```
 Finding R-01
+Attack:        A2/A3 - screen recapture whose display grid aliases where the moire cue does not look
+How it worked: `RedTeamFuzz` (./gradlew :harness:redTeam) searched the recapture simulator's parameters against
+               MoireCue. In 481 evaluations it found pitch 1.00, leak 0, gap 0.15: peakiness 3.2, pLive 0.98.
+               `--map 0.01` swept the pitch: the cue calls a clean recapture live at about 0.80, 0.96-1.01, 1.20, 1.60
+               and 1.98-2.03 (display pixels per sensor pixel). Everywhere else it catches it. Blur does NOT help the
+               attacker (it closes the hole), so no sharpness check is needed to cover it - and none would.
+Why the controls missed it: MoireCue examines 12-60 cycles per 128 px and ignores bins on the 8-px JPEG lattice. A grid
+               whose beat is near 0, or on the lattice (bins 16, 32, 48), or above 60, is invisible to it. The holes are
+               narrow (a percent or so of pitch) but a live camera preview lets an attacker walk the phone to one.
+Decision:      DISCLOSED (claim-sheet L19). The moire cue must not be the only control against screen replay: the
+               challenge (A3), the flash cue and the passive scorer are independent of it.
+Fix / limit:   not fixed. Widening the band to catch low beats would flag natural illumination gradients on real faces,
+               and that false-positive rate cannot be set without the corpus (#65). Re-run against real phones on the day.
+Re-run result: pending the physical attacks; synthetic only so far.
+```
+
+```
+Finding R-01 (template for the next one)
 Attack:        A? ...
 How it worked: ...
 Why the controls missed it: ...

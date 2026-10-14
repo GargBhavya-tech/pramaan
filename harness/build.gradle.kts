@@ -123,3 +123,13 @@ tasks.register<JavaExec>("segmentationBench") {
     mainClass.set("pramaan.harness.factory.SegmentationBench")
     workingDir = rootProject.projectDir
 }
+
+// An automated red team: searches the attack simulator's parameters for what the moire cue likes best (SYNTHETIC).
+// ./gradlew :harness:redTeam --args="--seed 7 --generations 40"
+tasks.register<JavaExec>("redTeam") {
+    group = "verification"
+    description = "Evolution-strategy red team against the moire cue on synthetic recaptures (Bible Part 45)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.harness.factory.RedTeamFuzz")
+    workingDir = rootProject.projectDir
+}
