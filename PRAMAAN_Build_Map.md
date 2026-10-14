@@ -940,6 +940,11 @@ Tests: `SceneContextTest`, `BackdropToolTest`, `StationWiringEngineTest` (withou
 `BackdropSubtractionSegmenter` (scaffold `--segmenter backdrop`) that also finds people walking behind, and a
 model-ready `OnnxPersonSegmenter`, scored on synthetic scenes with known truth (`SegmentationBench`). **Still not
 built:** a chosen, pinned and licensed segmentation model, and any measurement on real rooms.
+**Station self-test since built:** `StationSelfTest` (`./gradlew :harness:stationSelfTest --args="--photo room.jpg"`) runs controls and
+attacks made from the station's own empty-room photo through the real scene and moire cues (a screen replay of the right room
+fools the scene cue by construction, so the moire cue has to catch it, and at R-01's blind pitches it does not). It found
+that the scene cue false-rejected honest residents after a 15% exposure change (R-02, fixed: exposure matched before the
+comparison). Synthetic attacks on one photograph; not a certification.
 **Automated red team since built:** `RedTeamFuzz` (`./gradlew :harness:redTeam`, `--map` for the pitch sweep) searches the
 recapture simulator against the moire cue with an evolution strategy; it found blind pitches (red-team log R-01, claim
 sheet L19). Synthetic; combinations with the flash, scene and stereo cues are not yet searched.

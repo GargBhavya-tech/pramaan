@@ -149,6 +149,41 @@ class SceneContextTest {
         assertTrue(scene.pLive() > 0.8, "p " + scene.pLive());
     }
 
+    /** The frame with every channel multiplied by {@code gain}: an exposure change. */
+    private static RgbImage lit(RgbImage img, double gain) {
+        byte[] px = new byte[W * H * 3];
+        for (int y = 0; y < H; y++) {
+            for (int x = 0; x < W; x++) {
+                for (int c = 0; c < 3; c++) {
+                    px[(y * W + x) * 3 + c] = (byte) Math.max(0, Math.min(255, Math.round(img.get(x, y, c) * gain)));
+                }
+            }
+        }
+        return RgbImage.of(W, H, px);
+    }
+
+    /** Found by the station self-test: the scene cue used to score the same room 0.35 after a 15% exposure change. */
+    @Test
+    void theSameRoomStillVotesForLifeAfterAnExposureChangeInEitherDirection() {
+        for (double gain : new double[] {0.75, 0.85, 1.15, 1.25}) {
+            RgbImage frame = lit(withFace(room(1)), gain);
+            SceneContext ctx = new SceneContext(SceneFingerprint.capture(RgbImage.of(W, H, room(1))));
+            CueResult scene = byName(ctx.evaluate(frame, FACE, ImageOps.crop(frame, 120, 40, 199, 199)), "scene");
+            assertFalse(scene.abstained(), "gain " + gain);
+            assertTrue(scene.pLive() > 0.8, "gain " + gain + " p " + scene.pLive());
+        }
+    }
+
+    @Test
+    void exposureMatchingDoesNotLetAnotherRoomThroughAtAnyBrightness() {
+        for (double gain : new double[] {0.75, 1.25}) {
+            RgbImage frame = lit(withFace(room(1)), gain);
+            SceneContext other = new SceneContext(SceneFingerprint.capture(RgbImage.of(W, H, room(2))));
+            CueResult scene = byName(other.evaluate(frame, FACE, ImageOps.crop(frame, 120, 40, 199, 199)), "scene");
+            assertTrue(scene.pLive() < 0.3, "gain " + gain + " p " + scene.pLive());
+        }
+    }
+
     @Test
     void withASegmenterAnotherRoomStillDoesNotVoteForLife() {
         RgbImage faceFrame = withFace(room(1));

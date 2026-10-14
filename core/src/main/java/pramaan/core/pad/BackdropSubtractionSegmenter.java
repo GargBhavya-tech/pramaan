@@ -83,36 +83,8 @@ public final class BackdropSubtractionSegmenter implements PersonSegmenter {
             Math.min(frame.height(), box[3] + dy)};
     }
 
-    /**
-     * The exposure that makes the most of the frame look like the stored room: one gain for all channels, tried from
-     * {@value #MIN_GAIN} to {@value #MAX_GAIN}. Matching averages would be dragged by the person (a blue shirt shifts
-     * the mean colour of the frame); counting how many pixels fit is not, because a person's pixels fit at no gain.
-     */
     private static double[] gain(RgbImage small, PersonMask face, SceneFingerprint stored) {
-        double best = 1;
-        int bestFit = -1;
-        for (double g = MIN_GAIN; g <= MAX_GAIN + 1e-9; g += 0.05) {
-            int fit = 0;
-            for (int y = 0; y < PersonMask.H; y += 2) {
-                for (int x = 0; x < PersonMask.W; x += 2) {
-                    if (face.person(x, y)) {
-                        continue;
-                    }
-                    double like = stored.backgroundLikelihood(x, y, level(small, x, y, 0, g), level(small, x, y, 1, g),
-                            level(small, x, y, 2, g));
-                    fit += !Double.isNaN(like) && like >= LIKELIHOOD_FLOOR ? 1 : 0;
-                }
-            }
-            // On a tie prefer the gain nearest 1, so a frame that already matches is left alone.
-            if (fit > bestFit || (fit == bestFit && Math.abs(g - 1) < Math.abs(best - 1))) {
-                bestFit = fit;
-                best = g;
-            }
-        }
-        return new double[] {best, best, best};
-    }
-
-    private static int level(RgbImage img, int x, int y, int c, double gain) {
-        return (int) Math.max(0, Math.min(255, Math.round(img.get(x, y, c) * gain)));
+        double g = stored.exposureGain(small, face);
+        return new double[] {g, g, g};
     }
 }

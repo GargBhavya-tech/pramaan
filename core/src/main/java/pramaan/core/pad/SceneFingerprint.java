@@ -128,6 +128,58 @@ public final class SceneFingerprint {
         return least;
     }
 
+    /**
+     * The exposure that makes the most of a live frame look like this stored room: one gain for all channels, tried from
+     * 0.7 to 1.4 in steps of 0.05. Matching averages would be dragged by a person (a blue shirt shifts the mean colour of
+     * the frame); counting how many pixels fit is not, because a person's pixels fit at no gain. On a tie the gain nearest
+     * 1 wins, so a frame that already matches is left alone.
+     *
+     * @param small the live frame at the working resolution ({@value #W} x {@value #H})
+     * @param excluded pixels not to count (the resident), or null
+     */
+    double exposureGain(RgbImage small, PersonMask excluded) {
+        double best = 1;
+        int bestFit = -1;
+        for (double g = 0.7; g <= 1.4 + 1e-9; g += 0.05) {
+            int fit = 0;
+            for (int y = 0; y < H; y += 2) {
+                for (int x = 0; x < W; x += 2) {
+                    if (excluded != null && excluded.person(x, y)) {
+                        continue;
+                    }
+                    double like = backgroundLikelihood(x, y, level(small, x, y, 0, g), level(small, x, y, 1, g),
+                            level(small, x, y, 2, g));
+                    fit += !Double.isNaN(like) && like >= 0.012 ? 1 : 0;
+                }
+            }
+            if (fit > bestFit || (fit == bestFit && Math.abs(g - 1) < Math.abs(best - 1))) {
+                bestFit = fit;
+                best = g;
+            }
+        }
+        return best;
+    }
+
+    private static int level(RgbImage img, int x, int y, int c, double gain) {
+        return (int) Math.max(0, Math.min(255, Math.round(img.get(x, y, c) * gain)));
+    }
+
+    /** The frame with every channel multiplied by {@code gain}, clamped; the same frame if the gain is 1. */
+    static RgbImage exposed(RgbImage frame, double gain) {
+        if (Math.abs(gain - 1) < 1e-9) {
+            return frame;
+        }
+        byte[] b = new byte[frame.width() * frame.height() * 3];
+        for (int y = 0; y < frame.height(); y++) {
+            for (int x = 0; x < frame.width(); x++) {
+                for (int c = 0; c < 3; c++) {
+                    b[(y * frame.width() + x) * 3 + c] = (byte) level(frame, x, y, c, gain);
+                }
+            }
+        }
+        return RgbImage.of(frame.width(), frame.height(), b);
+    }
+
     /** Mean red, green and blue of the stored room's visible pixels (bin centres), for exposure matching. */
     double[] meanColour() {
         double[] sum = new double[3];

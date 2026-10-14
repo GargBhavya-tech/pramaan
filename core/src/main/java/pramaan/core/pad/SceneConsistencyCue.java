@@ -6,6 +6,7 @@
 
 package pramaan.core.pad;
 
+import pramaan.core.image.ImageOps;
 import pramaan.core.image.RgbImage;
 
 /**
@@ -66,7 +67,9 @@ public final class SceneConsistencyCue {
             return new Analysis(CueResult.abstain(NAME, CueResult.AbstainReason.CAPABILITY_MISSING), Double.NaN, false,
                     null);
         }
-        return analyseLive(stored, SceneFingerprint.capture(frame, residentBox));
+        PersonMask box = residentBox == null ? null : PersonMask.ofBox(frame.width(), frame.height(), residentBox);
+        RgbImage matched = SceneFingerprint.exposed(frame, stored.exposureGain(ImageOps.resize(frame, PersonMask.W, PersonMask.H), box));
+        return analyseLive(stored, SceneFingerprint.capture(matched, residentBox));
     }
 
     /** As above, leaving out exactly the pixels a segmenter found to be people instead of a rectangle round them. */
@@ -75,7 +78,8 @@ public final class SceneConsistencyCue {
             return new Analysis(CueResult.abstain(NAME, CueResult.AbstainReason.CAPABILITY_MISSING), Double.NaN, false,
                     null);
         }
-        return analyseLive(stored, SceneFingerprint.capture(frame, people));
+        RgbImage matched = SceneFingerprint.exposed(frame, stored.exposureGain(ImageOps.resize(frame, PersonMask.W, PersonMask.H), people));
+        return analyseLive(stored, SceneFingerprint.capture(matched, people));
     }
 
     private Analysis analyseLive(SceneFingerprint stored, SceneFingerprint live) {

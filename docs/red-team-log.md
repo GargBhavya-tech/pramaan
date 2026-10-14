@@ -89,6 +89,20 @@ Re-run result: pending the physical attacks; synthetic only so far.
 ```
 
 ```
+Finding R-02 (a false rejection, not an attack)
+Attack:        none - an honest resident in the same room under different light
+How it worked: `StationSelfTest` (./gradlew :harness:stationSelfTest) scored the scene cue 0.35 for the same room 15% brighter
+               or 25% darker: below the 0.55 threshold, so a resident was voted against by the afternoon sun.
+Why the controls missed it: the cue compared colour histograms, which move with exposure; only the person segmenter matched
+               exposure.
+Decision:      FIXED. `SceneFingerprint.exposureGain` picks the one gain that makes the most pixels fit the stored room (a
+               person's pixels fit at no gain, so a blue shirt cannot drag it) and the cue applies it first.
+Fix / limit:   this commit. Scene cue now 0.97-1.00 at 0.75x-1.25x; another room stays below 0.3 at both
+               (`SceneContextTest`). Synthetic; a real camera's auto white balance is a different change from a gain.
+Re-run result: self-test controls all live.
+```
+
+```
 Finding R-01 (template for the next one)
 Attack:        A? ...
 How it worked: ...

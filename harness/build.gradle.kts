@@ -133,3 +133,13 @@ tasks.register<JavaExec>("redTeam") {
     mainClass.set("pramaan.harness.factory.RedTeamFuzz")
     workingDir = rootProject.projectDir
 }
+
+// An install-time self-test: controls and attacks made from this station's own empty-room photo, through the real cues.
+// ./gradlew :harness:stationSelfTest --args="--photo empty-room.jpg"
+tasks.register<JavaExec>("stationSelfTest") {
+    group = "verification"
+    description = "Runs attacks made from this station's backdrop through the scene and moire cues (Bible Part 43, 45)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.harness.factory.StationSelfTest")
+    workingDir = rootProject.projectDir
+}
