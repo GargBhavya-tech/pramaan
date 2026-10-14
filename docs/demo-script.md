@@ -106,9 +106,11 @@ The challenge failure is the claim; moiré is supporting.
 
 **Say:** "Operators and supervisors get the strictest operating point, and the attempt is logged."
 
-**Fallback / limit:** the **flash** challenge is part of the Bible's version of this scene. The flash *cue* now
-exists (`FlashReflectionCue`) with tests on synthetic traces, but it is not wired into the engine's fusion and
-needs a resident-facing light. Say that; do not claim a flash result.  **NOT YET (flash).**
+**Fallback / limit:** the **flash** challenge is part of the Bible's version of this scene. It is wired: start the
+scaffold with `--flash-screen N` (the monitor facing the resident) and the engine draws and plays it, the cue votes,
+and the Diagnostics window shows the `flash` cue. It is **tested with a fake light and synthetic faces; the real window
+has not been rehearsed on a screen**, and without `--flash-screen` nothing is flashed. Say which of the two you are
+showing; never claim a flash result you did not see.  **NOT YET (flash on real hardware).**
 
 ## Scene 6 — Virtual camera / injected video  `HARDWARE`
 

@@ -839,9 +839,22 @@ It abstains `CAPABILITY_MISSING` with no light, `NOT_APPLICABLE` when the face i
 against, not an abstention — that is what an injected stream looks like. `FlashReflectionCueTest`: live ρ above
 0.7 at the right lag, phone replay ρ below 0.5, injection |ρ| below 0.45, a 3-frame delay does not pass, a flat
 print scores below a real nose. Thresholds are the Bible's worked example (ρ 0.83 / 0.21 / 0.07), **not measured**.
-**Not built:** a resident-facing display driver (the JavaFX flash window), per-frame face-region sampling from the
-live stream, and wiring the cue into `LivenessEngine`'s fusion — all need the resident-facing light the Bible says
-the desktop does not have; the spectral skin check needs the corpus (#65) and a fixed white balance.
+**Wired since:** `LivenessEngine.Builder.flashLight(FlashLight)` (and `Station`/`StandardEngines.create(..., station)`)
+declares a resident-facing light; with it the flash is drawn from the policy pool, `FlashPhase` plays the plan's
+sequence on it after the action steps — the session counts the flash as the plan's last step, so the phase passes
+that step when it ends — samples the face's skin, nose and cheeks from every single-face frame (`FaceRegions`, fixed
+proportions of the detector's box, taken even on frames the quality gate would not score), and the cue's vote joins
+the post-challenge fusion. The sequence is re-checked with `FlashSafety` before the first colour; an unsafe one is
+never shown and the cue abstains. The light is switched off whenever an attempt ends or is reset. Which accessibility
+profiles skip light is decided by the existing filter (`AccessibilityAdjustments.allows(FLASH)`); no profile named
+for photosensitivity exists, which is an open question for the operator-profile list. Desktop: `FlashWindow` (a
+borderless window on the monitor named by `--flash-screen N`, hiding itself 1.5 s after the last colour; an index with
+no monitor stops the start-up). Tests: `StationWiringEngineTest` (live face accepted with a flash vote above 0.8; an
+injected stream votes below 0.5; no light means no flash and an abstention), `AttemptPhasesTest` (including 3 fps),
+`FlashWindowTest`.
+**Not built:** the real display has not been looked at — `FlashWindow` is untested on a screen; the spectral skin
+check needs the corpus (#65) and a fixed white balance; the device's signed emission log (profile addition 5) does not
+yet feed the correlation.
 
 ### #86: Stereo depth cue
 Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #32
@@ -857,9 +870,13 @@ more than 20 ms apart abstain `NOT_APPLICABLE`); no calibrated second camera abs
 error above 1.5 px (the views cannot be one scene — one camera injected) gives a vote of 0.02. `StereoDepthCueTest`
 reproduces the Bible's worked example (f 900, b 80, Z 500 → d 144 px, 1.7 mm per half pixel) and, on synthetic
 geometry, a real face at ≈25 mm relief, a flat print ≈0 mm, a curved print with no nose peak, and the injection case.
+**Wired since:** `StereoSource` (core/source) is the auxiliary camera's interface — landmarks in the fixed order nose
+tip, left cheek, right cheek, then at least five more — and `LivenessEngine.Builder.stereo(...)` adds the cue's vote on
+every analysed frame; a frame with no pair adds nothing (not a failure). `StationWiringEngineTest`: a real-face pair
+votes above 0.9 and a flat one below 0.1 through the real engine.
 **Not built:** the calibration itself (`stereoCalibrate`/`stereoRectify` over checkerboard views — an installation
-step needing an image library), the auxiliary camera source, and landmark detection in the second view. Thresholds
-are the Bible's, **not measured**.
+step needing an image library), a real `StereoSource` (a second camera and a landmark detector on its rectified
+frames). Thresholds are the Bible's, **not measured**.
 
 ### #87: Scene and illumination consistency
 Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #31
@@ -875,7 +892,7 @@ empty-room capture, person segmentation to find "the visible background") and li
 (part B.2 — a spherical-harmonics shading fit); it is not wired into `LivenessEngine`'s fusion, because that would
 need the backdrop-capture subsystem part A is (an operational decision — where and when each centre's empty room
 gets photographed — not a code decision). `WhitePointConsistencyCueTest`.
-**Built since (parts A and B.2, also unwired):** `SceneFingerprint` (colour histogram plus up to 150 Harris corners
+**Built since (parts A and B.2; wired below):** `SceneFingerprint` (colour histogram plus up to 150 Harris corners
 with 256-bit BRIEF descriptors at 160x120 — the ORB family without the rotation a fixed camera does not need — with
 an exclusion box for the resident) and `SceneConsistencyCue` (`S_bg = 0.5 HistCorr + 0.5 matched/keypoints`). A
 consistent offset shared by at least 60 % of the matches is read as a bumped camera (the Bible's FOV proxy): the cue
@@ -885,9 +902,21 @@ A blank wall (too few keypoints) abstains `CAPABILITY_MISSING`; a resident filli
 change scores above 0.65, another room below 0.35. `LightDirectionConsistencyCue` is the 2-D, first-order form of B.2
 (a luminance plane fitted to the face and to the backdrop, compared by the cosine of the gradient directions; even
 lighting abstains) — **not** the spherical-harmonics fit on a 3-D face, and it cannot separate shading from
-albedo. `LightDirectionConsistencyCueTest` uses ramps of known direction. **Still not built:** person segmentation
-(an exclusion box stands in), MOG2-style removal of people walking behind, and the installation-time capture
-procedure. All thresholds are provisional.
+albedo. `LightDirectionConsistencyCueTest` uses ramps of known direction.
+**Wired since:** `SceneContext` (engine) holds the station's stored fingerprint and runs the three cues on every fifth
+frame inside `PipelineFrameAnalyser`, excluding a box grown from the face box and cutting the backdrop from the wider
+side margin. The fingerprint compares colour histograms **per grid cell over the cells visible in both images**
+(comparing the live frame's visible part with the whole empty room scored a matching room down for the resident standing
+in it) and counts only corners whose whole descriptor patch is visible background. It has a file format
+(`toBytes`/`fromBytes`, magic `PRSF`, format 2, bit-packed mask and per-cell counts); `BackdropTool`
+(`./gradlew :desktop:captureBackdrop --args="--image empty-room.jpg --out build/scaffold/backdrop.bin"`) writes it from
+one photograph of the empty room and refuses a blank wall; the scaffold's `--backdrop` reads it and declares
+`KNOWN_BACKDROP`, and a bumped camera is audited as `BACKDROP_CAMERA_MOVED`. `PROVISIONAL_SCORE` moved from 0.45 to
+0.55 after a test showed a room with a similar palette and no matching corners sitting exactly on the old threshold.
+Tests: `SceneContextTest`, `BackdropToolTest`, `StationWiringEngineTest` (without a backdrop all three abstain
+`CAPABILITY_MISSING`). **Still not built:** person segmentation (an exclusion box stands in), MOG2-style removal of
+people walking behind, and an audited in-app re-fingerprint (the tool is a command, not a button). All thresholds are
+provisional.
 
 ### #88: Fraud analytics signals
 Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #10
@@ -941,8 +970,17 @@ within 40 ms and 0.04; a printed iris (amplitude ≈ 0), a constriction at the w
 flash of three all abstain; a sluggish old eye at 520 ms with 12 % passes. Honest limit found in testing: latency and
 time constant trade off by about ±50 ms, so an eye genuinely near 650–700 ms can fall just outside the bound and
 then abstains rather than being penalised.
-**Not built:** pupil segmentation from NIR frames (the cue takes a radius series), the consensual-reflex bonus for
-dual-iris devices, and the illuminator control that needs the Liveness Profile (or the Part 40 kit).
+**Wired since:** `PupilSource` (core/source: `stimulate()` and `radii(from, to)`) and
+`LivenessEngine.Builder.pupil(...)`: `PupilPhase` runs after the flash step, fires three flashes at CSPRNG-random
+gaps, reads the radii over the whole window and gives them to the cue, whose result joins the post-challenge fusion
+(positive-only: it can raise the score, an absent reflex abstains). It is skipped when the resident's accessibility
+profile disallows light. The session grants the extra time through an audited, once-per-attempt, capped
+`LivenessSession.extendDecisionDeadline` (event `CHALLENGE_PHASES_STARTED`). **One deviation from the Bible:** the gap
+is 2.0-3.5 s, not 1.5-3 s — a pupil constricted for one flash is still partly constricted 1.5 s later, which depresses
+the baseline the next flash is measured against and shrinks its apparent amplitude (found in `StationWiringEngineTest`
+with a physiologically plausible re-dilation). Tests: `AttemptPhasesTest`, `StationWiringEngineTest`.
+**Not built:** pupil segmentation from NIR frames (the cue takes a radius series), a real `PupilSource`, the
+consensual-reflex bonus for dual-iris devices, and illuminator control through the Liveness Profile (or the Part 40 kit).
 
 ---
 
@@ -1075,8 +1113,18 @@ Android API level), `SignedStreamLock` (a `BindingLock`: a dropped, reordered, r
 chain for good; a capture naming a stale or foreign head, or none, is refused; a stream run too long without a signed
 checkpoint is untrusted) and `BindingLevel` (`HEURISTIC` vs `CRYPTOGRAPHIC`). Harness: `MockLivenessProfile`, the
 device side, whose outputs `MockDeviceProfileConformanceTest` validates against the schema. **Not done:** nothing posts
-it — Bible Q12 (how MOSIP accepts proposals) must be asked of the mentors first; `SbiFrameSource` does not yet read the
-extra stream headers and `CaptureBinder` does not yet call `SignedStreamLock`; no real device implements the profile.
+it — Bible Q12 (how MOSIP accepts proposals) must be asked of the mentors first; no real device implements the profile.
+**Wired since:** `Frame` carries the tag, time and checkpoint; `MjpegStreamReader` reads `X-SBI-LP-Tag`/`-Time`/
+`-Checkpoint`; `DiscoveredDevice` reads the device-info `livenessProfile` and declares its capabilities;
+`SbiFrameSource` runs the key agreement on the stream request (answer in the `X-SBI-LP-Answer` header), refuses a
+session whose device advertises the profile but cannot prove it, and observes every frame in its reader thread;
+`FaceFrameSource.streamLock()` hands the lock to the engine, `CaptureBinder` adds the `signedStream` lock (with a 5-frame
+slack for frames in flight at the moment of capture), `BindingResult.level()` is `HEURISTIC` or `CRYPTOGRAPHIC` and
+goes into the evidence's `binding.level`, and the policy flag `injection.requireSignedStream` turns a missing profile
+into `STREAM_REQUIRED`. `MockFrameSource.livenessProfile(true)` runs the whole path with injection and wrong-head
+attacks. Tests: `SbiLivenessProfileTest` (stub device incl. tampered tag, no answer, untrusted answer, plain device),
+`StationWiringEngineTest` (cryptographic binding; injected frame; foreign head; hidden profile).
+**Still open:** `captureBurst` and `illuminate` have no client call.
 
 ---
 

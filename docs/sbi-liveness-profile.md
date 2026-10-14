@@ -50,15 +50,17 @@ a client that does not know it ignores it. Requests keep the SBI convention that
 
 ### 3.2 Key agreement (addition 2, at stream start)
 
-The client adds an ephemeral P-256 public key (X.509 SubjectPublicKeyInfo, base64) to the stream-start request
-alongside the `transactionId` it already sends:
+The client adds a `livenessProfile` object to the stream-start request, holding an ephemeral P-256 public key
+(X.509 SubjectPublicKeyInfo, base64) and the transaction id — for PRAMAAN the session nonce, which is also the
+`transactionId` the first capture echoes (the stream is session-long; each retry's capture carries its own):
 
 ```json
-{ "version": "0.1", "transactionId": "0123456789abcdef0123456789abcdef", "clientEphemeralKey": "MFkw..." }
+"livenessProfile": { "version": "0.1", "transactionId": "0123456789abcdef0123456789abcdef", "clientEphemeralKey": "MFkw..." }
 ```
 
-The device answers with its own ephemeral key in a compact JWS signed with its device key (RS256, certificate chain
-in `x5c`, exactly like a capture). The payload names the transaction and the hash of the client key it answered:
+The device answers in the stream response's **`X-SBI-LP-Answer` header** with its own ephemeral key in a compact JWS
+signed with its device key (RS256, certificate chain in `x5c`, exactly like a capture). The payload names the
+transaction and the hash of the client key it answered:
 
 ```json
 { "version": "0.1", "transactionId": "0123456789abcdef0123456789abcdef",
@@ -101,7 +103,11 @@ costs microseconds; the expensive signature is needed only at checkpoints.
 ```
 
 `streamTagHead` is the head of the chain at the moment of capture. A client checks it against the chain it
-computed over the frames it received.
+computed over the frames it received. Because the device tags a frame the moment it captures it, up to
+`HEAD_SLACK_FRAMES` = 5 frames may still be in flight to the client when the capture happens, so the client accepts
+the head if it equals any of its last six heads — never an older one (a capture signed against a stale part of the
+stream is refused). The client reads every frame as it arrives, before any drop-oldest queue, so a frame dropped for
+being slow is still part of the chain.
 
 ### 3.5 `captureBurst` and `illuminate` (additions 4 and 5)
 
@@ -175,8 +181,15 @@ the one generic security message at the user interface — differing text would 
 
 ## 9. Not done
 
-* No real device implements this; **no certified SBI device has been tested against it**.
-* The client integration is the lock and its primitives. `SbiFrameSource` does not yet read the extra stream
-  headers, and `CaptureBinder` does not yet call `SignedStreamLock` — wiring needs a device (or MockMDS patched with
-  the profile) to exercise end to end.
+* No real device implements this; **no certified SBI device has been tested against it**, and MockMDS has not been
+  patched with the profile.
+* The client side is wired: `SbiFrameSource` reads `livenessProfile` from device info, runs the key agreement on the
+  stream request (refusing the session if the device advertises the profile but sends no verifiable answer),
+  authenticates every frame in its reader thread, and exposes the lock through `FaceFrameSource.streamLock()`;
+  `LivenessEngine` hands it to `CaptureBinder`, which adds the `signedStream` lock, reports `BindingLevel`, and writes
+  the level into the evidence. The policy flag `injection.requireSignedStream` makes a device without the profile
+  fail binding with `STREAM_REQUIRED` (threat T6). Tested against an in-process stub device
+  (`SbiLivenessProfileTest`) and the mock source end to end (`StationWiringEngineTest`).
+* Not wired: `captureBurst` and `illuminate` have schemas and a mock implementation but no client call yet, and the
+  signed emission log is not yet used to correlate the flash.
 * The JSON schemas are checked against the mock by a small in-test validator, not by a full JSON Schema engine.

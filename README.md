@@ -24,10 +24,13 @@ re-checkable evidence** rather than a one-off pass or fail on the client:
 
 Phases 0–11 are built: the liveness engine (`core`), the SBI client (`sbi`), the evaluation toolkit (`harness`)
 and a registration scaffold with the face capture screen, operator login, supervisor approval and diagnostics
-(`desktop`, ADR 0003). The Android AAR (Phase 12, #79) builds but has not yet run on a device. Phase 13 differentiators are built as
-tested cues and tools but are **not yet wired into the engine's fusion**: the flash-reflection cue (#85), stereo depth
-(#86), scene and illumination consistency (#87), the synthetic attack factory (#89), the pupil light reflex (#90),
-and a reference implementation of the SBI Liveness Profile (#100). Phase 15's documents are written — red-team log,
+(`desktop`, ADR 0003). The Android AAR (Phase 12, #79) builds but has not yet run on a device. Phase 13 differentiators are built and wired
+into the engine, each switching on only when the station has what it needs (`Station`): the flash-reflection cue
+(#85, `--flash-screen N` names the monitor facing the resident), stereo depth (#86), scene and illumination
+consistency (#87, `--backdrop file` from `./gradlew :desktop:captureBackdrop`), the pupil light reflex (#90), and the
+SBI Liveness Profile (#100; `injection.requireSignedStream` in the policy). They are tested with fakes and synthetic
+data — **no station with the extra hardware, and no device that speaks the profile, exists yet** — and the synthetic
+attack factory (#89) lives in the harness. Phase 15's documents are written — red-team log,
 demo script, claim sheet, deck outline — but the red-team day, rehearsals and slides need people and hardware.
 **There is no real corpus yet, so there are no measured error rates**; `docs/claim-sheet.md` says what is and is not claimed.
 See `PRAMAAN_Build_Map.md` for what each ticket built and `PRAMAAN_Final_Bible.md` for the design (Parts 0–48).

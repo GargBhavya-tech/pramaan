@@ -44,10 +44,10 @@ run**: that needs people, prints, phones, a mask and a camera (`docs/hardware-te
 |---|---|---|---|---|
 | A1 | Printed photo (matte, glossy, cut-out eyes, curved) | Passive scorer, colour-texture\*, flatness, challenges | Cue and challenge logic: `CueBankTest`, `ActionDetectorsTest`, `LivenessEngineTest`. \*Colour-texture abstains `UNTRAINED` until the corpus exists. | **NOT RUN** |
 | A2 | Screen showing a photo | Moiré, colour cues, flatness, challenge | Moiré: `CueBankTest`; synthetic recapture scores above bona fide: `SyntheticAttackFactoryTest` | **NOT RUN** |
-| A3 | Screen replaying a video | Moiré, unpredictable challenge, flash | Challenge entropy and uniformity: `ChallengeGeneratorTest`; wrong-action / latency: `ActionDetectorsTest`. Flash cue is **not wired** into fusion. | **NOT RUN** |
+| A3 | Screen replaying a video | Moiré, unpredictable challenge, flash | Challenge entropy and uniformity: `ChallengeGeneratorTest`; wrong-action / latency: `ActionDetectorsTest`. Flash is wired (needs `--flash-screen`) but only tested with a fake light. | **NOT RUN** |
 | A4 | 3-D mask | Passive, rPPG\*\*, deformation, flash shading, stereo | Deformation and stereo cues tested on synthetic data only. \*\*rPPG abstains on the SBI stream. Projection-on-mask is **unquantified**. | **NOT RUN** |
 | A5 | Virtual camera / injected feed | Injection guard (denylist veto), flash, stream tag chain | `InjectionGuardTest`, `InjectionGuardEngineTest`. The denylist matches *reported* device metadata only. The tag chain needs a device with the Liveness Profile: `SignedStreamLockTest`. | **NOT RUN** |
-| A6 | Real-time deepfake | Flash correlation, latency, artefact cue | Flash cue on synthetic traces: `FlashReflectionCueTest`. No deepfake-artefact cue exists. | **NOT RUN** |
+| A6 | Real-time deepfake | Flash correlation, latency, artefact cue | Flash cue on synthetic traces: `FlashReflectionCueTest`, through the engine with a fake light: `StationWiringEngineTest`. No deepfake-artefact cue exists. | **NOT RUN** |
 | A7 | Capture swap | Four binding locks | `BindingAttacksTest`, `CaptureBinderTest` | **TEST-BACKED** — re-run physically with a patched MockMDS |
 | A8 | Replay of signed SBI data | Nonce as `transactionId`, timestamp window | `CaptureBinderTest`, `BindingAttacksTest`, `SessionNonceTest` | **TEST-BACKED** |
 | A9 | Challenge pre-recording | High-entropy, CSPRNG-seeded challenges | `ChallengeGeneratorTest`, `NoInsecureRandomTest` | **TEST-BACKED** (entropy only; the attacker's actual library cost is not measured) |
