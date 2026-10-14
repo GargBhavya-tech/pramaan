@@ -17,8 +17,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import pramaan.core.binding.BindingInput;
 import pramaan.core.binding.BindingResult;
 import pramaan.core.binding.CaptureBinder;
+import pramaan.core.binding.SignedStreamLock;
 import pramaan.core.challenge.AccessibilityAdjustments;
 import pramaan.core.challenge.Challenge;
 import pramaan.core.challenge.ChallengeGenerator;
@@ -52,8 +54,13 @@ import pramaan.core.session.EngineBundle;
 import pramaan.core.session.LivenessSession;
 import pramaan.core.session.SessionEventRouter;
 import pramaan.core.session.SessionState;
+import pramaan.core.pad.StereoDepthCue;
 import pramaan.core.source.CaptureRequest;
+import pramaan.core.source.DeviceCapabilities;
 import pramaan.core.source.DeviceEvent;
+import pramaan.core.source.FlashLight;
+import pramaan.core.source.PupilSource;
+import pramaan.core.source.StereoSource;
 import pramaan.core.source.DeviceException;
 import pramaan.core.source.DeviceLevel;
 import pramaan.core.source.FaceFrameSource;
@@ -110,7 +117,13 @@ public final class LivenessEngine implements FrameSink {
             new CueRegistry.Spec("flatness", Set.of(), 3),
             new CueRegistry.Spec("deformation", Set.of(), 1),
             new CueRegistry.Spec("flash", Set.of(Capability.RESIDENT_DISPLAY), SessionCapabilities.FLASH_MIN_FPS),
-            new CueRegistry.Spec("rppg", Set.of(Capability.UNCOMPRESSED_FRAMES), SessionCapabilities.RPPG_MIN_FPS));
+            new CueRegistry.Spec("rppg", Set.of(Capability.UNCOMPRESSED_FRAMES), SessionCapabilities.RPPG_MIN_FPS),
+            new CueRegistry.Spec("stereo", Set.of(Capability.SECOND_CAMERA), 1),
+            new CueRegistry.Spec("plr", Set.of(Capability.IRIS_CAMERA), 1),
+            new CueRegistry.Spec("scene", Set.of(Capability.KNOWN_BACKDROP), 1),
+            new CueRegistry.Spec("lightDirection", Set.of(Capability.KNOWN_BACKDROP), 1),
+            new CueRegistry.Spec("whitePoint", Set.of(Capability.KNOWN_BACKDROP), 1));
+    /** Cues implemented unconditionally; flash, stereo, plr and the backdrop trio join per engine, when their source is given. */
     static final Set<String> IMPLEMENTED = Set.of(PASSIVE_CUE, "moire", "colorTexture", "flatness", "deformation");
     /** Sample-crop candidates kept per step: enough for {@link SampleSelector} to choose and top up from. */
     static final int SAMPLES_PER_STEP = SampleSelector.MIN;
@@ -136,6 +149,17 @@ public final class LivenessEngine implements FrameSink {
     private final DiagnosticSink diagnostics;
     private final EngineBundle bundle;
     private final List<CueResult> notRunning;
+    private final FlashLight flashLight;
+    private final StereoSource stereoSource;
+    private final PupilSource pupilSource;
+    private final StereoDepthCue stereoCue = new StereoDepthCue(StereoSource.NOSE_TIP, StereoSource.LEFT_CHEEK,
+            StereoSource.RIGHT_CHEEK);
+    /** The phases that run after the action steps (flash, pupil reflex), built once per attempt. */
+    private final List<AttemptPhase> phases = new ArrayList<>();
+    private boolean phasesBuilt;
+    private int phaseIndex;
+    private boolean flashStepPending;
+    private boolean pupilTimeGranted;
 
     private final CueAccumulator cues = new CueAccumulator();
     private final Map<Integer, List<SampleSelector.Candidate>> samples = new java.util.TreeMap<>();
@@ -166,7 +190,10 @@ public final class LivenessEngine implements FrameSink {
         this.source = b.source;
         this.analyser = b.analyser;
         this.captureAnalyser = b.captureAnalyser;
-        this.caps = b.caps;
+        this.flashLight = b.flashLight;
+        this.stereoSource = b.stereoSource;
+        this.pupilSource = b.pupilSource;
+        this.caps = withStationCapabilities(b);
         this.level = b.level;
         // The operator's accessibility choice lives on the session (Build Map #92), so the evidence records the
         // profiles the plan was actually drawn under; an explicit builder value is for tests and tools.
@@ -178,8 +205,21 @@ public final class LivenessEngine implements FrameSink {
         EngineBundle bundle = b.bundle;
         this.bundle = bundle;
         List<CueResult> skipped = new ArrayList<>(CueRegistry.plan(CUES, caps.device().capabilities(), caps.fps()).abstentions());
+        Set<String> implemented = new java.util.HashSet<>(IMPLEMENTED);
+        if (flashLight != null) {
+            implemented.add("flash");
+        }
+        if (stereoSource != null) {
+            implemented.add("stereo");
+        }
+        if (pupilSource != null) {
+            implemented.add("plr");
+        }
+        if (b.knownBackdrop) {
+            implemented.addAll(Set.of("scene", "lightDirection", "whitePoint"));
+        }
         for (String runnable : CueRegistry.plan(CUES, caps.device().capabilities(), caps.fps()).runnable()) {
-            if (!IMPLEMENTED.contains(runnable)) {
+            if (!implemented.contains(runnable)) {
                 skipped.add(CueResult.abstain(runnable, CueResult.AbstainReason.NOT_APPLICABLE));
             }
         }
@@ -193,7 +233,8 @@ public final class LivenessEngine implements FrameSink {
         this.point = table.operatingPoint(profile.operatingPoint(), b.deviceClass);
         this.fusion = new RiskFusion(table);
         this.decider = new ZoneDecider(random::nextDouble, table.disagreementLogitGap());
-        this.binder = new CaptureBinder(b.deviceTrust, table.thetaSame(), timeouts.bindingWindow(), timeouts.captureMaxSkew());
+        this.binder = new CaptureBinder(b.deviceTrust, table.thetaSame(), timeouts.bindingWindow(), timeouts.captureMaxSkew(),
+                bundle.policy().requireSignedStream());
         this.router = new SessionEventRouter(session, FaceTracker.gapFor(caps.fps()));
         if (b.diagnostics == null) {
             this.diagnostics = new DiagnosticSink() {
@@ -212,6 +253,32 @@ public final class LivenessEngine implements FrameSink {
         return new Builder(bundle, session);
     }
 
+    /**
+     * The device's capabilities plus what this station adds around it: a resident-facing light, a second camera, an
+     * iris camera, a known backdrop (Bible Part 31.2). These are properties of the installation, not of the SBI
+     * device, so they are declared to the engine instead of discovered.
+     */
+    private static SessionCapabilities withStationCapabilities(Builder b) {
+        Set<Capability> all = EnumSet.noneOf(Capability.class);
+        all.addAll(b.caps.device().capabilities());
+        if (b.flashLight != null) {
+            all.add(Capability.RESIDENT_DISPLAY);
+        }
+        if (b.stereoSource != null) {
+            all.add(Capability.SECOND_CAMERA);
+        }
+        if (b.pupilSource != null) {
+            all.add(Capability.IRIS_CAMERA);
+        }
+        if (b.knownBackdrop) {
+            all.add(Capability.KNOWN_BACKDROP);
+        }
+        if (all.equals(b.caps.device().capabilities())) {
+            return b.caps;
+        }
+        return SessionCapabilities.of(b.caps.fps(), new DeviceCapabilities(b.caps.device().device(), all));
+    }
+
     // ------------------------------------------------------------------------------------------ host API
 
     /** Starts the session's first attempt. */
@@ -224,12 +291,14 @@ public final class LivenessEngine implements FrameSink {
     /** Fires due timeouts; call from a timer so a stalled stream still times out. */
     public synchronized void tick() {
         session.tick();
+        syncAttempt();
         publish();
     }
 
     @Override
     public synchronized void onDeviceEvent(DeviceEvent event) {
         router.onDeviceEvent(event);
+        syncAttempt();
         publish();
     }
 
@@ -340,12 +409,74 @@ public final class LivenessEngine implements FrameSink {
         if (session.state() == SessionState.PASSIVE && session.passiveWindowComplete()) {
             decidePassive();
         }
-        if (session.state() == SessionState.CHALLENGING && plan != null && session.challengeStep() >= plan.steps().size()) {
+        if (session.state() == SessionState.CHALLENGING && plan != null && session.challengeStep() >= plan.steps().size()
+                && !phasesRunning(frame, obs)) {
             decideAfterChallenge();
         }
         if (session.state() == SessionState.CAPTURING) {
             captureAndBind();
         }
+    }
+
+    /**
+     * Runs the stretch between the last action step and the decision: the flash sequence on the resident-facing
+     * light and the pupil reflex, when this station has them and the resident's accessibility profiles allow light
+     * (photosensitivity). Each phase gets frames until it is done; the decision waits for all of them. Returns true
+     * while any is still running.
+     */
+    private boolean phasesRunning(Frame frame, FrameObservation obs) {
+        if (!phasesBuilt) {
+            phasesBuilt = true;
+            flashStepPending = plan.flash().isPresent();
+            if (adjustments.allows(ChallengeKind.FLASH)) {
+                if (flashLight != null && plan.flash().isPresent()) {
+                    phases.add(new FlashPhase(flashLight, plan.flash().get()));
+                }
+                if (pupilSource != null) {
+                    phases.add(new PupilPhase(pupilSource, random));
+                }
+            }
+        }
+        // The session counts the flash as the plan's last step (it allots flash time + the step timeout for it). With
+        // no light to play it on, that step is passed at once so the resident is never timed out on nobody's fault.
+        if (flashStepPending && phases.stream().noneMatch(p -> p instanceof FlashPhase)) {
+            flashStepPending = false;
+            session.challengeStepPassed();
+        }
+        while (phaseIndex < phases.size()) {
+            AttemptPhase p = phases.get(phaseIndex);
+            if (p instanceof PupilPhase && !pupilTimeGranted) {
+                // The pupil reflex runs after the flash step, once the session awaits its decision on a two-second
+                // grace; it asks, audited, for the longer time it needs.
+                pupilTimeGranted = true;
+                session.extendDecisionDeadline(Duration.ofMillis(PupilPhase.WORST_CASE_MS));
+            }
+            if (p.advance(frame, obs)) {
+                return true;
+            }
+            phaseIndex++;
+            if (p instanceof FlashPhase && flashStepPending) {
+                flashStepPending = false;
+                session.challengeStepPassed(); // the flash step is done; the cue, not the step, judges the response
+            }
+            for (CueResult r : p.results()) {
+                if (!r.abstained() || !unlocked.containsKey(r.cue())) {
+                    unlocked.put(r.cue(), r); // a vote replaces an abstention, never the reverse
+                }
+            }
+        }
+        return false;
+    }
+
+    private void abortPhases() {
+        for (AttemptPhase p : phases) {
+            p.abort();
+        }
+        phases.clear();
+        phasesBuilt = false;
+        phaseIndex = 0;
+        flashStepPending = false;
+        pupilTimeGranted = false;
     }
 
     /** A frame that joined the attempt's hash chain: its scores and landmarks become evidence. */
@@ -362,6 +493,11 @@ public final class LivenessEngine implements FrameSink {
             cues.add(obs.moire());
         }
         obs.cues().forEach(cues::add);
+        if (stereoSource != null && obs.landmarks() != null) {
+            // The second camera's view of the same instant (Bible Part 38); its absence for a frame is not a failure.
+            stereoSource.pairFor(t).ifPresent(p -> cues.add(
+                    stereoCue.evaluate(p.calibration(), p.left(), p.right(), p.leftMillis(), p.rightMillis())));
+        }
         if (obs.sampleCrop() != null) {
             keepSample(new SampleSelector.Candidate(s == SessionState.PASSIVE ? -1 : session.challengeStep(),
                     obs.sampleQuality(), obs.sampleCrop()));
@@ -482,7 +618,11 @@ public final class LivenessEngine implements FrameSink {
         if (d.zone() == Zone.CHALLENGE) {
             generator = ChallengeGenerator.fresh(random);
             ChallengePolicy cp = profile.challenge();
-            p = generator.plan(verifiable(cp.pool()), cp.minSteps(), cp.maxSteps(), caps, adjustments, UNLOCKING);
+            List<ChallengeKind> pool = verifiable(cp.pool());
+            if (flashLight != null && cp.pool().contains(ChallengeKind.FLASH)) {
+                pool.add(ChallengeKind.FLASH); // verifiable here: FlashPhase plays it and the cue judges it
+            }
+            p = generator.plan(pool, cp.minSteps(), cp.maxSteps(), caps, adjustments, UNLOCKING);
         }
         if (session.passiveDecided(d, p) && session.state() == SessionState.CHALLENGING) {
             plan = p;
@@ -520,7 +660,12 @@ public final class LivenessEngine implements FrameSink {
         }
         publish();
         float[] embedding = captureAnalyser.embed(capture);
-        BindingResult result = binder.bind(session.bindingInput(capture, embedding, trackId, earlierCaptures));
+        BindingInput input = session.bindingInput(capture, embedding, trackId, earlierCaptures);
+        java.util.Optional<SignedStreamLock> streamLock = source.streamLock();
+        if (streamLock.isPresent()) {
+            input = input.withStreamLock(streamLock.get()); // the device authenticated the preview: add the fifth lock
+        }
+        BindingResult result = binder.bind(input);
         lastBinding = result;
         session.bindingVerified(result);
         if (session.state() == SessionState.ACCEPTED) {
@@ -575,6 +720,7 @@ public final class LivenessEngine implements FrameSink {
             lastBinding = null;
         }
         if (!live || session.attempt() != attemptSeen) {
+            abortPhases(); // never leave the resident-facing light on past the attempt it belonged to
             attemptSeen = session.attempt();
             samples.clear();
             cues.clear();
@@ -636,6 +782,10 @@ public final class LivenessEngine implements FrameSink {
         private Integer requestedScore;
         private DiagnosticSink diagnostics;
         private DiagnosticGrant grant;
+        private FlashLight flashLight;
+        private StereoSource stereoSource;
+        private PupilSource pupilSource;
+        private boolean knownBackdrop;
 
         private Builder(EngineBundle bundle, LivenessSession session) {
             this.bundle = Objects.requireNonNull(bundle, "bundle");
@@ -705,6 +855,36 @@ public final class LivenessEngine implements FrameSink {
         public Builder diagnostics(DiagnosticSink sink, DiagnosticGrant diagnosticGrant) {
             this.diagnostics = Objects.requireNonNull(sink, "sink");
             this.grant = Objects.requireNonNull(diagnosticGrant, "grant");
+            return this;
+        }
+
+        /**
+         * A light that faces the resident (Bible Part 8.6). With it the flash challenge may be drawn and the flash
+         * cue runs; without it neither does. Also declares {@code RESIDENT_DISPLAY} for the station.
+         */
+        public Builder flashLight(FlashLight light) {
+            this.flashLight = light;
+            return this;
+        }
+
+        /** A calibrated second camera (Bible Part 38): the stereo-depth cue runs on every analysed frame. */
+        public Builder stereo(StereoSource source) {
+            this.stereoSource = source;
+            return this;
+        }
+
+        /** An iris camera with a visible stimulus (Bible Part 32): the pupil-light-reflex phase runs after the steps. */
+        public Builder pupil(PupilSource source) {
+            this.pupilSource = source;
+            return this;
+        }
+
+        /**
+         * This station has a stored fingerprint of its empty backdrop (Bible Part 43), and the frame analyser
+         * evaluates the scene and illumination cues against it. Declares {@code KNOWN_BACKDROP}.
+         */
+        public Builder knownBackdrop(boolean known) {
+            this.knownBackdrop = known;
             return this;
         }
 

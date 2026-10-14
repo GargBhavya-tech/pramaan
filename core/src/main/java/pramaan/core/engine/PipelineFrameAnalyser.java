@@ -33,6 +33,7 @@ public final class PipelineFrameAnalyser implements FrameAnalyser {
     private final SFaceEmbedder sface;
     private final MoireCue moire = new MoireCue();
     private final ColorTextureCue colorTexture;
+    private final SceneContext scene;
 
     public PipelineFrameAnalyser(FramePipeline pipeline, LandmarkProvider landmarks, SFaceEmbedder sface) {
         this(pipeline, landmarks, sface, new ColorTextureCue(null, 0));
@@ -41,6 +42,16 @@ public final class PipelineFrameAnalyser implements FrameAnalyser {
     /** @param colorTexture the colour-texture cue (#30); untrained, it abstains on every frame */
     public PipelineFrameAnalyser(FramePipeline pipeline, LandmarkProvider landmarks, SFaceEmbedder sface,
             ColorTextureCue colorTexture) {
+        this(pipeline, landmarks, sface, colorTexture, null);
+    }
+
+    /**
+     * @param scene this station's stored backdrop (Bible Part 43), or null when none was ever captured; with it, the
+     *     scene, white-point and light-direction cues are evaluated on the frames it picks
+     */
+    public PipelineFrameAnalyser(FramePipeline pipeline, LandmarkProvider landmarks, SFaceEmbedder sface,
+            ColorTextureCue colorTexture, SceneContext scene) {
+        this.scene = scene;
         this.pipeline = Objects.requireNonNull(pipeline, "pipeline");
         this.landmarks = Objects.requireNonNull(landmarks, "landmarks");
         this.sface = Objects.requireNonNull(sface, "sface");
@@ -60,6 +71,10 @@ public final class PipelineFrameAnalyser implements FrameAnalyser {
             return b.build();
         }
         b.quality(r.quality.passes(), r.guidance).landmarks(landmarks.locate(r.image, r.face));
+        // The flash cue reads the face's colour on every single-face frame, even one the quality gate would not
+        // score: a coloured light changes the very lighting the gate judges.
+        double[][] regions = FaceRegions.sample(r.image, r.face);
+        b.regions(regions[0], regions[1], regions[2]);
         if (r.quality.passes() && !Double.isNaN(r.passive)) {
             RgbImage face = nativeCrop(r.image, r.face);
             b.passive(r.passive)
@@ -67,6 +82,9 @@ public final class PipelineFrameAnalyser implements FrameAnalyser {
                     .cue(colorTexture.evaluate(face))
                     .embedding(sface.embed(r.image, r.face.fivePoints()))
                     .sample(SampleSelector.contextCrop(r.image, r.face), r.quality.q());
+            if (scene != null) {
+                scene.evaluate(r.image, r.face, face).forEach(b::cue);
+            }
         }
         return b.build();
     }

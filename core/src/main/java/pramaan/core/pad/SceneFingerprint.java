@@ -149,6 +149,96 @@ public final class SceneFingerprint {
         return keypoints.size();
     }
 
+    private static final int MAGIC = 0x50525346; // "PRSF"
+    private static final int FORMAT = 1;
+
+    /**
+     * The fingerprint as stored at installation: a four-byte magic, a format number, the histogram, the visible-area
+     * mask (bit-packed) and the keypoints. It holds colour statistics and corner descriptors of an <em>empty</em>
+     * room, not a picture of it and not a person.
+     */
+    public byte[] toBytes() {
+        try {
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            java.io.DataOutputStream out = new java.io.DataOutputStream(bytes);
+            out.writeInt(MAGIC);
+            out.writeInt(FORMAT);
+            out.writeInt(hist.length);
+            for (double h : hist) {
+                out.writeDouble(h);
+            }
+            byte[] mask = new byte[(valid.length + 7) / 8];
+            for (int i = 0; i < valid.length; i++) {
+                if (valid[i]) {
+                    mask[i / 8] |= (byte) (1 << (i % 8));
+                }
+            }
+            out.writeInt(valid.length);
+            out.write(mask);
+            out.writeInt(keypoints.size());
+            for (Keypoint k : keypoints) {
+                out.writeShort(k.x);
+                out.writeShort(k.y);
+                for (long w : k.bits) {
+                    out.writeLong(w);
+                }
+            }
+            out.flush();
+            return bytes.toByteArray();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("cannot serialise a fingerprint", e);
+        }
+    }
+
+    /** @throws IllegalArgumentException if the bytes are not a fingerprint of this format and size */
+    public static SceneFingerprint fromBytes(byte[] data) {
+        try {
+            java.io.DataInputStream in = new java.io.DataInputStream(new java.io.ByteArrayInputStream(data));
+            if (in.readInt() != MAGIC || in.readInt() != FORMAT) {
+                throw new IllegalArgumentException("not a scene fingerprint of format " + FORMAT);
+            }
+            double[] hist = new double[in.readInt()];
+            if (hist.length != 3 * BINS) {
+                throw new IllegalArgumentException("unexpected histogram size " + hist.length);
+            }
+            for (int i = 0; i < hist.length; i++) {
+                hist[i] = in.readDouble();
+            }
+            int cells = in.readInt();
+            if (cells != W * H) {
+                throw new IllegalArgumentException("fingerprint was made at another working resolution");
+            }
+            byte[] mask = new byte[(cells + 7) / 8];
+            in.readFully(mask);
+            boolean[] valid = new boolean[cells];
+            int visible = 0;
+            for (int i = 0; i < cells; i++) {
+                valid[i] = (mask[i / 8] >> (i % 8) & 1) != 0;
+                visible += valid[i] ? 1 : 0;
+            }
+            int n = in.readInt();
+            if (n < 0 || n > MAX_KEYPOINTS) {
+                throw new IllegalArgumentException("unexpected keypoint count " + n);
+            }
+            List<Keypoint> keypoints = new ArrayList<>();
+            for (int i = 0; i < n; i++) {
+                int x = in.readUnsignedShort();
+                int y = in.readUnsignedShort();
+                if (x >= W || y >= H) {
+                    throw new IllegalArgumentException("keypoint outside the working image");
+                }
+                long[] bits = new long[DESCRIPTOR_BITS / 64];
+                for (int j = 0; j < bits.length; j++) {
+                    bits[j] = in.readLong();
+                }
+                keypoints.add(new Keypoint(x, y, bits));
+            }
+            return new SceneFingerprint(hist, valid, keypoints, (double) visible / cells);
+        } catch (java.io.IOException e) {
+            throw new IllegalArgumentException("truncated or unreadable fingerprint: " + e.getMessage(), e);
+        }
+    }
+
     public double visibleFraction() {
         return visibleFraction;
     }

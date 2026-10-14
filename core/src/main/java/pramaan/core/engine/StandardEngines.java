@@ -113,14 +113,30 @@ public final class StandardEngines {
     public LivenessEngine create(LivenessSession session, FaceFrameSource source, EngineListener listener,
             int requestedScore, SessionCapabilities caps, DeviceCapabilities device, DiagnosticSink diagnostics,
             DiagnosticGrant grant) {
+        return create(session, source, listener, requestedScore, caps, device, diagnostics, grant, Station.NONE);
+    }
+
+    /**
+     * As above, for a station with extras around the SBI device (Bible Part 31.2): a resident-facing light, a second
+     * camera, an iris camera and a stored backdrop. Each turns on the cues that need it; none changes how a station
+     * without it runs.
+     */
+    public LivenessEngine create(LivenessSession session, FaceFrameSource source, EngineListener listener,
+            int requestedScore, SessionCapabilities caps, DeviceCapabilities device, DiagnosticSink diagnostics,
+            DiagnosticGrant grant, Station station) {
         YuNetDetector detector = new YuNetDetector(model(YUNET), DETECT_SCORE, DETECT_NMS);
         FramePipeline pipeline = new FramePipeline(frames, detector,
                 new PassiveScorer(model(MINIFAS_V2), model(MINIFAS_V1SE)), caps.fps(), monotonicNanos);
         SFaceEmbedder sface = new SFaceEmbedder(model(SFACE));
         LivenessEngine.Builder b = LivenessEngine.builder(bundle, session)
                 .device(source, deviceTrust, device.device().level())
-                .analysers(new PipelineFrameAnalyser(pipeline, landmarker(), sface),
+                .analysers(new PipelineFrameAnalyser(pipeline, landmarker(), sface,
+                        new pramaan.core.pad.ColorTextureCue(null, 0), station.scene()),
                         new SFaceCaptureAnalyser(deviceTrust, detector, sface, images))
+                .flashLight(station.flashLight())
+                .stereo(station.stereo())
+                .pupil(station.pupil())
+                .knownBackdrop(station.scene() != null)
                 .capabilities(caps)
                 .random(random)
                 .listener(listener)

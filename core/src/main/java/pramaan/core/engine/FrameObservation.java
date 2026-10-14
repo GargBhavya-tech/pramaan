@@ -39,8 +39,10 @@ public final class FrameObservation {
     private final float[] embedding;
     private final RgbImage sampleCrop;
     private final double sampleQuality;
+    private final double[][] regions;
 
     private FrameObservation(Builder b) {
+        this.regions = b.regions;
         this.decoded = b.decoded;
         this.gate = b.gate;
         this.trackId = b.trackId;
@@ -132,7 +134,43 @@ public final class FrameObservation {
         return sampleQuality;
     }
 
+    /**
+     * Mean RGB (0-255) of three regions of the face in this frame, for the flash cue (Bible Part 8.6): row 0 the skin
+     * area, row 1 the nose bridge, row 2 the cheeks; null when the frame did not carry them.
+     */
+    public double[][] regions() {
+        if (regions == null) {
+            return null;
+        }
+        double[][] copy = new double[regions.length][];
+        for (int i = 0; i < copy.length; i++) {
+            copy[i] = regions[i].clone();
+        }
+        return copy;
+    }
+
+    /** A copy of this observation that also carries face-region colours; for analysers that add them after the fact. */
+    public FrameObservation withRegions(double[] face, double[] nose, double[] cheeks) {
+        Builder b = builder(gate, trackId).trackReset(trackReset);
+        if (qualityPasses || guidance != null) {
+            b.quality(qualityPasses, guidance);
+        }
+        if (!Double.isNaN(passive)) {
+            b.passive(passive);
+        }
+        if (moire != null) {
+            b.moire(moire);
+        }
+        cues.forEach(b::cue);
+        b.landmarks(landmarks).embedding(embedding);
+        if (sampleCrop != null) {
+            b.sample(sampleCrop, sampleQuality);
+        }
+        return b.regions(face, nose, cheeks).build();
+    }
+
     public static final class Builder {
+        private double[][] regions;
         private boolean decoded = true;
         private final FaceGate.Status gate;
         private final long trackId;
@@ -189,6 +227,12 @@ public final class FrameObservation {
             return this;
         }
 
+        /** The face, nose-bridge and cheek mean colours of this frame (each a length-3 RGB row). */
+        public Builder regions(double[] face, double[] nose, double[] cheeks) {
+            this.regions = new double[][] {face.clone(), nose.clone(), cheeks.clone()};
+            return this;
+        }
+
         public Builder sample(RgbImage crop, double quality) {
             this.sampleCrop = Objects.requireNonNull(crop, "crop");
             this.sampleQuality = quality;
@@ -197,7 +241,7 @@ public final class FrameObservation {
 
         public FrameObservation build() {
             if (gate != FaceGate.Status.ONE_FACE && (qualityPasses || !Double.isNaN(passive) || landmarks != null
-                    || moire != null || !cues.isEmpty() || embedding != null || sampleCrop != null)) {
+                    || moire != null || !cues.isEmpty() || embedding != null || sampleCrop != null || regions != null)) {
                 throw new IllegalStateException("only a single-face frame can carry quality, scores or landmarks");
             }
             return new FrameObservation(this);

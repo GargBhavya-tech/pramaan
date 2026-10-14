@@ -76,6 +76,7 @@ public final class LivenessSession {
     private int totalSteps;
     private Instant stepDeadline;
     private boolean awaitingRefusion;
+    private boolean phasesGranted;
     private boolean reprompted;
     private FailureReason lastFailure;
     private Instant acceptedAt;
@@ -399,6 +400,29 @@ public final class LivenessSession {
         } else {
             stepDeadline = deadlineForStep(stepIndex);
         }
+        return true;
+    }
+
+    /** The most time the post-step phases may add: the flash sequence plus the pupil reflex, with margin. */
+    public static final Duration MAX_PHASE_TIME = Duration.ofSeconds(20);
+
+    /**
+     * The engine is about to run the phases that follow the action steps — the flash sequence and the pupil reflex
+     * (Bible Parts 8.6, 32) — and asks for the time they need on top of the decision grace. Granted once per attempt,
+     * only while the steps are done and the decision is awaited, and only up to {@link #MAX_PHASE_TIME}; audited, so
+     * a longer session is never silent.
+     *
+     * @return false (and the session unchanged) if the request is out of place or too large
+     */
+    public boolean extendDecisionDeadline(Duration extra) {
+        tick();
+        if (state != SessionState.CHALLENGING || !awaitingRefusion || phasesGranted
+                || extra.isNegative() || extra.compareTo(MAX_PHASE_TIME) > 0) {
+            return ignored("extendDecisionDeadline");
+        }
+        phasesGranted = true;
+        stepDeadline = stepDeadline.plus(extra);
+        emit(AuditEvent.of("CHALLENGE_PHASES_STARTED").put("sessionId", context.sessionId()).put("extraMs", extra.toMillis()));
         return true;
     }
 
@@ -756,6 +780,7 @@ public final class LivenessSession {
     }
 
     private void clearAttemptEvidence() {
+        phasesGranted = false;
         plan = null;
         stepIndex = 0;
         totalSteps = 0;
