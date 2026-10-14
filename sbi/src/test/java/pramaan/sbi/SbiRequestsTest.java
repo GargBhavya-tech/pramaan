@@ -40,6 +40,16 @@ class SbiRequestsTest {
     }
 
     @Test
+    void theProfileRequestsAlsoSendEveryScalarAsAString() throws Exception {
+        JsonNode burst = new ObjectMapper().readTree(SbiRequests.captureBurst("0123456789abcdef0123456789abcdef", 3, 200));
+        assertEquals("3", burst.path("count").asText());
+        assertEquals("200", burst.path("intervalMs").asText());
+        List<String> numbers = new ArrayList<>();
+        collectNumbers(burst, "$", numbers);
+        assertTrue(numbers.isEmpty(), "numeric JSON values found: " + numbers);
+    }
+
+    @Test
     void streamTimeoutIsAString() throws Exception {
         JsonNode root = new ObjectMapper().readTree(SbiRequests.stream("3", "0", 10_000));
         assertTrue(root.path("timeout").isTextual());

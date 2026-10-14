@@ -141,6 +141,19 @@ public final class DiscoveredDevice {
         return identity;
     }
 
+    /** True if the device's profile offers a visible-light illuminator the client may drive (addition 5). */
+    public boolean canIlluminate() {
+        if (livenessProfile == null) {
+            return false;
+        }
+        for (JsonNode light : livenessProfile.path("illuminatorControl")) {
+            if (light.asText("").startsWith("VISIBLE")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean isFace() {
         return "Face".equalsIgnoreCase(type);
     }

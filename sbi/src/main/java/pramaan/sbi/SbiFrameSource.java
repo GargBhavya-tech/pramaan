@@ -25,6 +25,12 @@ import pramaan.core.crypto.Jws;
 import pramaan.core.crypto.JwsVerificationException;
 import pramaan.core.crypto.VerifiedJws;
 import pramaan.core.session.SessionContext;
+import pramaan.core.binding.EmissionLog;
+import pramaan.core.challenge.FlashSequence;
+import pramaan.core.source.DeviceIlluminator;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import pramaan.core.source.Capability;
 import pramaan.core.source.CaptureRequest;
 import pramaan.core.source.DeviceCapabilities;
@@ -47,6 +53,11 @@ import pramaan.sbi.capture.RCaptureResponse;
 public final class SbiFrameSource implements FaceFrameSource {
 
     private static final ObjectMapper JSON = new ObjectMapper();
+    private static final java.util.concurrent.Executor ILLUMINATE_POOL = r -> {
+        Thread t = new Thread(r, "sbi-illuminate");
+        t.setDaemon(true);
+        t.start();
+    };
 
     private final SbiConfig config;
     private final SbiHttp http;
@@ -57,6 +68,7 @@ public final class SbiFrameSource implements FaceFrameSource {
     private volatile String endReason = "stream ended";
     private volatile boolean stopping;
     private volatile SignedStreamLock streamLock;
+    private volatile String transactionId;
     private Thread reader;
     private Thread delivery;
 
@@ -99,6 +111,99 @@ public final class SbiFrameSource implements FaceFrameSource {
         return Optional.ofNullable(streamLock);
     }
 
+    /**
+     * The device's own light, when its profile offers a visible illuminator (addition 5). The schedule goes out as an
+     * {@code ILLUMINATE} request on the session's transaction id and the signed emission log comes back, verified
+     * against the same device trust as the capture.
+     */
+    @Override
+    public synchronized Optional<DeviceIlluminator> illuminator() {
+        if (face == null || !face.canIlluminate()) {
+            return Optional.empty();
+        }
+        return Optional.of(sequence -> CompletableFuture.supplyAsync(() -> {
+            try {
+                return illuminate(sequence);
+            } catch (DeviceException e) {
+                throw new CompletionException(e);
+            }
+        }, ILLUMINATE_POOL));
+    }
+
+    private EmissionLog illuminate(FlashSequence sequence) throws DeviceException {
+        DiscoveredDevice device;
+        String txn;
+        synchronized (this) {
+            requireDiscovered();
+            device = face;
+            txn = transactionId;
+        }
+        if (txn == null) {
+            throw new DeviceException(DeviceException.Reason.PROTOCOL, "illuminate before the stream started");
+        }
+        long total = 0;
+        for (int d : sequence.durationsMs()) {
+            total += d;
+        }
+        byte[] response = http.call(device.port(), "ILLUMINATE", "/illuminate", SbiRequests.illuminate(txn, sequence),
+                Duration.ofMillis(total).plusSeconds(10));
+        try {
+            return EmissionLog.verify(new String(response, StandardCharsets.UTF_8).trim(), config.trust(), txn);
+        } catch (JwsVerificationException e) {
+            throw new DeviceException(DeviceException.Reason.UNTRUSTED, "emission log rejected: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Several signed frames during a challenge (addition 4). Each comes back in the same shape as one RCAPTURE entry
+     * and is verified exactly like a capture, so a swapped or unsigned frame never reaches the caller. Requires the
+     * device's profile to offer {@code captureBurst}.
+     */
+    public List<SignedCapture> captureBurst(int count, Duration interval) throws DeviceException {
+        DiscoveredDevice device;
+        String sub;
+        String txn;
+        synchronized (this) {
+            requireDiscovered();
+            device = face;
+            sub = subId;
+            txn = transactionId;
+        }
+        if (!device.profileCapabilities().contains(Capability.CAPTURE_BURST)) {
+            throw new DeviceException(DeviceException.Reason.PROTOCOL, "the device does not offer captureBurst");
+        }
+        if (txn == null) {
+            throw new DeviceException(DeviceException.Reason.PROTOCOL, "captureBurst before the stream started");
+        }
+        if (count < 1 || count > 99 || interval.toMillis() < 10 || interval.toMillis() > 9999) {
+            throw new IllegalArgumentException("burst of " + count + " frames every " + interval.toMillis() + " ms is out of range");
+        }
+        byte[] response = http.call(device.port(), "CAPTUREBURST", "/captureburst",
+                SbiRequests.captureBurst(txn, count, interval.toMillis()),
+                interval.multipliedBy(count).plusSeconds(10));
+        RCaptureResponse parsed;
+        try {
+            parsed = RCaptureResponse.parse(response);
+        } catch (IOException | IllegalArgumentException e) {
+            throw new DeviceException(DeviceException.Reason.PROTOCOL, "captureBurst answer is malformed: " + e.getMessage(), e);
+        }
+        if (parsed.entries().size() != count) {
+            throw new DeviceException(DeviceException.Reason.PROTOCOL,
+                    "asked for " + count + " frames and got " + parsed.entries().size());
+        }
+        List<SignedCapture> out = new java.util.ArrayList<>();
+        String previous = "";
+        for (int i = 0; i < count; i++) {
+            SignedCapture c = verified(parsed.entries().get(i), previous, device, sub);
+            if (!txn.equals(c.verifiedTransactionId())) {
+                throw new DeviceException(DeviceException.Reason.UNTRUSTED, "burst frame " + i + " is for another transaction");
+            }
+            out.add(c);
+            previous = c.chainHash();
+        }
+        return out;
+    }
+
     @Override
     public synchronized void start(SessionContext session, FrameSink sink) throws DeviceException {
         requireDiscovered();
@@ -109,6 +214,7 @@ public final class SbiFrameSource implements FaceFrameSource {
         stopping = false;
         KeyPair clientKey = null;
         String transactionId = session.nonce().value();
+        this.transactionId = transactionId;
         byte[] request = SbiRequests.stream(face.deviceId(), subId, config.streamTimeout().toMillis());
         if (face.signedStream()) {
             clientKey = StreamKeyAgreement.newEphemeral();
@@ -232,8 +338,11 @@ public final class SbiFrameSource implements FaceFrameSource {
             // as an unchecked exception and the engine reported its own failure instead of the device's.
             throw new DeviceException(DeviceException.Reason.PROTOCOL, "rcapture data is not a JWS: " + e.getMessage(), e);
         }
-        RCaptureResponse.Entry entry = parsed.entries().get(0);
+        return verified(parsed.entries().get(0), request.previousHash(), device, sub);
+    }
 
+    private SignedCapture verified(RCaptureResponse.Entry entry, String previousHash, DiscoveredDevice device, String sub)
+            throws DeviceException {
         VerifiedJws verified;
         try {
             verified = Jws.verify(entry.data().compact(), config.trust());
@@ -246,7 +355,7 @@ public final class SbiFrameSource implements FaceFrameSource {
         } catch (IOException e) {
             throw new DeviceException(DeviceException.Reason.PROTOCOL, "signed payload is not JSON", e);
         }
-        return new SignedCapture(verified.compact(), entry.hash() == null ? "" : entry.hash(), request.previousHash(),
+        return new SignedCapture(verified.compact(), entry.hash() == null ? "" : entry.hash(), previousHash,
                 payload.path("transactionId").asText(""), payload.path("timestamp").asText(null), verified.signer(),
                 device.metadata(sub), config.clock().instant());
     }

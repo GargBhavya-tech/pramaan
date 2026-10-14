@@ -860,8 +860,10 @@ no monitor stops the start-up). Tests: `StationWiringEngineTest` (live face acce
 injected stream votes below 0.5; no light means no flash and an abstention), `AttemptPhasesTest` (including 3 fps),
 `FlashWindowTest`.
 **Not built:** the real display has not been looked at — `FlashWindow` is untested on a screen; the spectral skin
-check needs the corpus (#65) and a fixed white balance; the device's signed emission log (profile addition 5) does not
-yet feed the correlation.
+check needs the corpus (#65) and a fixed white balance.
+**Built since:** the device's signed emission log (profile addition 5) feeds the correlation: `EmissionLog`,
+`DeviceIlluminator`, `DeviceFlashPhase`, preferred to the station's light; `EmissionLogTest` and four cases in
+`StationWiringEngineTest` (live face, injected stream, a log that differs from the schedule, a device that fails).
 
 ### #86: Stereo depth cue
 Priority: 🟦 STRETCH · Type: Prototype · Blocked by: #32
@@ -1131,7 +1133,7 @@ goes into the evidence's `binding.level`, and the policy flag `injection.require
 into `STREAM_REQUIRED`. `MockFrameSource.livenessProfile(true)` runs the whole path with injection and wrong-head
 attacks. Tests: `SbiLivenessProfileTest` (stub device incl. tampered tag, no answer, untrusted answer, plain device),
 `StationWiringEngineTest` (cryptographic binding; injected frame; foreign head; hidden profile).
-**Still open:** `captureBurst` and `illuminate` have no client call.
+**Since built:** `illuminate` (`ILLUMINATE /illuminate`, `SbiFrameSource.illuminator()`) and `captureBurst` (`CAPTUREBURST /captureburst`, verified like a capture) have client calls, tested against the stub device. **Still open:** the burst frames are not yet compared with the preview, and MockMDS has not been patched to speak any of this.
 
 ---
 

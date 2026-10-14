@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.ByteArrayOutputStream;
@@ -25,6 +27,8 @@ import java.security.KeyPairGenerator;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -32,7 +36,17 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import pramaan.core.Workflow;
+import pramaan.core.binding.EmissionLog;
 import pramaan.core.binding.SignedStreamLock;
+import pramaan.core.challenge.AccessibilityAdjustments;
+import pramaan.core.challenge.ChallengeGenerator;
+import pramaan.core.policy.ChallengeKind;
+import pramaan.core.challenge.FlashSequence;
+import pramaan.core.source.DeviceCapabilities;
+import pramaan.core.source.DeviceLevel;
+import pramaan.core.source.DeviceMetadata;
+import pramaan.core.source.SessionCapabilities;
+import pramaan.core.source.SignedCapture;
 import pramaan.core.binding.StreamKeyAgreement;
 import pramaan.core.binding.StreamTagChain;
 import pramaan.core.crypto.Jws;
@@ -64,6 +78,11 @@ class SbiLivenessProfileTest {
     private volatile boolean sendAnswer = true;
     private volatile boolean signAnswerWithWrongKey;
     private volatile int corruptTagAtFrame = -1;
+    private volatile String lastTransaction = "";
+    private volatile boolean signLogWithWrongKey;
+    private volatile boolean logForeignTransaction;
+    private volatile int burstForeignFrame = -1;
+    private volatile int burstShortBy;
 
     @BeforeAll
     static void makeKeys() throws Exception {
@@ -103,6 +122,12 @@ class SbiLivenessProfileTest {
             case "STREAM":
                 stream(ex, JSON.readTree(request));
                 return;
+            case "ILLUMINATE":
+                illuminate(ex, JSON.readTree(request));
+                return;
+            case "CAPTUREBURST":
+                captureBurst(ex, JSON.readTree(request));
+                return;
             default:
                 ex.sendResponseHeaders(405, -1);
                 ex.close();
@@ -115,6 +140,7 @@ class SbiLivenessProfileTest {
         try {
             if (lp.isObject()) {
                 String txn = lp.path("transactionId").asText();
+                lastTransaction = txn;
                 byte[] clientPublic = Base64.getDecoder().decode(lp.path("clientEphemeralKey").asText());
                 KeyPair mine = StreamKeyAgreement.newEphemeral();
                 byte[] devicePublic = mine.getPublic().getEncoded();
@@ -155,6 +181,52 @@ class SbiLivenessProfileTest {
                 out.write(part.toByteArray());
                 out.flush();
             }
+        }
+    }
+
+    /** The emission log for the schedule the client sent, signed by the device (or by a stranger, or for another transaction). */
+    private void illuminate(HttpExchange ex, JsonNode body) throws IOException {
+        try {
+            ObjectNode log = JSON.createObjectNode();
+            log.put("version", "0.1");
+            log.put("transactionId", logForeignTransaction ? "fedcba9876543210fedcba9876543210" : lastTransaction);
+            ArrayNode list = log.putArray("emissions");
+            long at = 0;
+            for (JsonNode step : body.path("schedule")) {
+                long d = Long.parseLong(step.path("durationMs").asText());
+                ObjectNode e = list.addObject();
+                e.put("colour", step.path("colour").asText());
+                e.put("atMs", Long.toString(at));
+                e.put("durationMs", Long.toString(d));
+                at += d;
+            }
+            KeyPair signer = signLogWithWrongKey ? untrustedKey : deviceKey;
+            byte[] jws = Jws.signRs256(JSON.writeValueAsBytes(log), KID, signer.getPrivate()).getBytes(StandardCharsets.UTF_8);
+            ex.getResponseHeaders().add("Content-Type", "application/jose");
+            ex.sendResponseHeaders(200, jws.length);
+            try (OutputStream out = ex.getResponseBody()) {
+                out.write(jws);
+            }
+        } catch (java.security.GeneralSecurityException e) {
+            throw new IOException(e);
+        }
+    }
+
+    /** {@code count} signed frames in the shape of an RCAPTURE answer; one can be made to name another transaction. */
+    private void captureBurst(HttpExchange ex, JsonNode body) throws IOException {
+        try {
+            int count = Integer.parseInt(body.path("count").asText()) - burstShortBy;
+            StringBuilder entries = new StringBuilder();
+            for (int i = 0; i < count; i++) {
+                String txn = i == burstForeignFrame ? "fedcba9876543210fedcba9876543210" : lastTransaction;
+                String payload = "{\"transactionId\":\"" + txn + "\",\"timestamp\":\"2026-10-14T10:00:0" + i + "Z\"}";
+                String jws = Jws.signRs256(payload.getBytes(StandardCharsets.UTF_8), KID, deviceKey.getPrivate());
+                entries.append(i == 0 ? "" : ",").append("{\"specVersion\":\"0.9.5\",\"data\":\"").append(jws)
+                        .append("\",\"hash\":\"").append(String.format("%02X", i)).append("\"}");
+            }
+            respond(ex, "{\"biometrics\":[" + entries + "]}");
+        } catch (java.security.GeneralSecurityException e) {
+            throw new IOException(e);
         }
     }
 
@@ -266,6 +338,102 @@ class SbiLivenessProfileTest {
             source.discover();
             DeviceException e = assertThrows(DeviceException.class, () -> source.start(session(), IGNORE));
             assertEquals(DeviceException.Reason.UNTRUSTED, e.reason());
+        }
+    }
+
+    private static FlashSequence schedule() {
+        DeviceCapabilities caps = new DeviceCapabilities(
+                new DeviceMetadata("3", "0", "code", DeviceLevel.L0, "Stub", "Face1", "SN1"),
+                EnumSet.of(Capability.RESIDENT_DISPLAY));
+        return ChallengeGenerator.fresh(new SecureRandom()).plan(
+                List.of(ChallengeKind.TURN, ChallengeKind.BLINK, ChallengeKind.SMILE, ChallengeKind.FLASH), 1, 3,
+                SessionCapabilities.of(10, caps), AccessibilityAdjustments.NONE).flash().orElseThrow();
+    }
+
+    private static DeviceException deviceFault(Throwable t) {
+        for (Throwable c = t; c != null; c = c.getCause()) {
+            if (c instanceof DeviceException) {
+                return (DeviceException) c;
+            }
+        }
+        throw new AssertionError("no DeviceException in the cause chain of " + t);
+    }
+
+    @Test
+    void theDevicesOwnLightReturnsASignedLogOfWhatItShowed() throws Exception {
+        try (SbiFrameSource source = source()) {
+            source.discover();
+            streamToEnd(source);
+            FlashSequence asked = schedule();
+            EmissionLog log = source.illuminator().orElseThrow().illuminate(asked).get(15, TimeUnit.SECONDS);
+            assertEquals(lastTransaction, log.transactionId());
+            assertEquals(null, log.differenceFrom(asked, 0), "the stub played the schedule exactly");
+        }
+    }
+
+    @Test
+    void anEmissionLogSignedByAStrangerOrForAnotherTransactionIsRefused() throws Exception {
+        try (SbiFrameSource source = source()) {
+            source.discover();
+            streamToEnd(source);
+            signLogWithWrongKey = true;
+            Throwable t = assertThrows(java.util.concurrent.ExecutionException.class,
+                    () -> source.illuminator().orElseThrow().illuminate(schedule()).get(15, TimeUnit.SECONDS));
+            assertEquals(DeviceException.Reason.UNTRUSTED, deviceFault(t).reason());
+
+            signLogWithWrongKey = false;
+            logForeignTransaction = true;
+            Throwable u = assertThrows(java.util.concurrent.ExecutionException.class,
+                    () -> source.illuminator().orElseThrow().illuminate(schedule()).get(15, TimeUnit.SECONDS));
+            assertEquals(DeviceException.Reason.UNTRUSTED, deviceFault(u).reason());
+        }
+    }
+
+    @Test
+    void aPlainDeviceOffersNoIlluminator() throws Exception {
+        advertiseProfile = false;
+        try (SbiFrameSource source = source()) {
+            source.discover();
+            assertFalse(source.illuminator().isPresent());
+        }
+    }
+
+    @Test
+    void aBurstOfSignedFramesIsVerifiedLikeACapture() throws Exception {
+        try (SbiFrameSource source = source()) {
+            source.discover();
+            streamToEnd(source);
+            List<SignedCapture> frames = source.captureBurst(3, Duration.ofMillis(200));
+            assertEquals(3, frames.size());
+            for (SignedCapture f : frames) {
+                assertEquals(lastTransaction, f.verifiedTransactionId());
+            }
+        }
+    }
+
+    @Test
+    void aBurstWithAFrameFromAnotherTransactionOrTheWrongCountIsRefused() throws Exception {
+        try (SbiFrameSource source = source()) {
+            source.discover();
+            streamToEnd(source);
+            burstForeignFrame = 1;
+            DeviceException foreign = assertThrows(DeviceException.class, () -> source.captureBurst(3, Duration.ofMillis(200)));
+            assertEquals(DeviceException.Reason.UNTRUSTED, foreign.reason());
+
+            burstForeignFrame = -1;
+            burstShortBy = 1;
+            DeviceException short_ = assertThrows(DeviceException.class, () -> source.captureBurst(3, Duration.ofMillis(200)));
+            assertEquals(DeviceException.Reason.PROTOCOL, short_.reason());
+        }
+    }
+
+    @Test
+    void aBurstIsRefusedFromADeviceThatDoesNotOfferIt() throws Exception {
+        advertiseProfile = false;
+        try (SbiFrameSource source = source()) {
+            source.discover();
+            DeviceException e = assertThrows(DeviceException.class, () -> source.captureBurst(3, Duration.ofMillis(200)));
+            assertEquals(DeviceException.Reason.PROTOCOL, e.reason());
         }
     }
 

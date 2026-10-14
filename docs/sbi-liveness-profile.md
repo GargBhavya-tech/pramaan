@@ -190,6 +190,20 @@ the one generic security message at the user interface — differing text would 
   the level into the evidence. The policy flag `injection.requireSignedStream` makes a device without the profile
   fail binding with `STREAM_REQUIRED` (threat T6). Tested against an in-process stub device
   (`SbiLivenessProfileTest`) and the mock source end to end (`StationWiringEngineTest`).
-* Not wired: `captureBurst` and `illuminate` have schemas and a mock implementation but no client call yet, and the
-  signed emission log is not yet used to correlate the flash.
+* `illuminate` and `captureBurst` have client calls. `SbiFrameSource.illuminator()` sends an `ILLUMINATE /illuminate`
+  request (body: the `IlluminateRequest`; answer: the compact JWS, as text) and returns the log through
+  `EmissionLog.verify`, which refuses a stranger's signature, another transaction, overlapping or numeric emissions.
+  `LivenessEngine` prefers the device's light to the station's: `DeviceFlashPhase` keeps frames through a dark lead-in,
+  sends the schedule, and lines the frames up against the log rather than against what was asked. A log that differs
+  from the request by more than 150 ms per step makes the flash cue abstain and writes `FLASH_DEVICE_LOG_PROBLEM` to
+  the audit trail (threat T9: it is never held against the resident). `captureBurst` is `CAPTUREBURST /captureburst`;
+  the answer has the same shape as an RCAPTURE answer, every entry is verified like a capture, and a frame for another
+  transaction or a wrong count is refused. The verbs, paths and answer shapes are this draft's own proposal, since
+  the profile text above names the calls but not their transport. Tested against the stub device
+  (`SbiLivenessProfileTest`), `EmissionLogTest`, and end to end in `StationWiringEngineTest`.
+* The log gives times relative to the first emission, not the host clock, so the client anchors them to the moment it
+  sent the request. The flash cue's lag search (up to two frames) absorbs the device's start-up delay; at 3 fps that is
+  about 670 ms of slack. A device that also gives sensor timestamps could tighten the anchor; nothing does yet.
+* Not wired: nothing uses the burst frames beyond returning them verified. They are not yet compared with the preview
+  for identity continuity.
 * The JSON schemas are checked against the mock by a small in-test validator, not by a full JSON Schema engine.

@@ -2369,7 +2369,7 @@ primitives `StreamTagChain`, `StreamKeyAgreement`, `SignedStreamLock`, `BindingL
 `MockLivenessProfile`. Design decisions the sketch above left open: the key agreement is ephemeral **P-256** ECDH (not
 X25519, which is missing on older Android) with the device's signed answer naming the client key it answered, so a
 swapped key is detected; the checkpoint payload is `"<index>:<tag hex>"`; and a stream longer than 60 frames without a
-signed checkpoint is untrusted. Not wired into `SbiFrameSource`/`CaptureBinder`; nothing has been posted to MOSIP (Q12).
+signed checkpoint is untrusted. Wired into `SbiFrameSource`/`CaptureBinder`, and `illuminate`/`captureBurst` have client calls: the device's signed emission log (`EmissionLog`) now drives the flash correlation through `DeviceFlashPhase`, preferred to the station's own light. The log is anchored to the host clock at the request, so the lag search absorbs the device's start-up delay. Nothing has been posted to MOSIP (Q12).
 
 ---
 

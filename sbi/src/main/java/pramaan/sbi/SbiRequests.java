@@ -59,6 +59,28 @@ public final class SbiRequests {
         return bytes(body);
     }
 
+    /** {@code captureBurst} (Liveness Profile, addition 4): several signed frames during a challenge. */
+    public static byte[] captureBurst(String transactionId, int count, long intervalMillis) {
+        ObjectNode body = JSON.createObjectNode();
+        body.put("transactionId", transactionId);
+        body.put("count", Integer.toString(count));
+        body.put("intervalMs", Long.toString(intervalMillis));
+        return bytes(body);
+    }
+
+    /** {@code illuminate} (Liveness Profile, addition 5): the client's random schedule, every scalar a string. */
+    public static byte[] illuminate(String transactionId, pramaan.core.challenge.FlashSequence sequence) {
+        ObjectNode body = JSON.createObjectNode();
+        body.put("transactionId", transactionId);
+        ArrayNode schedule = body.putArray("schedule");
+        for (int i = 0; i < sequence.colours().size(); i++) {
+            ObjectNode step = schedule.addObject();
+            step.put("colour", sequence.colours().get(i).name());
+            step.put("durationMs", Integer.toString(sequence.durationsMs()[i]));
+        }
+        return bytes(body);
+    }
+
     public static byte[] rcaptureFace(CaptureRequest request, String deviceId, String deviceSubId, String env,
             String specVersion, Clock clock) {
         ObjectNode body = JSON.createObjectNode();

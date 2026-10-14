@@ -23,7 +23,7 @@ else. A claim that has no number here is not made.
 | L13 | Anything on Android | The AAR builds and has unit/on-device smoke tests; it has **not run a liveness session on a device**. Android clients never see preview frames, so Mode D (inside the SBI app) is required. | `README.md`, `CLAUDE.md` |
 | L14 | Hindi quality | The Hindi catalogue is complete but **not reviewed by a native speaker**. | Build Map #91 |
 | L15 | Model licences are settled | FLIP and PSCF licences are open (Part 30 Q16). The models in use are listed in `docs/licences.md`. | Part 30 |
-| L17 | That the SBI Liveness Profile works with any real device | The client and a mock device implement it and agree; **no certified device does**, and MockMDS has not been patched. Until one does, every real capture is `HEURISTIC`. | `docs/sbi-liveness-profile.md` |
+| L17 | That the SBI Liveness Profile works with any real device | The client (key agreement, frame tags, `illuminate`, `captureBurst`) and a mock device implement it and agree; **no certified device does**, and MockMDS has not been patched. The verbs and answer shapes for the last two are this draft's own proposal. Until one does, every real capture is `HEURISTIC`. | `docs/sbi-liveness-profile.md` |
 | L16 | That MOSIP will accept the SBI Liveness Profile | How MOSIP takes spec proposals is unknown (Part 30 Q12). We ask the mentors before posting. | `docs/sbi-liveness-profile.md` |
 
 ## 2. What we do claim, with the number that backs it
