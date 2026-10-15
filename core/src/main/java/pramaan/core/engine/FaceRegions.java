@@ -19,13 +19,13 @@ import pramaan.core.image.RgbImage;
  * nose    x 42-58 %, y 40-65 %
  * cheeks  x 12-32 % and 68-88 %, y 50-75 %   (their pooled mean)</pre>
  */
-final class FaceRegions {
+public final class FaceRegions {
 
     private FaceRegions() {
     }
 
     /** {@code {skin, nose, cheeks}}, each a mean RGB in 0-255. */
-    static double[][] sample(RgbImage image, FaceBox face) {
+    public static double[][] sample(RgbImage image, FaceBox face) {
         double[] skin = mean(image, face, 0.20, 0.25, 0.80, 0.85);
         double[] nose = mean(image, face, 0.42, 0.40, 0.58, 0.65);
         double[] left = mean(image, face, 0.12, 0.50, 0.32, 0.75);

@@ -940,6 +940,14 @@ Tests: `SceneContextTest`, `BackdropToolTest`, `StationWiringEngineTest` (withou
 `BackdropSubtractionSegmenter` (scaffold `--segmenter backdrop`) that also finds people walking behind, and a
 model-ready `OnnxPersonSegmenter`, scored on synthetic scenes with known truth (`SegmentationBench`). **Still not
 built:** a chosen, pinned and licensed segmentation model, and any measurement on real rooms.
+**E1 recorder and analyser since built:** `FlashExperiment` (`./gradlew :desktop:flashExperiment`) plays the engine's own safe random
+flash sequence on a screen while `ffmpeg` records a camera, stamps each frame with the host arrival time (the engine's
+`hostArrival` semantics) and each colour with the time it was shown, and records only with `--consent-given`;
+`FlashExperimentAnalysis` (`./gradlew :harness:analyseFlash`) thins the frames to 10 fps, finds the face with the engine's
+YuNet and samples the engine's `FaceRegions`, runs the real `FlashReflectionCue`, and reports rho, fitted lag, verdicts and
+the separation of genuine from replay, while stating that it cannot give an error rate. Tested on synthetic recordings and on a
+real photograph, and rehearsed end to end on a test pattern; **not yet run with a person**: run-sheet in
+`docs/research-plan-real-data.md`.
 **Physics-supervised labels since built (machinery only):** `PseudoLabeler` labels a session LIVE or ATTACK only when the flash
 cue is confident, queues every session where another cue disagrees (the teacher's likely blind spots) plus a random audit
 share for a human, estimates the teacher's own error from the random audit with a 95% interval (the disagreement queue

@@ -143,3 +143,13 @@ tasks.register<JavaExec>("stationSelfTest") {
     mainClass.set("pramaan.harness.factory.StationSelfTest")
     workingDir = rootProject.projectDir
 }
+
+// Docs: docs/research-plan-real-data.md (E1). Asks the real flash cue whether faces in recorded runs answered the light.
+// ./gradlew :harness:analyseFlash --args="--dir build/e1"
+tasks.register<JavaExec>("analyseFlash") {
+    group = "verification"
+    description = "Analyses recordings from :desktop:flashExperiment with the real flash cue (docs/research-plan-real-data.md)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.harness.experiment.FlashExperimentAnalysis")
+    workingDir = rootProject.projectDir
+}

@@ -67,3 +67,14 @@ tasks.register<JavaExec>("streamSignature") {
     mainClass.set("pramaan.desktop.scaffold.StreamSignatureTool")
     workingDir = rootProject.projectDir
 }
+
+// Docs: docs/research-plan-real-data.md (E1). Plays the engine's flash sequence on a screen while a camera records, and
+// writes frames, a frame index and a run log for the analyser. Records only with --consent-given.
+// ./gradlew :desktop:flashExperiment --args="--list-cameras"
+tasks.register<JavaExec>("flashExperiment") {
+    group = "verification"
+    description = "Records the first real-data flash experiment: screen flash plus camera (docs/research-plan-real-data.md)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.desktop.experiment.FlashExperiment")
+    workingDir = rootProject.projectDir
+}

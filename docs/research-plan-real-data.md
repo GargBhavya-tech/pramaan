@@ -37,6 +37,31 @@ turns the recording back into per-frame face regions for `FlashReflectionCue`. B
 experiment still needs a person in front of the camera, who must agree to be recorded (`docs/consent-form.md`): the
 assistant will not record anyone's camera unasked.
 
+### How to run E1 (built; not yet run on a person)
+
+The recorder and analyser exist and were rehearsed end to end on a test pattern (no camera, no window): 160 frames, 8
+colours, paired and thinned, the cue abstaining correctly because there is no face, the run flagged DRY.
+
+1. `./gradlew :desktop:flashExperiment --args="--list-cameras"` shows the camera names (the laptop's is usually
+   "Integrated Camera"; an installed "OBS Virtual Camera" will be listed too: do not pick it).
+2. Sit 40-60 cm from the screen, face lit normally, dim the room a little if you can. Tell the person what will happen: the
+   screen goes dark and flashes colours for about 6 seconds, never more than 3 changes a second; they can look away or
+   close their eyes at any time. **They must agree before you add `--consent-given`.**
+3. Ten genuine runs, a fresh random sequence each time:
+   `./gradlew :desktop:flashExperiment --args="--camera 'Integrated Camera' --label genuine --out build/e1/g01 --consent-given"`
+   (g02 ... g10).
+4. Ten replay runs: play a recorded video of the same person on a phone, hold it where the face was, same command with
+   `--label replay --out build/e1/r01 ...`.
+5. `./gradlew :harness:analyseFlash --args="--dir build/e1"` prints one line per run (faces found, rho, fitted lag in frames
+   and milliseconds, nose-to-cheek ratio, verdict) and the separation verdict against the predictions above. If the lag
+   column is steady and not 0, re-run with `--latency-ms <that lag>` to see the fit with the delay declared.
+6. The frames are biometric data in `build/e1/` (gitignored). Delete the folder when you are done; the person can ask for
+   that at any time.
+
+What the recorder does **not** do: it does not ask for or record consent for you (the flag is your statement that you got
+it), it does not attest the screen's timing (the colour times are the host's word), and it does not control the camera's
+auto-exposure, which may fight the flash; if rho is poor on genuine runs, check that first.
+
 ## 2. The challenge-conditioned verifier (idea 5)
 
 **Idea.** Today the flash cue computes a correlation between *the colours we emitted* and *the chroma the face returned*.
