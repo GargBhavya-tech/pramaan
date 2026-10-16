@@ -153,3 +153,13 @@ tasks.register<JavaExec>("analyseFlash") {
     mainClass.set("pramaan.harness.experiment.FlashExperimentAnalysis")
     workingDir = rootProject.projectDir
 }
+
+// The red team against the fused decision, with the shipped operating-point table (SYNTHETIC).
+// ./gradlew :harness:fusedRedTeam
+tasks.register<JavaExec>("fusedRedTeam") {
+    group = "verification"
+    description = "Which display pitches the whole fusion accepts, with and without the flash cue (Bible Part 9, 45)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.harness.factory.FusedRedTeam")
+    workingDir = rootProject.projectDir
+}

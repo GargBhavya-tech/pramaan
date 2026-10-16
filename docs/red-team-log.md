@@ -89,6 +89,23 @@ Re-run result: pending the physical attacks; synthetic only so far.
 ```
 
 ```
+Finding R-03 (R-01 against the whole decision)
+Attack:        A2/A3 - screen replay of the right room at one of R-01's blind pitches (0.80, 1.00, 1.20, 2.00)
+How it worked: `FusedRedTeam` (./gradlew :harness:fusedRedTeam) fused the scene and moire votes of 85 simulated replays with the
+               real RiskFusion and the shipped table. With the passive scorer assumed fooled too and no flash cue, 4 of 85
+               pitches are ACCEPTED outright (p 0.95-0.99 against the 0.85 accept threshold): the scene cue (w 0.6) and the moire cue
+               (w 0.8), both controlled by the attacker, sum to an acceptance. With a flash cue the replay never answers, none is
+               accepted: three fall to the CHALLENGE zone and one is rejected.
+Why the controls missed it: weights are positive evidence that adds up, and nothing requires one of the cues in an ACCEPT to be
+               independent of what the attacker shows to the camera. The ACCEPT zone issues no challenge.
+Decision:      DISCLOSED, with a design suggestion, not a fix (claim-sheet L21). Conditional on the passive CNN being fooled (not modelled:
+               it is likely not) and on no flash light. Suggested rule, to be set on the corpus: an ACCEPT needs at least one live
+               vote from a cue the display cannot fake (flash, stereo, a passed challenge), else the session goes to the
+               challenge. Not implemented: it would change BPCER at every station without a light, which cannot be priced without #65.
+Re-run result: pending real phones and the passive scorer on real replays.
+```
+
+```
 Finding R-02 (a false rejection, not an attack)
 Attack:        none - an honest resident in the same room under different light
 How it worked: `StationSelfTest` (./gradlew :harness:stationSelfTest) scored the scene cue 0.35 for the same room 15% brighter

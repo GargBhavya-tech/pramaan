@@ -89,6 +89,27 @@ public final class StationSelfTest {
         return rows;
     }
 
+    /**
+     * The scene and moire votes for a screen replay of this room at one display pitch, as {@code {scene, moire}} pLive
+     * (NaN where a cue abstained). The attacker shows the right room and a face, so the scene cue sees the right room;
+     * only the pitch is the attacker's to choose.
+     */
+    public static double[] replayVotes(RgbImage room, double pitch) {
+        RgbImage base = ImageOps.resize(room, SIZE_W, SIZE_H);
+        SceneFingerprint stored = SceneFingerprint.capture(base);
+        ScreenRecapture.Params p = new ScreenRecapture.Params();
+        p.displayPitchPx = pitch;
+        p.leak = 0;
+        p.gap = 0.15;
+        p.glare = 0;
+        p.ripple = 0;
+        p.supersample = 3;
+        RgbImage replay = ScreenRecapture.render(withFace(base), p);
+        CueResult scene = new SceneConsistencyCue().evaluate(stored, ImageOps.resize(replay, SIZE_W, SIZE_H), FACE_BOX);
+        CueResult moire = moire(replay);
+        return new double[] {scene.abstained() ? Double.NaN : scene.pLive(), moire.abstained() ? Double.NaN : moire.pLive()};
+    }
+
     private static Row row(String name, boolean shouldBeLive, SceneFingerprint stored, RgbImage frame) {
         CueResult scene = new SceneConsistencyCue().evaluate(stored, ImageOps.resize(frame, SIZE_W, SIZE_H), FACE_BOX);
         CueResult moire = moire(frame);
