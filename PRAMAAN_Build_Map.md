@@ -944,6 +944,15 @@ Tests: `SceneContextTest`, `BackdropToolTest`, `StationWiringEngineTest` (withou
 `BackdropSubtractionSegmenter` (scaffold `--segmenter backdrop`) that also finds people walking behind, and a
 model-ready `OnnxPersonSegmenter`, scored on synthetic scenes with known truth (`SegmentationBench`). **Still not
 built:** a chosen, pinned and licensed segmentation model, and any measurement on real rooms.
+**Android and CI since checked:** after the stream fingerprint, device flash, burst lock, person segmentation, learned-fusion and
+red-team work, `./gradlew -p android :pramaan-android:check` passes (core still uses only APIs Android has; lint clean) - on
+this machine, not on a phone. A GitHub Actions workflow (`.github/workflows/build.yml`: Linux under xvfb and Windows, JDK 24) was
+written but **has never run**: there is no remote yet. The harness tests take about two minutes in total; the 10-minute
+full runs seen earlier were one dry-run test running ffmpeg's test pattern unthrottled, fixed with `-re`.
+**Not built, on purpose:** double-JPEG-compression analysis. It would catch a still image re-encoded by a virtual camera, but
+OBS-style pipelines decode and encode once (which the stream fingerprint already sees by its tables) and a replayed H.264 video
+carries no JPEG history, so the realistic benefit is narrow and its false-positive rate on real webcams cannot be set without
+a corpus.
 **Corpus-day calibrator since built:** `CalibrateFromRows` (`./gradlew :harness:calibrate --args="--rows rows.jsonl ..."`) reads the
 recorded `SessionRow`s and writes a PROPOSAL, never an edit to `operating-points.json`: split by *person* (half fit the weights,
 a quarter calibrate the cut-offs, a quarter held out), weights refitted and shrunk toward the table, a conformal reject
