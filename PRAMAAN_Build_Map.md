@@ -944,6 +944,14 @@ Tests: `SceneContextTest`, `BackdropToolTest`, `StationWiringEngineTest` (withou
 `BackdropSubtractionSegmenter` (scaffold `--segmenter backdrop`) that also finds people walking behind, and a
 model-ready `OnnxPersonSegmenter`, scored on synthetic scenes with known truth (`SegmentationBench`). **Still not
 built:** a chosen, pinned and licensed segmentation model, and any measurement on real rooms.
+**Corpus-day calibrator since built:** `CalibrateFromRows` (`./gradlew :harness:calibrate --args="--rows rows.jsonl ..."`) reads the
+recorded `SessionRow`s and writes a PROPOSAL, never an edit to `operating-points.json`: split by *person* (half fit the weights,
+a quarter calibrate the cut-offs, a quarter held out), weights refitted and shrunk toward the table, a conformal reject
+cut-off per group (an honest refusal where a group has fewer than `ceil(1/alpha) - 1` genuine sessions), a proposed accept cut-off
+at the 99% quantile of calibration attacks (no guarantee), and BPCER per group and APCER per attack species on the held-out
+people only, each with a 95% Clopper-Pearson interval, in `calibration.json` (with the rows' and the table's SHA-256, the seed and
+the counts) and a text report. On a synthetic corpus the held-out BPCER came out 5.4% [3.6, 7.8] against a 5% target. Synthetic
+only: it has never seen a real row.
 **E1 recorder and analyser since built:** `FlashExperiment` (`./gradlew :desktop:flashExperiment`) plays the engine's own safe random
 flash sequence on a screen while `ffmpeg` records a camera, stamps each frame with the host arrival time (the engine's
 `hostArrival` semantics) and each colour with the time it was shown, and records only with `--consent-given`;

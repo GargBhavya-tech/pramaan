@@ -163,3 +163,13 @@ tasks.register<JavaExec>("fusedRedTeam") {
     mainClass.set("pramaan.harness.factory.FusedRedTeam")
     workingDir = rootProject.projectDir
 }
+
+// Corpus day: a calibration PROPOSAL from recorded session rows (split by person, conformal cut-offs, held-out error rates).
+// ./gradlew :harness:calibrate --args="--rows build/results/rows.jsonl --alpha 0.05 --group-by deviceLevel"
+tasks.register<JavaExec>("calibrate") {
+    group = "verification"
+    description = "Proposes fusion weights and cut-offs from session rows, with provenance; applies nothing (Build Map #65, #70)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.harness.eval.CalibrateFromRows")
+    workingDir = rootProject.projectDir
+}
