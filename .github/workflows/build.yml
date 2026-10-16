@@ -1,0 +1,57 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+# Builds and tests the JVM modules on every push and pull request. The Android build needs the Android SDK and is not run
+# here. Model files and the vendored MockMDS are not in the repository, so tests that need them skip themselves.
+#
+# NOT YET RUN: this file was written without a remote to run it on. The first push may show failures that are about the
+# CI machine (a missing display, a model a test assumed) and not about the code; fix those, do not silence the tests.
+name: build
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '24'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install ffmpeg and a virtual display (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg xvfb
+
+      - name: Install ffmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg -y --no-progress
+
+      - name: Build and test (Linux, under a virtual display for the JavaFX tests)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a ./gradlew :core:build :sbi:build :harness:build :desktop:build --no-daemon
+
+      - name: Build and test (Windows)
+        if: runner.os == 'Windows'
+        run: ./gradlew :core:build :sbi:build :harness:build :desktop:build --no-daemon
+
+      - name: Keep the test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ matrix.os }}
+          path: '**/build/reports/tests'

@@ -2,7 +2,8 @@
 
 Structure follows the Bible: **threat model → the gap nobody names → architecture → the numbers → inclusion → the
 SBI proposal.** Every slide names its evidence so nothing is said that `docs/claim-sheet.md` does not back. The
-slides themselves are made in whatever tool you present from; this file is the content, order and timing.
+slides themselves are in `docs/deck.md` (Marp markdown: preview in VS Code or `npx @marp-team/marp-cli docs/deck.md --pdf`);
+this file is the content, order and timing, and `deck.md` follows it.
 
 Target: 7 minutes of talk plus the demo, 15 slides. The deck must work **with no laptop of your own**: export to PDF,
 and keep the recorded demo (section 3) on a USB stick and in a cloud link.
@@ -47,7 +48,7 @@ re-recorded alone. Capture the screen and the camera view side by side.
 | S3 | Printed photo | 40 s | Generic message; Diagnostics cue view | A score on the resident screen (there is none) |
 | S4 | Phone replay | 60 s | The challenge issued, the video failing it, the generic message, the cue view | — |
 | S5 | Operator login with a photo | 30 s | The failed login and its audit entry | — |
-| S6 | Virtual camera | 40 s | `INJECTION_DETECTED` in the audit log; a normal webcam *not* vetoed | A claim that OS-level enumeration exists (L9) |
+| S6 | Virtual camera | 40 s | `INJECTION_DETECTED` in the audit log; a normal webcam *not* vetoed | A claim beyond L9: the host-camera check was tried on one Windows PC with OBS installed and finds off-the-shelf virtual cameras by name and by registration, not a renamed one |
 | S7 | Capture swap | 40 s | `BindingAttacksTest` output and the named lock | — |
 | S8 | Accessibility | 40 s | `NO_VISION` ticked, Hindi prompts with icons, no gaze challenge | — |
 | S9 | The report | 60 s | The HTML report, intervals, the synthetic label if synthetic | A synthetic number as a headline (L2) |
