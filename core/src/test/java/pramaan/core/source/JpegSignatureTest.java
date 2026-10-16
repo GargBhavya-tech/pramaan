@@ -109,6 +109,42 @@ class JpegSignatureTest {
         }
     }
 
+    /**
+     * The parser reads bytes a hostile virtual camera chooses. Whatever it is fed, it must answer with a signature or
+     * null and never throw, loop or allocate without bound: 20 000 mutated, truncated and spliced JPEGs.
+     */
+    @Test
+    void noInputEverMakesTheParserThrowOrHang() throws Exception {
+        byte[][] seeds = {jpeg(1, 0.8f, false, 128), jpeg(2, 0.3f, true, 96), jpeg(3, 0.95f, false, 64)};
+        Random r = new Random(99);
+        long start = System.nanoTime();
+        for (int i = 0; i < 20_000; i++) {
+            byte[] b = seeds[r.nextInt(seeds.length)].clone();
+            switch (r.nextInt(4)) {
+                case 0: // flip a few bytes anywhere, including lengths
+                    for (int k = 0; k < 1 + r.nextInt(6); k++) {
+                        b[r.nextInt(b.length)] = (byte) r.nextInt(256);
+                    }
+                    break;
+                case 1: // truncate
+                    b = java.util.Arrays.copyOf(b, r.nextInt(b.length));
+                    break;
+                case 2: // flip bytes in the header region only, where the parser lives
+                    for (int k = 0; k < 1 + r.nextInt(4); k++) {
+                        b[r.nextInt(Math.min(b.length, 700))] = (byte) r.nextInt(256);
+                    }
+                    break;
+                default: // random bytes behind a valid start-of-image
+                    b = new byte[2 + r.nextInt(300)];
+                    r.nextBytes(b);
+                    b[0] = (byte) 0xFF;
+                    b[1] = (byte) 0xD8;
+            }
+            JpegSignature.of(b); // must not throw
+        }
+        assertTrue((System.nanoTime() - start) / 1_000_000 < 20_000, "20 000 parses took too long: a hang or a blow-up");
+    }
+
     // ------------------------------------------------------------------------------------------ the profile
 
     @Test

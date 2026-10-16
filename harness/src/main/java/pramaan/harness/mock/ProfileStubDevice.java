@@ -209,6 +209,9 @@ public final class ProfileStubDevice implements AutoCloseable {
         String txn = body.path("transactionId").asText();
         int count = Integer.parseInt(body.path("count").asText());
         long interval = Long.parseLong(body.path("intervalMs").asText());
+        if (count < 1 || count > 99 || interval < 10 || interval > 9999) {
+            throw new IllegalArgumentException("burst out of range: the profile allows 1-99 frames, 10-9999 ms apart");
+        }
         ArrayNode list = JSON.createArrayNode();
         String previous = "";
         for (int i = 0; i < count; i++) {
@@ -254,6 +257,10 @@ public final class ProfileStubDevice implements AutoCloseable {
     private void illuminate(HttpExchange ex, JsonNode body) throws IOException {
         MockLivenessProfile profile = sessions.get(body.path("transactionId").asText());
         if (profile == null) {
+            ex.sendResponseHeaders(400, -1);
+            return;
+        }
+        if (body.path("schedule").size() < 1 || body.path("schedule").size() > 16) {
             ex.sendResponseHeaders(400, -1);
             return;
         }

@@ -830,6 +830,10 @@ OBS install are not in a unit test, but the inventory was run on a real Windows 
 built-in webcam alone; the first version, which read only Plug-and-Play, missed it. The parse is tested on canned
 output of both sources. Still not built: PRNU, a signed
 externally maintained denylist.
+**Review notes (privacy):** the signed evidence now carries `injection.hostVirtualCameras`, `hostSoftwareCameras` and
+`streamSignature` (names of cameras and encoder summaries of the registration PC). That is workstation data, not resident data,
+but it does tell the server what software is installed; a deployment that treats that as sensitive should drop the name lists
+and keep the counts.
 **Stream fingerprint since built:** `JpegSignature` reads a frame's encoder headers (quantisation and Huffman tables,
 sampling, marker order; no pixel decoding), `StreamSignatureProfile` is the file enrolled for the real camera
 (`./gradlew :desktop:streamSignature`, scaffold `--stream-signature`), `StreamSignatureWatch` counts frames from another
