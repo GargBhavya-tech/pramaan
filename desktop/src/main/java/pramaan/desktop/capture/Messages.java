@@ -24,13 +24,24 @@ import java.util.ResourceBundle;
 public final class Messages {
 
     private final ResourceBundle bundle;
+    private final Locale locale;
 
-    private Messages(ResourceBundle bundle) {
+    private Messages(ResourceBundle bundle, Locale locale) {
         this.bundle = bundle;
+        this.locale = locale;
     }
 
     public static Messages forLocale(Locale locale) {
-        return new Messages(ResourceBundle.getBundle("pramaan.desktop.capture.messages", locale));
+        return new Messages(ResourceBundle.getBundle("pramaan.desktop.capture.messages", locale), locale);
+    }
+
+    /** The locale this catalogue was asked for (the words may still come from the base catalogue). */
+    public Locale locale() {
+        return locale;
+    }
+
+    public boolean isHindi() {
+        return "hi".equals(locale.getLanguage());
     }
 
     public boolean has(String id) {

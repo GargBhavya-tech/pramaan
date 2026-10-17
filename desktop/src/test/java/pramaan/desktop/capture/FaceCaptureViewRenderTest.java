@@ -95,7 +95,7 @@ class FaceCaptureViewRenderTest {
         CaptureScreenModel model = new CaptureScreenModel(screens::add);
         FaceCaptureView view = onFx(() -> {
             FaceCaptureView v = new FaceCaptureView(en);
-            new Scene(v, 520, 560);
+            pramaan.desktop.ui.Theme.apply(new Scene(v, 640, 700));
             v.setPreviewImage(new Image(new ByteArrayInputStream(jpeg)));
             return v;
         });

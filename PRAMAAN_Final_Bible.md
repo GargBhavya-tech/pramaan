@@ -1361,6 +1361,25 @@ not just that the catalogue exists), closing principle 2 across languages, not j
 a score — and `RegistrationScaffold`'s badge shows "Offline — working normally", turning red with a stale-policy
 sentence once `EngineBundle.stale(now)` is true (#94; Part 17.2).
 
+*As built (UI pass, `desktop/…/ui`):* the station window is now a designed screen, not stock controls. **Direction:** a tool an
+operator uses all day and a resident reads once, so calm, high-contrast and plain; one amber accent that means only "an action
+is being asked of you now". Every state is an icon and a word as well as a colour (`Banner`, `StepRail`, the stage strip), and
+every text/background pair in `pramaan.css` was checked at 4.5:1 or better. **Parts:** `StationView` (header with the offline,
+operator and diagnostic chips, language, larger-text and high-contrast switches; the step rail; the capture area; the task
+panel), `Panels` (one panel per step, re-worded in place so a language switch keeps what was typed, ticked and answered),
+`Dialogs` (an audited action asks for administrator and reason in one form, and stays off until it can be accepted), and
+`Theme` (tokens, the two accessibility modes, a Hindi font class). **Rules kept:** the capture view still shows no score, no
+cause, and, on purpose, no progress bar or count of challenge steps, because how many steps a resident is asked for must not
+tell them how the system sees them; the test that no score-like word appears now covers every operator-screen string too. Every
+outcome the station can report has a message in both languages (tested), and each message says what to do next. **Checked:**
+the screens are rendered offscreen in English, Hindi, large text and high contrast (`desktop/build/reports/scaffold/ui-*.png`),
+and the real scaffold was started once and ran with no exceptions. **Not done, and not claimed:** no resident or operator has
+used these screens; keyboard-only and screen-reader use are built in (labels, focus ring, 44 px targets, accessible text) but
+not tried with a real screen reader; Hindi bold falls back to regular weight on this machine's Nirmala UI, so headings rely on
+size there; there is no reduced-motion setting (the one looping animation, the turn arrow, runs only while a turn is asked);
+the Devanagari text is still machine-drafted and needs a native speaker; and it is a JavaFX scaffold, not the Registration
+Client's own screens.
+
 ### 19.3 Diagnostic mode (operator/admin only, policy-gated)
 
 Shows per-cue scores, device capabilities, frame timing, quality components — for troubleshooting a centre's setup. Disabled by default; enabling it is itself an audited event.

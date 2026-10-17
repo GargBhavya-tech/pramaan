@@ -1,0 +1,495 @@
+/*
+ * PRAMAAN station theme. Utilitarian, calm, high contrast: an operator uses this screen all day and a resident reads
+ * it once. One accent (amber) is used for exactly one thing, "an action is being asked of you now". Every state is
+ * carried by an icon and a word as well as a colour. Targets are at least 44 px tall (WCAG 2.2, 2.5.8), the focus
+ * ring is 3 px (2.4.11), and every text/background pair below was checked at 4.5:1 or better.
+ *
+ * Colours are tokens on .root; the high-contrast and large-text modes only redefine tokens and the base size.
+ */
+
+.root {
+    -p-bg: #f3f5f7;
+    -p-surface: #ffffff;
+    -p-line: #cfd6dd;
+    -p-ink: #14202e;
+    -p-ink-2: #3b4a5a;
+    -p-ink-3: #52606d;
+    -p-primary: #1b4f8a;
+    -p-primary-hover: #163f6e;
+    -p-on-primary: #ffffff;
+    -p-focus: #0b57d0;
+    -p-accent: #f5a623;
+    -p-ok: #1b6e3c;
+    -p-ok-bg: #e6f4ea;
+    -p-warn: #6b4500;
+    -p-warn-bg: #fff4d6;
+    -p-err: #8e1220;
+    -p-err-bg: #fde8ea;
+    -p-info: #173f70;
+    -p-info-bg: #e7eff8;
+    -p-stage: #1f2933;
+
+    -fx-font-family: "Segoe UI", "Nirmala UI", "Noto Sans", "System";
+    -fx-font-size: 14px;
+    -fx-base: #e9edf1;
+    -fx-background: -p-bg;
+    -fx-text-fill: -p-ink;
+}
+
+.root.large-text {
+    -fx-font-size: 18px;
+}
+
+.root.high-contrast {
+    -p-bg: #ffffff;
+    -p-line: #14202e;
+    -p-ink-2: #14202e;
+    -p-ink-3: #14202e;
+    -p-primary: #0a2f5c;
+    -p-primary-hover: #000000;
+    -p-ok: #0b4a24;
+    -p-ok-bg: #ffffff;
+    -p-warn: #4a2f00;
+    -p-warn-bg: #ffffff;
+    -p-err: #7a0c18;
+    -p-err-bg: #ffffff;
+    -p-info: #0a2f5c;
+    -p-info-bg: #ffffff;
+}
+
+.label, .text, .check-box, .radio-button {
+    -fx-text-fill: -p-ink;
+}
+
+/* Segoe UI has no bold Devanagari, so JavaFX draws empty boxes for bold Hindi. Nirmala UI ships with Windows and has one. */
+.root.lang-hi {
+    -fx-font-family: "Nirmala UI", "Noto Sans Devanagari", "Segoe UI";
+}
+
+.devanagari {
+    -fx-font-family: "Nirmala UI", "Noto Sans Devanagari";
+}
+
+/* ------------------------------------------------------------------ header */
+
+.app-header {
+    -fx-background-color: -p-surface;
+    -fx-border-color: transparent transparent -p-line transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 10 20 10 20;
+    -fx-spacing: 16;
+}
+
+.brand-name {
+    -fx-font-size: 1.45em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -p-primary;
+}
+
+.brand-sub {
+    -fx-font-size: 0.86em;
+    -fx-text-fill: -p-ink-3;
+}
+
+.chip {
+    -fx-background-color: -p-bg;
+    -fx-border-color: -p-line;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+    -fx-padding: 4 12 4 10;
+    -fx-spacing: 6;
+    -fx-alignment: center-left;
+}
+
+.chip .label {
+    -fx-font-size: 0.9em;
+    -fx-text-fill: -p-ink-2;
+}
+
+.chip.chip-warn {
+    -fx-background-color: -p-warn-bg;
+    -fx-border-color: -p-warn;
+}
+
+.chip.chip-warn .label {
+    -fx-text-fill: -p-warn;
+    -fx-font-weight: bold;
+}
+
+/* ------------------------------------------------------------------ step rail */
+
+.rail {
+    -fx-background-color: -p-surface;
+    -fx-border-color: transparent -p-line transparent transparent;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 24 18 24 18;
+    -fx-spacing: 6;
+}
+
+.rail-heading {
+    -fx-font-size: 0.82em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -p-ink-3;
+    -fx-padding: 0 0 6 0;
+}
+
+.step {
+    -fx-spacing: 12;
+    -fx-alignment: center-left;
+    -fx-padding: 8 8 8 8;
+    -fx-background-radius: 8;
+}
+
+.step-badge {
+    -fx-min-width: 30;
+    -fx-min-height: 30;
+    -fx-pref-width: 30;
+    -fx-pref-height: 30;
+    -fx-background-radius: 15;
+    -fx-border-radius: 15;
+    -fx-border-color: -p-line;
+    -fx-border-width: 2;
+    -fx-background-color: -p-surface;
+    -fx-alignment: center;
+}
+
+.step-badge .label {
+    -fx-font-weight: bold;
+    -fx-text-fill: -p-ink-3;
+}
+
+.step-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: -p-ink-3;
+}
+
+.step-state {
+    -fx-font-size: 0.84em;
+    -fx-text-fill: -p-ink-3;
+}
+
+.step.step-current {
+    -fx-background-color: -p-info-bg;
+}
+
+.step.step-current .step-badge {
+    -fx-background-color: -p-primary;
+    -fx-border-color: -p-primary;
+}
+
+.step.step-current .step-badge .label {
+    -fx-text-fill: -p-on-primary;
+}
+
+.step.step-current .step-title {
+    -fx-text-fill: -p-info;
+}
+
+.step.step-done .step-badge {
+    -fx-background-color: -p-ok;
+    -fx-border-color: -p-ok;
+}
+
+.step.step-done .step-title {
+    -fx-text-fill: -p-ink;
+}
+
+/* ------------------------------------------------------------------ capture area */
+
+.capture-area {
+    -fx-background-color: -p-bg;
+    -fx-padding: 20;
+    -fx-spacing: 14;
+    -fx-alignment: top-center;
+}
+
+.stage-strip {
+    -fx-background-color: -p-surface;
+    -fx-border-color: -p-line;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 14 18 14 18;
+    -fx-spacing: 14;
+    -fx-alignment: center-left;
+}
+
+.stage-headline {
+    -fx-font-size: 1.55em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -p-ink;
+}
+
+.stage-guidance {
+    -fx-font-size: 1.15em;
+    -fx-text-fill: -p-ink-2;
+}
+
+.stage-notice {
+    -fx-font-size: 1.0em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -p-err;
+}
+
+.stage-attempt {
+    -fx-font-size: 0.9em;
+    -fx-text-fill: -p-ink-3;
+}
+
+.stage-strip.stage-success { -fx-border-color: -p-ok; -fx-border-width: 2; }
+.stage-strip.stage-retry,
+.stage-strip.stage-stopped { -fx-border-color: -p-err; -fx-border-width: 2; }
+.stage-strip.stage-challenge { -fx-border-color: -p-accent; -fx-border-width: 3; }
+
+/* ------------------------------------------------------------------ task panel */
+
+.task-panel {
+    -fx-background-color: -p-surface;
+    -fx-border-color: transparent transparent transparent -p-line;
+    -fx-border-width: 0 0 0 1;
+    -fx-padding: 24 22 24 22;
+    -fx-spacing: 14;
+}
+
+.panel-title {
+    -fx-font-size: 1.4em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -p-ink;
+}
+
+.panel-hint {
+    -fx-text-fill: -p-ink-2;
+}
+
+.field-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: -p-ink;
+    -fx-padding: 6 0 0 0;
+}
+
+.section-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: -p-ink-2;
+    -fx-padding: 10 0 0 0;
+}
+
+.photo-frame {
+    -fx-background-color: -p-bg;
+    -fx-border-color: -p-line;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 10;
+    -fx-alignment: center;
+    -fx-min-height: 150;
+}
+
+.photo-empty {
+    -fx-text-fill: -p-ink-3;
+    -fx-font-size: 0.92em;
+}
+
+/* ------------------------------------------------------------------ controls */
+
+.button {
+    -fx-min-height: 44;
+    -fx-padding: 8 18 8 18;
+    -fx-background-color: -p-surface;
+    -fx-border-color: -p-ink-3;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-text-fill: -p-ink;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.button:hover {
+    -fx-background-color: -p-info-bg;
+}
+
+.button.primary {
+    -fx-background-color: -p-primary;
+    -fx-border-color: -p-primary;
+    -fx-text-fill: -p-on-primary;
+}
+
+.button.primary:hover {
+    -fx-background-color: -p-primary-hover;
+    -fx-border-color: -p-primary-hover;
+}
+
+.button:disabled {
+    -fx-opacity: 0.5;
+}
+
+.button:focused,
+.text-field:focused,
+.combo-box:focused,
+.menu-button:focused {
+    -fx-border-color: -p-focus;
+    -fx-border-width: 3;
+}
+
+.check-box:focused > .box {
+    -fx-border-color: -p-focus;
+    -fx-border-width: 3;
+}
+
+.check-box {
+    -fx-min-height: 32;
+    -fx-padding: 2 0 2 0;
+}
+
+.text-field {
+    -fx-min-height: 44;
+    -fx-background-color: -p-surface;
+    -fx-border-color: -p-ink-3;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 4 12 4 12;
+    -fx-text-fill: -p-ink;
+}
+
+.combo-box {
+    -fx-min-height: 44;
+    -fx-background-color: -p-surface;
+    -fx-border-color: -p-ink-3;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.menu-button {
+    -fx-min-height: 40;
+    -fx-background-color: -p-surface;
+    -fx-border-color: -p-ink-3;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.link-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -p-primary;
+    -fx-underline: true;
+    -fx-font-weight: normal;
+}
+
+/* ------------------------------------------------------------------ banners (an icon and a word, never colour alone) */
+
+.banner {
+    -fx-spacing: 10;
+    -fx-padding: 12 14 12 14;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-border-width: 1.5;
+    -fx-alignment: top-left;
+}
+
+.banner .label {
+    -fx-wrap-text: true;
+}
+
+.banner.banner-info    { -fx-background-color: -p-info-bg; -fx-border-color: -p-info; }
+.banner.banner-info .label    { -fx-text-fill: -p-info; }
+.banner.banner-success { -fx-background-color: -p-ok-bg; -fx-border-color: -p-ok; }
+.banner.banner-success .label { -fx-text-fill: -p-ok; }
+.banner.banner-warning { -fx-background-color: -p-warn-bg; -fx-border-color: -p-warn; }
+.banner.banner-warning .label { -fx-text-fill: -p-warn; }
+.banner.banner-error   { -fx-background-color: -p-err-bg; -fx-border-color: -p-err; }
+.banner.banner-error .label   { -fx-text-fill: -p-err; }
+
+/* ------------------------------------------------------------------ icons (stroked, 24-unit grid, scaled in code) */
+
+.icon {
+    -fx-fill: transparent;
+    -fx-stroke: -p-ink-2;
+    -fx-stroke-width: 2.1;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+}
+
+.icon-on-dark .icon,
+.button.primary .icon { -fx-stroke: #ffffff; }
+.banner-info .icon { -fx-stroke: -p-info; }
+.banner-success .icon { -fx-stroke: -p-ok; }
+.banner-warning .icon { -fx-stroke: -p-warn; }
+.banner-error .icon { -fx-stroke: -p-err; }
+.chip-warn .icon { -fx-stroke: -p-warn; }
+.toggle-button .icon { -fx-stroke: -p-ink; }
+.toggle-button:selected .icon { -fx-stroke: #ffffff; }
+.stage-strip .icon { -fx-stroke: -p-ink; }
+.stage-strip.stage-success .icon { -fx-stroke: -p-ok; }
+.stage-strip.stage-retry .icon,
+.stage-strip.stage-stopped .icon { -fx-stroke: -p-err; }
+
+/* ------------------------------------------------------------------ strips under the header, scroll panes, toggles */
+
+.banner.scaffold-strip,
+.banner.notice-strip {
+    -fx-border-radius: 0;
+    -fx-background-radius: 0;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 6 20 6 20;
+    -fx-alignment: center-left;
+}
+
+.banner.scaffold-strip .label {
+    -fx-font-size: 0.9em;
+}
+
+.plain-scroll,
+.plain-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+}
+
+.plain-scroll {
+    -fx-background-insets: 0;
+}
+
+.toggle-button {
+    -fx-min-height: 40;
+    -fx-min-width: 44;
+    -fx-background-color: -p-surface;
+    -fx-border-color: -p-ink-3;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-text-fill: -p-ink;
+    -fx-font-weight: bold;
+}
+
+.toggle-button:selected {
+    -fx-background-color: -p-primary;
+    -fx-border-color: -p-primary;
+    -fx-text-fill: -p-on-primary;
+}
+
+.toggle-button:focused {
+    -fx-border-color: -p-focus;
+    -fx-border-width: 3;
+}
+
+.diagnostic-banner {
+    -fx-background-color: -p-warn-bg;
+    -fx-text-fill: -p-warn;
+    -fx-font-weight: bold;
+    -fx-padding: 10 16 10 16;
+    -fx-max-width: infinity;
+}
+
+/* ------------------------------------------------------------------ dialogs */
+
+.dialog-root {
+    -fx-background-color: -p-surface;
+    -fx-padding: 24;
+    -fx-spacing: 12;
+}
+
+.dialog-title {
+    -fx-font-size: 1.3em;
+    -fx-font-weight: bold;
+}

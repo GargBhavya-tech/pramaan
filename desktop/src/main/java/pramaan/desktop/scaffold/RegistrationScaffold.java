@@ -9,43 +9,23 @@ package pramaan.desktop.scaffold;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Clock;
 import java.time.Duration;
-import java.nio.file.Path;
-import java.util.EnumSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ComboBox;
-import pramaan.core.policy.AccessibilityProfile;
-import pramaan.core.policy.RollbackGuard;
-import pramaan.core.session.ExceptionOutcome;
-import pramaan.core.session.ExceptionReason;
-import pramaan.desktop.capture.Speech;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TextInputDialog;
-import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import pramaan.core.Workflow;
 import pramaan.core.audit.AuditEvent;
@@ -56,8 +36,13 @@ import pramaan.core.binding.VerifiedCapture;
 import pramaan.core.crypto.JwsTrust;
 import pramaan.core.engine.DiagnosticGrant;
 import pramaan.core.engine.LivenessEngine;
+import pramaan.core.engine.SceneContext;
+import pramaan.core.engine.Station;
 import pramaan.core.image.RgbImage;
+import pramaan.core.pad.SceneFingerprint;
+import pramaan.core.policy.RollbackGuard;
 import pramaan.core.session.EngineBundle;
+import pramaan.core.session.ExceptionOutcome;
 import pramaan.core.session.LivenessSession;
 import pramaan.core.session.SessionRegistry;
 import pramaan.core.session.SessionState;
@@ -66,16 +51,20 @@ import pramaan.core.source.SignedCapture;
 import pramaan.desktop.IsoFaceDecoder;
 import pramaan.desktop.capture.CaptureScreenModel;
 import pramaan.desktop.capture.CaptureSession;
-import pramaan.core.engine.SceneContext;
-import pramaan.core.engine.Station;
-import pramaan.core.pad.SceneFingerprint;
 import pramaan.desktop.capture.DesktopEngines;
-import pramaan.desktop.capture.FlashWindow;
-import pramaan.desktop.capture.WindowsCameraInventory;
 import pramaan.desktop.capture.DiagnosticsWindow;
 import pramaan.desktop.capture.DirectoryConfiguration;
 import pramaan.desktop.capture.FaceCaptureView;
+import pramaan.desktop.capture.FlashWindow;
 import pramaan.desktop.capture.Messages;
+import pramaan.desktop.capture.Speech;
+import pramaan.desktop.capture.Text;
+import pramaan.desktop.capture.WindowsCameraInventory;
+import pramaan.desktop.ui.Banner;
+import pramaan.desktop.ui.Dialogs;
+import pramaan.desktop.ui.Panels;
+import pramaan.desktop.ui.StationView;
+import pramaan.desktop.ui.Theme;
 import pramaan.sbi.SbiConfig;
 import pramaan.sbi.SbiFrameSource;
 
@@ -84,6 +73,9 @@ import pramaan.sbi.SbiFrameSource;
  * screen: operator login — strict liveness, then the match (#76); the resident face capture (#75); supervisor
  * approval by a fresh liveness session bound to this packet (#77); and an audited, policy-gated diagnostic
  * window (#78). It is labelled as a scaffold on screen; it is not the MOSIP client.
+ *
+ * <p>This class is the wiring: what each button does. How the window looks is {@link StationView} and
+ * {@link Panels}, so the screens can be rendered and tested without an engine.
  *
  * <p>Fails closed: if the policy, the operating-point table or a model does not verify, nothing can start and
  * the screen says face verification is unavailable.
@@ -94,15 +86,9 @@ public final class RegistrationScaffold extends Application {
     private volatile EvidenceStore evidence;
     /** The logged-in operator's face: a resident capture matching it is refused (Bible Part 15.3; Build Map #88). */
     private float[] operatorFace;
-    private final Label badges = new Label();
     private final SessionRegistry registry = new SessionRegistry();
     private final SecureRandom random = new SecureRandom();
     private final Clock clock = Clock.systemUTC();
-    private final ImageView captured = new ImageView();
-    private final VBox form = new VBox(10);
-    private final Label step = new Label();
-    private final Button diagnosticsButton = new Button("Diagnostics…");
-    private final Button retakeBackdropButton = new Button("Re-take backdrop…");
     private ScaffoldConfig config;
     private volatile DesktopEngines engines;
     private volatile SceneContext scene;
@@ -110,49 +96,49 @@ public final class RegistrationScaffold extends Application {
     private OperatorGallery gallery;
     private AuditLog audit;
     private FaceCaptureView view;
+    private StationView station;
+    private Stage stage;
     private volatile CaptureSession capture;
     private DiagnosticsWindow diagnostics;
     private DiagnosticGrant grant;
     private String operator;
 
     @Override
-    public void start(Stage stage) {
+    public void start(Stage primary) {
+        this.stage = primary;
         config = ScaffoldConfig.parse(getParameters().getRaw());
         gallery = new OperatorGallery(config.galleryDir);
         messages = Messages.forLocale(config.language.isEmpty() ? Locale.getDefault() : Locale.forLanguageTag(config.language));
         view = new FaceCaptureView(messages, config.speech ? Speech.forPlatform() : Speech.NONE);
-        captured.setFitWidth(150);
-        captured.setFitHeight(190);
-        captured.setPreserveRatio(true);
+        station = new StationView(messages, view, new StationView.Actions() {
+            @Override
+            public void toggleLanguage() {
+                messages = Messages.forLocale(messages.isHindi() ? Locale.ROOT : Locale.forLanguageTag("hi"));
+                station.retext(messages);
+            }
 
-        Label title = new Label("Registration Client");
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
-        Label tag = new Label("PRAMAAN scaffold — not the MOSIP Registration Client (ADR 0003)");
-        tag.setStyle("-fx-text-fill: #52606d;");
-        step.setStyle("-fx-font-size: 14px;");
-        diagnosticsButton.setOnAction(e -> activateDiagnostics());
-        retakeBackdropButton.setOnAction(e -> retakeBackdrop());
-        badges.setStyle("-fx-text-fill: #2e7d32; -fx-font-size: 12px;");
-        HBox topRow = new HBox(16, new VBox(2, title, tag), step, badges);
-        topRow.setAlignment(Pos.CENTER_LEFT);
-        topRow.setPadding(new Insets(12, 16, 4, 16));
+            @Override
+            public void retakeBackdrop() {
+                RegistrationScaffold.this.retakeBackdrop();
+            }
 
-        form.setPadding(new Insets(16));
-        form.setPrefWidth(250);
-        VBox result = new VBox(6, new Label("Captured photo"), captured);
-        result.setPadding(new Insets(16));
-        result.setAlignment(Pos.TOP_CENTER);
-        HBox bottom = new HBox(8, retakeBackdropButton, diagnosticsButton);
-        bottom.setAlignment(Pos.CENTER_RIGHT);
-        bottom.setPadding(new Insets(8, 16, 12, 16));
+            @Override
+            public void diagnostics() {
+                activateDiagnostics();
+            }
+        });
 
-        BorderPane root = new BorderPane(view, topRow, result, bottom, form);
+        Scene sc = new Scene(station, 1280, 800);
+        Theme.apply(sc);
         stage.setTitle("PRAMAAN — Registration Client scaffold");
-        stage.setScene(new Scene(root, 1040, 720));
+        stage.setScene(sc);
+        stage.setMinWidth(1180);
+        stage.setMinHeight(720);
         stage.setOnCloseRequest(e -> shutdown());
         stage.show();
 
-        form.setDisable(true);
+        station.setPanel(new Panels.Loading());
+        station.setToolsEnabled(false);
         view.show(new CaptureScreenModel(s -> { }).current());
         Thread loader = new Thread(this::loadEngine, "pramaan-bundle-loader");
         loader.setDaemon(true);
@@ -221,18 +207,15 @@ public final class RegistrationScaffold extends Application {
             boolean stale = bundle.stale(clock.instant());
             Platform.runLater(() -> {
                 // The scaffold never syncs: it is always offline, and says so (Build Map #94).
-                String text = messages.resolve(pramaan.desktop.capture.Text.of("pramaan.status.offline"));
-                if (stale) {
-                    text += "   " + messages.resolve(pramaan.desktop.capture.Text.of("pramaan.status.stale-policy"));
-                    badges.setStyle("-fx-text-fill: #b3261e; -fx-font-size: 12px;");
-                }
-                badges.setText(text);
+                station.setOffline(true, stale);
+                station.setToolsEnabled(true);
                 showLogin();
             });
         } catch (Exception e) {
             System.err.println("PRAMAAN: liveness unavailable: " + e);
             CaptureScreenModel m = new CaptureScreenModel(view::show);
             m.engineUnavailable();
+            Platform.runLater(() -> station.setPanel(new Panels.Unavailable()));
         }
     }
 
@@ -245,22 +228,18 @@ public final class RegistrationScaffold extends Application {
     // ------------------------------------------------------------------------------------------ #76 operator login
 
     private void showLogin() {
-        step.setText("1  Operator login");
-        TextField id = new TextField(config.operatorId);
-        Label status = new Label();
-        status.setWrapText(true);
-        Button login = new Button("Log in with face");
-        login.setDefaultButton(true);
-        Button onboard = new Button("Onboard my face");
-        login.setOnAction(e -> faceCheck(Workflow.OPERATOR, id.getText().trim(), null, engine -> {
+        station.setStep(StationView.Step.LOGIN);
+        station.setOperator(null);
+        Panels.Login p = new Panels.Login(config.operatorId);
+        p.submit.setOnAction(e -> faceCheck(Workflow.OPERATOR, p.id.getText().trim(), null, engine -> {
             if (engine == null) {
                 return;
             }
-            OperatorAuthentication.Outcome o = OperatorAuthentication.authenticate(id.getText().trim(), engine,
+            OperatorAuthentication.Outcome o = OperatorAuthentication.authenticate(p.id.getText().trim(), engine,
                     new EnrolledFaceMatcher(gallery, engines.captureAnalyser(), engines.bundle().table().thetaSame()),
                     this::audit);
             if (o == OperatorAuthentication.Outcome.AUTHENTICATED) {
-                operator = id.getText().trim();
+                operator = p.id.getText().trim();
                 try {
                     // The face that just logged in is the one no resident capture may be (Bible Part 15.3).
                     operatorFace = engines.captureAnalyser().embed(engine.acceptedCapture().orElseThrow());
@@ -270,73 +249,48 @@ public final class RegistrationScaffold extends Application {
                 }
                 showRegistration();
             } else {
-                status.setText(loginMessage(o));
+                p.say(Panels.loginResult(o));
             }
         }));
-        onboard.setOnAction(e -> faceCheck(Workflow.OPERATOR, id.getText().trim(), null,
-                engine -> status.setText(onboard(id.getText().trim(), engine))));
-        setForm(new Label("Operator id"), id, login, onboard, status);
-    }
-
-    private static String loginMessage(OperatorAuthentication.Outcome o) {
-        switch (o) {
-            case FACE_NOT_MATCHED:
-                return "Face not recognised for this operator.";
-            case MATCH_UNAVAILABLE:
-                return "Face matching is unavailable. Please contact support.";
-            default:
-                return "Face verification could not be completed. Please try again.";
-        }
+        p.onboard.setOnAction(e -> faceCheck(Workflow.OPERATOR, p.id.getText().trim(), null,
+                engine -> p.say(onboard(p.id.getText().trim(), engine))));
+        station.setPanel(p);
     }
 
     /**
      * Scaffold onboarding: the enrolled face is taken from a capture that passed strict liveness and binding, so
      * a photo cannot be enrolled either. (The real client onboards through its own supervised flow.)
      */
-    private String onboard(String operatorId, LivenessEngine engine) {
+    private Panels.Notice onboard(String operatorId, LivenessEngine engine) {
         Optional<SignedCapture> c = engine == null ? Optional.empty() : engine.acceptedCapture();
         if (c.isEmpty()) {
-            return "Face verification could not be completed. Please try again.";
+            return new Panels.Notice(Banner.Kind.WARNING, Text.of("pramaan.ui.login.incomplete"));
         }
         try {
             float[] e = engines.captureAnalyser().embed(c.get());
             if (e == null) {
-                return "The capture did not show exactly one face. Please try again.";
+                return new Panels.Notice(Banner.Kind.WARNING, Text.of("pramaan.ui.onboard.one-face"));
             }
             gallery.enrol(operatorId, e);
             audit(AuditEvent.of("OPERATOR_ONBOARDED").put("operatorId", operatorId)
                     .put("sessionId", engine.session().sessionId()).build());
-            return "Face enrolled. You can now log in with your face.";
+            return new Panels.Notice(Banner.Kind.SUCCESS, Text.of("pramaan.ui.onboard.done"));
         } catch (Exception ex) {
-            return "Onboarding failed: " + ex.getMessage();
+            System.err.println("PRAMAAN: onboarding failed: " + ex);
+            return new Panels.Notice(Banner.Kind.ERROR, Text.of("pramaan.ui.onboard.failed"));
         }
     }
 
     // ------------------------------------------------------------------------------------------ #75 resident capture
 
     private void showRegistration() {
-        step.setText("2  Resident biometrics — operator " + operator);
-        captured.setImage(null);
-        Label subject = new Label("Registration " + config.subjectId);
-        Button scan = new Button("Scan face");
-        scan.setDefaultButton(true);
-        Button next = new Button("Next: supervisor approval");
-        next.setDisable(true);
-        Label status = new Label();
-        status.setWrapText(true);
+        station.setStep(StationView.Step.RESIDENT);
+        station.setOperator(operator);
+        Panels.Resident p = new Panels.Resident(config.subjectId, engines.bundle().policy().accessibilityProfiles());
         // Build Map #92: the operator selects accessibility profiles before the scan; they shape the challenges and
         // are recorded in the evidence and the audit log.
-        VBox profiles = new VBox(4, new Label("Accessibility (operator selects)"));
-        java.util.List<CheckBox> boxes = new java.util.ArrayList<>();
-        for (AccessibilityProfile p : engines.bundle().policy().accessibilityProfiles()) {
-            CheckBox b = new CheckBox(p.name());
-            b.setUserData(p);
-            boxes.add(b);
-            profiles.getChildren().add(b);
-        }
-        scan.setOnAction(e -> {
-            Set<AccessibilityProfile> chosen = EnumSet.noneOf(AccessibilityProfile.class);
-            boxes.stream().filter(CheckBox::isSelected).forEach(b -> chosen.add((AccessibilityProfile) b.getUserData()));
+        p.scan.setOnAction(e -> {
+            var chosen = p.chosenProfiles();
             faceCheck(Workflow.RESIDENT, config.subjectId, null, session -> {
                 session.useAccessibilityProfiles(chosen);
                 if (operatorFace != null) {
@@ -344,27 +298,28 @@ public final class RegistrationScaffold extends Application {
                 }
             }, engine -> {
                 if (engine != null && engine.session().state() == SessionState.ACCEPTED) {
-                    showCapture(engine.acceptedCapture());
-                    status.setText(storeEvidence(engine));
-                    next.setDisable(false);
+                    p.setPhoto(capturedPhoto(engine.acceptedCapture()));
+                    p.say(storeEvidence(engine));
+                    p.next.setDisable(false);
                 } else if (engine != null && engine.session().state() == SessionState.EXCEPTION_FLOW) {
                     showException(engine);
                 }
             });
         });
-        next.setOnAction(e -> showApproval());
-        setForm(new Label("Face"), subject, profiles, scan, next, status);
+        p.next.setOnAction(e -> showApproval());
+        station.setPanel(p);
     }
 
     /** ADR 0003 patch P4: signed evidence into the face BIR's Others, and the attempt into the transparency log. */
-    private String storeEvidence(LivenessEngine engine) {
+    private Panels.Notice storeEvidence(LivenessEngine engine) {
         try {
             Path packet = evidence.storeAccepted(engine, operator, config.centreId);
-            return "Packet written with signed liveness evidence: " + packet.getFileName();
+            return new Panels.Notice(Banner.Kind.SUCCESS,
+                    Text.of("pramaan.ui.resident.stored", Map.of("file", packet.getFileName().toString())));
         } catch (Exception ex) {
             // The capture passed, but without its evidence the packet is not complete: say so, never pretend.
             System.err.println("PRAMAAN: evidence could not be stored: " + ex);
-            return "The liveness evidence could not be stored. Do not continue with this packet.";
+            return new Panels.Notice(Banner.Kind.ERROR, Text.of("pramaan.ui.resident.store-failed"));
         }
     }
 
@@ -377,49 +332,24 @@ public final class RegistrationScaffold extends Application {
      * check: a photo of a photo blocks the path for good.
      */
     private void showException(LivenessEngine resident) {
-        step.setText("2b  Exception — supervisor approval required");
-        ComboBox<ExceptionReason> reason = new ComboBox<>();
-        reason.getItems().setAll(ExceptionReason.values());
-        reason.getSelectionModel().selectFirst();
-        TextField supervisor = new TextField("supervisor-1");
-        Label status = new Label("Face verification could not be completed for this resident. A supervisor must approve"
-                + " an exception, with a reason.");
-        status.setWrapText(true);
-        Button approve = new Button("Approve exception with supervisor face");
-        Button next = new Button("Next: supervisor approval");
-        next.setDisable(true);
+        station.setStep(StationView.Step.EXCEPTION);
+        Panels.ExceptionApproval p = new Panels.ExceptionApproval("supervisor-1");
         LivenessSession session = resident.session();
-        approve.setOnAction(e -> faceCheck(Workflow.SUPERVISOR, supervisor.getText().trim(), session.sessionId(), s -> { },
+        p.approve.setOnAction(e -> faceCheck(Workflow.SUPERVISOR, p.supervisor.getText().trim(), session.sessionId(), s -> { },
                 sup -> {
                     SupervisorVerdict verdict = sup == null ? null : sup.session().supervisorVerdict().orElse(null);
                     Optional<pramaan.core.fusion.Decision> photo = resident.decision();
                     if (photo.isEmpty()) {
-                        status.setText("No exception photograph was checked in this session. Start a new registration.");
+                        p.say(Banner.Kind.WARNING, Text.of("pramaan.ui.exception.no-photo"));
                         return;
                     }
-                    ExceptionOutcome o = session.requestException(reason.getValue(), verdict, photo.get());
-                    status.setText(exceptionMessage(o));
-                    next.setDisable(o != ExceptionOutcome.APPROVED);
-                    approve.setDisable(session.state() != SessionState.EXCEPTION_FLOW);
+                    ExceptionOutcome o = session.requestException(p.reason.getValue(), verdict, photo.get());
+                    p.say(Panels.exceptionResult(o));
+                    p.next.setDisable(o != ExceptionOutcome.APPROVED);
+                    p.approve.setDisable(session.state() != SessionState.EXCEPTION_FLOW);
                 }));
-        next.setOnAction(e -> showApproval());
-        setForm(new Label("Exception reason"), reason, new Label("Supervisor id"), supervisor, approve, next, status);
-    }
-
-    private static String exceptionMessage(ExceptionOutcome o) {
-        switch (o) {
-            case APPROVED:
-                return "Exception approved. The packet is flagged EXCEPTION for central review.";
-            case REJECTED_SAME_PERSON:
-                return "The operator cannot approve their own exception.";
-            case REJECTED_NO_SUPERVISOR:
-                return "Supervisor face verification did not pass. Please try again.";
-            case BLOCKED_CAPTURE_ATTACK:
-            case BLOCKED_DAILY_LIMIT:
-                return "Exception not possible. This case is referred for central review.";
-            default:
-                return "This approval is not valid for this resident. Please verify again.";
-        }
+        p.next.setOnAction(e -> showApproval());
+        station.setPanel(p);
     }
 
     // ------------------------------------------------------------------------------------------ #77 supervisor approval
@@ -428,34 +358,17 @@ public final class RegistrationScaffold extends Application {
         byte[] b = new byte[4];
         random.nextBytes(b);
         String packetId = String.format("P-%s-%02x%02x%02x%02x", config.subjectId, b[0], b[1], b[2], b[3]);
-        step.setText("3  Supervisor approval");
-        TextField supervisor = new TextField("supervisor-1");
-        Label status = new Label();
-        status.setWrapText(true);
-        Button approve = new Button("Approve with face");
-        approve.setDefaultButton(true);
-        Button another = new Button("New registration");
-        another.setDisable(true);
-        approve.setOnAction(e -> faceCheck(Workflow.SUPERVISOR, supervisor.getText().trim(), packetId, engine -> {
+        station.setStep(StationView.Step.APPROVAL);
+        Panels.Approval p = new Panels.Approval(packetId, "supervisor-1");
+        p.approve.setOnAction(e -> faceCheck(Workflow.SUPERVISOR, p.supervisor.getText().trim(), packetId, engine -> {
             SupervisorVerdict verdict = engine == null ? null : engine.session().supervisorVerdict().orElse(null);
             PacketApproval.Outcome o = PacketApproval.approve(packetId, operator, verdict, engines.bundle().policy(),
                     registry, clock.instant(), this::audit);
-            status.setText(o == PacketApproval.Outcome.APPROVED ? "Packet approved." : approvalMessage(o));
-            another.setDisable(o != PacketApproval.Outcome.APPROVED);
+            p.say(Panels.approvalResult(o));
+            p.another.setDisable(o != PacketApproval.Outcome.APPROVED);
         }));
-        another.setOnAction(e -> showRegistration());
-        setForm(new Label("Packet " + packetId), new Label("Supervisor id"), supervisor, approve, another, status);
-    }
-
-    private static String approvalMessage(PacketApproval.Outcome o) {
-        switch (o) {
-            case SAME_PERSON:
-                return "The operator cannot approve their own packet.";
-            case NO_VERDICT:
-                return "Face verification could not be completed. Please try again.";
-            default:
-                return "This approval is not valid for this packet. Please verify again.";
-        }
+        p.another.setOnAction(e -> showRegistration());
+        station.setPanel(p);
     }
 
     // ------------------------------------------------------------------------------------------ #78 diagnostics
@@ -465,18 +378,20 @@ public final class RegistrationScaffold extends Application {
         if (engines == null) {
             return;
         }
-        Optional<String> admin = ask("Administrator id", "Diagnostic mode is audited. Administrator id:");
-        Optional<String> reason = admin.isPresent() ? ask("Reason", "Why is diagnostic mode needed?") : Optional.empty();
-        if (admin.isEmpty() || reason.isEmpty() || admin.get().isBlank() || reason.get().isBlank()) {
+        Optional<Dialogs.Entry> entry = Dialogs.askAudited(stage, stage.getScene(), messages, "pramaan.ui.diag.title",
+                "pramaan.ui.diag.body", "pramaan.ui.diag.reason-hint", null);
+        if (entry.isEmpty()) {
             return;
         }
         try {
-            grant = DiagnosticGrant.activate(engines.bundle(), admin.get().trim(), reason.get().trim(), clock.instant(),
+            grant = DiagnosticGrant.activate(engines.bundle(), entry.get().adminId(), entry.get().reason(), clock.instant(),
                     this::audit);
-            diagnostics = new DiagnosticsWindow(grant.adminId());
+            diagnostics = new DiagnosticsWindow(grant.adminId(), messages, stage.getScene());
             diagnostics.show();
+            station.setDiagnostic(true);
         } catch (IllegalStateException refused) {
-            new Alert(Alert.AlertType.INFORMATION, "Diagnostic mode is disabled by policy.").showAndWait();
+            Dialogs.notify(stage, stage.getScene(), messages, "pramaan.ui.diag.title", Banner.Kind.WARNING,
+                    Text.of("pramaan.ui.diag.disabled"));
         }
     }
 
@@ -489,59 +404,49 @@ public final class RegistrationScaffold extends Application {
      */
     private void retakeBackdrop() {
         DesktopEngines current = engines;
-        if (current == null || form.isDisabled()) {
+        if (current == null || station.panel() == null || station.panel().isDisabled()) {
             return;
         }
         if (config.backdrop == null) {
-            new Alert(Alert.AlertType.INFORMATION, "No backdrop file is configured. Start the scaffold with"
-                    + " --backdrop <file> to say where the fingerprint is kept.").showAndWait();
+            Dialogs.notify(stage, stage.getScene(), messages, "pramaan.ui.backdrop.title", Banner.Kind.INFO,
+                    Text.of("pramaan.ui.backdrop.no-file"));
             return;
         }
-        Optional<String> admin = ask("Administrator id", "Replacing the backdrop is audited. Administrator id:");
-        Optional<String> reason = admin.isPresent() ? ask("Reason", "Why is the backdrop being re-taken?") : Optional.empty();
-        if (admin.isEmpty() || reason.isEmpty() || admin.get().isBlank() || reason.get().isBlank()) {
-            return;
-        }
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "The room must be empty, in its normal lighting, with the"
-                + " camera where it will stay. Is it?");
-        if (confirm.showAndWait().filter(b -> b == javafx.scene.control.ButtonType.OK).isEmpty()) {
+        Optional<Dialogs.Entry> entry = Dialogs.askAudited(stage, stage.getScene(), messages, "pramaan.ui.backdrop.title",
+                "pramaan.ui.backdrop.body", "pramaan.ui.backdrop.reason-hint", "pramaan.ui.backdrop.empty-room");
+        if (entry.isEmpty()) {
             return;
         }
         javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
-        chooser.setTitle("Photograph of the empty room");
-        java.io.File file = chooser.showOpenDialog(null);
+        chooser.setTitle(messages.resolve(Text.of("pramaan.ui.backdrop.choose")));
+        java.io.File file = chooser.showOpenDialog(stage);
         if (file == null) {
             return;
         }
         try {
             BackdropRetake.Result r = BackdropRetake.retake(Files.readAllBytes(file.toPath()), config.backdrop,
-                    admin.get().trim(), reason.get().trim(), true, clock, this::audit);
+                    entry.get().adminId(), entry.get().reason(), true, clock, this::audit);
+            Map<String, String> corners = Map.of("corners", Integer.toString(r.corners()));
             switch (r.outcome()) {
                 case SAVED:
                     engines = new DesktopEngines(current.bundle(), current.deviceTrust(), random, station());
                     cameraMoveAudited.set(false);
-                    new Alert(Alert.AlertType.INFORMATION, "Backdrop saved (" + r.corners() + " corners). It applies to the"
-                            + " next registration.").showAndWait();
+                    Dialogs.notify(stage, stage.getScene(), messages, "pramaan.ui.backdrop.title", Banner.Kind.SUCCESS,
+                            Text.of("pramaan.ui.backdrop.saved", corners));
                     break;
                 case TOO_PLAIN:
-                    new Alert(Alert.AlertType.WARNING, "Only " + r.corners() + " corners: this backdrop is too plain to tell"
-                            + " from another room. Photograph a part of the room with some structure in it. Nothing was"
-                            + " changed.").showAndWait();
+                    Dialogs.notify(stage, stage.getScene(), messages, "pramaan.ui.backdrop.title", Banner.Kind.WARNING,
+                            Text.of("pramaan.ui.backdrop.too-plain", corners));
                     break;
                 default:
-                    new Alert(Alert.AlertType.WARNING, "That file is not an image. Nothing was changed.").showAndWait();
+                    Dialogs.notify(stage, stage.getScene(), messages, "pramaan.ui.backdrop.title", Banner.Kind.WARNING,
+                            Text.of("pramaan.ui.backdrop.not-image"));
             }
         } catch (IOException e) {
-            new Alert(Alert.AlertType.ERROR, "The backdrop could not be saved: " + e.getMessage()).showAndWait();
+            System.err.println("PRAMAAN: the backdrop could not be saved: " + e);
+            Dialogs.notify(stage, stage.getScene(), messages, "pramaan.ui.backdrop.title", Banner.Kind.ERROR,
+                    Text.of("pramaan.ui.backdrop.failed"));
         }
-    }
-
-    private static Optional<String> ask(String title, String prompt) {
-        TextInputDialog d = new TextInputDialog();
-        d.setTitle(title);
-        d.setHeaderText(null);
-        d.setContentText(prompt);
-        return d.showAndWait();
     }
 
     // ------------------------------------------------------------------------------------------ one face check
@@ -560,8 +465,9 @@ public final class RegistrationScaffold extends Application {
         if (subjectId.isEmpty()) {
             return;
         }
-        form.setDisable(true);
+        busy(true);
         closeCapture();
+        view.clearPreview();
         DesktopEngines e = engines;
         AtomicBoolean finished = new AtomicBoolean();
         CaptureSession[] cs = new CaptureSession[1];
@@ -573,7 +479,7 @@ public final class RegistrationScaffold extends Application {
                     LivenessEngine engine = cs[0] == null ? null : cs[0].engine().orElse(null);
                     closeCapture();
                     noteCameraMoved();
-                    form.setDisable(false);
+                    busy(false);
                     done.accept(engine);
                 });
             }
@@ -619,20 +525,25 @@ public final class RegistrationScaffold extends Application {
 
     // ------------------------------------------------------------------------------------------ helpers
 
-    private void setForm(Node... nodes) {
-        form.getChildren().setAll(nodes);
-        form.setDisable(false);
+    /** While a scan runs the panel and the station tools are off, so nothing can be changed under it. */
+    private void busy(boolean on) {
+        if (station.panel() != null) {
+            station.panel().setDisable(on);
+        }
+        station.setToolsEnabled(!on);
     }
 
     /** The accepted capture, decoded from the signed ISO record the binder verified: what would be stored. */
-    private void showCapture(Optional<SignedCapture> c) {
-        c.ifPresent(cap -> {
-            try {
-                captured.setImage(toFx(IsoFaceDecoder.decode(VerifiedCapture.verify(cap, engines.deviceTrust()).isoRecord())));
-            } catch (Exception ex) {
-                System.err.println("PRAMAAN: could not show the capture: " + ex.getMessage());
-            }
-        });
+    private javafx.scene.image.Image capturedPhoto(Optional<SignedCapture> c) {
+        if (c.isEmpty()) {
+            return null;
+        }
+        try {
+            return toFx(IsoFaceDecoder.decode(VerifiedCapture.verify(c.get(), engines.deviceTrust()).isoRecord()));
+        } catch (Exception ex) {
+            System.err.println("PRAMAAN: could not show the capture: " + ex.getMessage());
+            return null;
+        }
     }
 
     private static WritableImage toFx(RgbImage img) {

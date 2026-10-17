@@ -36,14 +36,27 @@ public final class DiagnosticsWindow implements DiagnosticSink {
     private long timedFrames;
     private long engineNanos;
 
-    /** Must be created on the FX thread. */
-    public DiagnosticsWindow(String adminId) {
+    /**
+     * Must be created on the FX thread.
+     *
+     * @param like the station window's scene, so this window shares its look and text size (may be null)
+     */
+    public DiagnosticsWindow(String adminId, Messages messages, Scene like) {
         log.setEditable(false);
         log.setStyle("-fx-font-family: monospace;");
+        Label banner = new Label(messages.resolve(Text.of("pramaan.ui.diagnostics.window", java.util.Map.of("admin", adminId))));
+        banner.getStyleClass().add("diagnostic-banner");
+        banner.setWrapText(true);
         BorderPane root = new BorderPane(log);
-        root.setTop(new Label("  Diagnostic mode \u2014 administrator " + adminId + " (audited). Not for residents."));
+        root.setTop(banner);
         stage.setTitle("PRAMAAN diagnostics");
-        stage.setScene(new Scene(root, 640, 420));
+        Scene scene = new Scene(root, 760, 460);
+        if (like != null) {
+            pramaan.desktop.ui.Theme.match(scene, like);
+        } else {
+            pramaan.desktop.ui.Theme.apply(scene);
+        }
+        stage.setScene(scene);
     }
 
     public void show() {

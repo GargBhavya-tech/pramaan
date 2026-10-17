@@ -17,8 +17,10 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
+import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -29,42 +31,51 @@ import javafx.scene.shape.Ellipse;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.TextAlignment;
+import javafx.scene.shape.Shape;
 import javafx.util.Duration;
 import pramaan.core.source.DeviceEvent;
 import pramaan.core.source.Frame;
 import pramaan.core.source.FrameSink;
 import pramaan.core.source.PixelFormat;
+import pramaan.desktop.ui.Icons;
 
 /**
- * The face capture screen (Build Map #75; Bible Part 19): live preview in a face oval, one headline, one line of
- * guidance, the prompt's animation, the attempt counter. It renders {@link CaptureScreenModel.Screen}s and
- * nothing else, so it cannot show what the engine never sends.
+ * The face capture screen (Build Map #75; Bible Part 19): live preview in a face oval with the room dimmed around it,
+ * one headline with an icon, one line of guidance, the prompt's animation, the attempt counter. It renders
+ * {@link CaptureScreenModel.Screen}s and nothing else, so it cannot show what the engine never sends.
+ *
+ * <p>It deliberately shows no progress bar and no count of challenge steps: how many steps a resident is asked for must
+ * not tell them how the system sees them (Part 19.1, principle 2).
  *
  * <p>The preview is mirrored, as residents expect; "turn to your left" therefore points to the screen's left.
  * The oval's colour follows the stage — never a score.
  */
 public final class FaceCaptureView extends VBox {
 
-    public static final double PREVIEW_WIDTH = 480;
-    public static final double PREVIEW_HEIGHT = 360;
+    public static final double PREVIEW_WIDTH = 560;
+    public static final double PREVIEW_HEIGHT = 420;
+    private static final double OVAL_RX = 122;
+    private static final double OVAL_RY = 158;
 
-    private final Messages messages;
+    private volatile Messages messages;
     private final ImageView preview = new ImageView();
-    private final Ellipse oval = new Ellipse(PREVIEW_WIDTH / 2, PREVIEW_HEIGHT / 2, 105, 140);
+    private final Ellipse oval = new Ellipse(PREVIEW_WIDTH / 2, PREVIEW_HEIGHT / 2, OVAL_RX, OVAL_RY);
     private final Polygon arrow = new Polygon(0, 0, 36, -26, 36, -10, 80, -10, 80, 10, 36, 10, 36, 26);
     private final TranslateTransition nudge = new TranslateTransition(Duration.millis(600), arrow);
-    private final javafx.scene.text.Text headline = text(24, FontWeight.BOLD);
-    private final javafx.scene.text.Text guidance = text(16, FontWeight.NORMAL);
-    private final javafx.scene.text.Text notice = text(14, FontWeight.NORMAL);
-    private final javafx.scene.text.Text attempt = text(13, FontWeight.NORMAL);
+    private final Label headline = label("stage-headline");
+    private final Label guidance = label("stage-guidance");
+    private final Label notice = label("stage-notice");
+    private final Label attempt = label("stage-attempt");
+    private final HBox strip = new HBox();
+    private final StackPane stageIcon = new StackPane();
+    private final VBox words = new VBox(4, headline, guidance, notice, attempt);
+    private final StackPane waiting = new StackPane();
     private final AtomicReference<Image> pendingFrame = new AtomicReference<>();
     private CaptureScreenModel.Screen shown;
     private final Speech speech;
     private final StackPane icon = new StackPane();
     private String lastSpoken;
+    private String stageClass;
 
     public FaceCaptureView(Messages messages) {
         this(messages, Speech.NONE);
@@ -78,29 +89,78 @@ public final class FaceCaptureView extends VBox {
         preview.setFitHeight(PREVIEW_HEIGHT);
         preview.setPreserveRatio(false);
         preview.setScaleX(-1);
+        preview.setVisible(false);
         Rectangle backdrop = new Rectangle(PREVIEW_WIDTH, PREVIEW_HEIGHT, Color.web("#1f2933"));
+
+        StackPane cameraIcon = Icons.CAMERA.node(64);
+        cameraIcon.getStyleClass().add("icon-on-dark");
+        waiting.getChildren().setAll(cameraIcon);
+        waiting.setMaxSize(80, 80);
+
+        Shape vignette = Shape.subtract(new Rectangle(PREVIEW_WIDTH, PREVIEW_HEIGHT),
+                new Ellipse(PREVIEW_WIDTH / 2, PREVIEW_HEIGHT / 2, OVAL_RX, OVAL_RY));
+        vignette.setFill(Color.web("#14202e", 0.62));
+        vignette.setStroke(null);
+        vignette.setMouseTransparent(true);
+
         oval.setFill(Color.TRANSPARENT);
-        oval.setStrokeWidth(4);
+        oval.setStrokeWidth(5);
         oval.setStroke(Color.WHITE);
         arrow.setFill(Color.web("#f5a623"));
+        arrow.setStroke(Color.web("#14202e"));
+        arrow.setStrokeWidth(2);
         arrow.setVisible(false);
         nudge.setAutoReverse(true);
         nudge.setCycleCount(Animation.INDEFINITE);
-        icon.setMaxSize(72, 72);
-        icon.setStyle("-fx-background-color: rgba(255,255,255,0.85); -fx-background-radius: 36;");
+        icon.setMaxSize(84, 84);
+        icon.setStyle("-fx-background-color: white; -fx-background-radius: 42; -fx-border-color: #f5a623;"
+                + " -fx-border-width: 3; -fx-border-radius: 42;");
         icon.setVisible(false);
         StackPane.setAlignment(icon, Pos.TOP_RIGHT);
-        StackPane.setMargin(icon, new Insets(10));
-        StackPane viewport = new StackPane(backdrop, preview, new Group(oval), arrow, icon);
+        StackPane.setMargin(icon, new Insets(14));
+
+        StackPane viewport = new StackPane(backdrop, waiting, preview, vignette, new Group(oval), arrow, icon);
+        viewport.setMinSize(PREVIEW_WIDTH, PREVIEW_HEIGHT);
+        viewport.setPrefSize(PREVIEW_WIDTH, PREVIEW_HEIGHT);
         viewport.setMaxSize(PREVIEW_WIDTH, PREVIEW_HEIGHT);
-        notice.setFill(Color.web("#b3261e"));
-        attempt.setFill(Color.web("#52606d"));
-        setSpacing(10);
-        setPadding(new Insets(16));
+        Rectangle clip = new Rectangle(PREVIEW_WIDTH, PREVIEW_HEIGHT);
+        clip.setArcWidth(24);
+        clip.setArcHeight(24);
+        viewport.setClip(clip);
+
+        strip.getStyleClass().add("stage-strip");
+        strip.setAlignment(Pos.CENTER_LEFT);
+        strip.getChildren().setAll(stageIcon, words);
+        strip.setMaxWidth(PREVIEW_WIDTH);
+        strip.setMinWidth(PREVIEW_WIDTH);
+        words.setMaxWidth(PREVIEW_WIDTH - 84);
+        for (Label l : new Label[] {headline, guidance, notice, attempt}) {
+            l.setMaxWidth(PREVIEW_WIDTH - 84);
+        }
+        stageIcon.setMinSize(34, 34);
+        stageIcon.setAlignment(Pos.CENTER);
+        getStyleClass().add("capture-area");
+        setSpacing(14);
+        setPadding(new Insets(20));
         setAlignment(Pos.TOP_CENTER);
-        getChildren().addAll(viewport, headline, guidance, notice, attempt);
-        for (javafx.scene.text.Text t : new javafx.scene.text.Text[] {headline, guidance, notice, attempt}) {
-            t.setWrappingWidth(PREVIEW_WIDTH);
+        getChildren().addAll(viewport, strip);
+    }
+
+    private static Label label(String styleClass) {
+        Label l = new Label();
+        l.getStyleClass().add(styleClass);
+        l.setWrapText(true);
+        l.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+        return l;
+    }
+
+    /** Switches the language of what is on screen, now. */
+    public void setMessages(Messages messages) {
+        this.messages = Objects.requireNonNull(messages, "messages");
+        CaptureScreenModel.Screen s = shown;
+        if (s != null) {
+            lastSpoken = null;
+            apply(s, false);
         }
     }
 
@@ -114,7 +174,7 @@ public final class FaceCaptureView extends VBox {
                 }
                 Image img = new Image(new ByteArrayInputStream(frame.copyBytes()));
                 if (pendingFrame.getAndSet(img) == null) {
-                    Platform.runLater(() -> preview.setImage(pendingFrame.getAndSet(null)));
+                    Platform.runLater(() -> setPreviewImage(pendingFrame.getAndSet(null)));
                 }
             }
 
@@ -128,9 +188,9 @@ public final class FaceCaptureView extends VBox {
     /** Shows a screen; safe from any thread. */
     public void show(CaptureScreenModel.Screen screen) {
         if (Platform.isFxApplicationThread()) {
-            apply(screen);
+            apply(screen, true);
         } else {
-            Platform.runLater(() -> apply(screen));
+            Platform.runLater(() -> apply(screen, true));
         }
     }
 
@@ -142,7 +202,7 @@ public final class FaceCaptureView extends VBox {
     /** The strings on screen now. */
     public List<String> visibleText() {
         List<String> out = new ArrayList<>();
-        for (javafx.scene.text.Text t : new javafx.scene.text.Text[] {headline, guidance, notice, attempt}) {
+        for (Label t : new Label[] {headline, guidance, notice, attempt}) {
             if (t.isVisible() && !t.getText().isEmpty()) {
                 out.add(t.getText());
             }
@@ -152,15 +212,34 @@ public final class FaceCaptureView extends VBox {
 
     public void setPreviewImage(Image image) {
         preview.setImage(image);
+        preview.setVisible(image != null);
+        waiting.setVisible(image == null);
     }
 
-    private void apply(CaptureScreenModel.Screen s) {
+    /** Back to the camera placeholder: the last resident's face must not stay on screen into the next session. */
+    public void clearPreview() {
+        if (Platform.isFxApplicationThread()) {
+            setPreviewImage(null);
+        } else {
+            Platform.runLater(() -> setPreviewImage(null));
+        }
+    }
+
+    private void apply(CaptureScreenModel.Screen s, boolean fresh) {
         shown = s;
         set(headline, s.headline());
         set(guidance, s.guidance());
         set(notice, s.notice());
         set(attempt, s.attempt());
         oval.setStroke(colour(s.stage()));
+        oval.setStrokeWidth(s.stage() == CaptureScreenModel.Stage.CHALLENGE ? 7 : 5);
+        if (stageClass != null) {
+            strip.getStyleClass().remove(stageClass);
+        }
+        stageClass = "stage-" + s.stage().name().toLowerCase(java.util.Locale.ROOT);
+        strip.getStyleClass().add(stageClass);
+        stageIcon.getChildren().setAll(iconOf(s.stage()).node(34));
+        strip.setAccessibleText(String.join(". ", visibleText()));
         String anim = s.animation();
         boolean turn = anim != null && anim.startsWith("anim:head-turn");
         arrow.setVisible(turn);
@@ -168,7 +247,7 @@ public final class FaceCaptureView extends VBox {
         if (turn) {
             boolean left = anim.endsWith("left");
             arrow.setRotate(left ? 0 : 180);
-            double x = left ? -PREVIEW_WIDTH / 2 + 70 : PREVIEW_WIDTH / 2 - 70;
+            double x = left ? -PREVIEW_WIDTH / 2 + 56 : PREVIEW_WIDTH / 2 - 56;
             arrow.setTranslateX(x);
             nudge.setFromX(x);
             nudge.setToX(x + (left ? -18 : 18));
@@ -177,13 +256,35 @@ public final class FaceCaptureView extends VBox {
         java.util.Optional<PromptIcon> i = anim == null ? java.util.Optional.empty() : PromptIcon.of(anim);
         icon.getChildren().setAll(i.map(FaceCaptureView::draw).orElse(new Group()));
         icon.setVisible(i.isPresent());
-        if (s.tone()) {
+        if (fresh && s.tone()) {
             java.awt.Toolkit.getDefaultToolkit().beep();
         }
         String said = headline.getText();
         if (s.stage() != CaptureScreenModel.Stage.CONNECTING && !said.isEmpty() && !said.equals(lastSpoken)) {
             lastSpoken = said;
             speech.say(said);
+        }
+    }
+
+    /** The icon beside the headline: a picture of the stage, so it is not told by colour alone. */
+    static Icons iconOf(CaptureScreenModel.Stage stage) {
+        switch (stage) {
+            case CONNECTING:
+            case CAPTURING:
+                return Icons.CAMERA;
+            case POSITIONING:
+                return Icons.USER;
+            case CHECKING:
+                return Icons.CLOCK;
+            case CHALLENGE:
+                return Icons.EYE;
+            case SUCCESS:
+                return Icons.CHECK_CIRCLE;
+            case RETRY:
+                return Icons.REFRESH;
+            case STOPPED:
+            default:
+                return Icons.WARNING;
         }
     }
 
@@ -250,7 +351,7 @@ public final class FaceCaptureView extends VBox {
         return g;
     }
 
-    private void set(javafx.scene.text.Text node, Text text) {
+    private void set(Label node, Text text) {
         node.setText(text == null ? "" : messages.resolve(text));
         node.setVisible(text != null);
         node.setManaged(text != null);
@@ -259,24 +360,17 @@ public final class FaceCaptureView extends VBox {
     static Color colour(CaptureScreenModel.Stage stage) {
         switch (stage) {
             case SUCCESS:
-                return Color.web("#2e7d32");
+                return Color.web("#4cc27a");
             case RETRY:
             case STOPPED:
-                return Color.web("#b3261e");
+                return Color.web("#ff6b6b");
             case CHALLENGE:
                 return Color.web("#f5a623");
             case CHECKING:
             case CAPTURING:
-                return Color.web("#1e88e5");
+                return Color.web("#6cb0ff");
             default:
                 return Color.WHITE;
         }
-    }
-
-    private static javafx.scene.text.Text text(double size, FontWeight weight) {
-        javafx.scene.text.Text t = new javafx.scene.text.Text();
-        t.setFont(Font.font("System", weight, size));
-        t.setTextAlignment(TextAlignment.CENTER);
-        return t;
     }
 }
