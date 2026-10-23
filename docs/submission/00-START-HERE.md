@@ -66,8 +66,9 @@ I could not read the primary text and I do not know the 2026 wording. So:
 ## 5. The honest one-paragraph status (use this wording anywhere)
 
 PRAMAAN is a working liveness engine, an SBI client, an evaluation harness, a desktop registration scaffold, an Android
-library and a proposal for extending the SBI device standard, with **665 automated tests passing** (2 skipped because
-they need MockMDS; last full build 2026-10-24, 198 commits, about 50,700 lines of Java). **It has not been measured on
+library and a proposal for extending the SBI device standard, with **665 automated tests passing** (2 skipped on this machine;
+20 skipped on a fresh clone, where the face models and MockMDS fixtures are absent and the tests that need them skip
+themselves; fresh-clone build verified 2026-10-24, 199 commits, about 50,700 lines of Java). **It has not been measured on
 real attacks** (no corpus exists, so every threshold is provisional and no APCER or BPCER is claimed), has not run on a
 real device or a phone, is a scaffold and not the MOSIP Registration Client, and no real user has tried the screens. Its
 own red team found two real weaknesses in it, which are logged, not hidden. The limits come first in every document in

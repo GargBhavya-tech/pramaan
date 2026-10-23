@@ -74,7 +74,7 @@ What *is* measured and reproducible:
 
 | | Number | Reproduce |
 |---|---|---|
-| Test suite | **665 JVM tests, 0 failures** (2 skipped), full build ≈ 7 min on a laptop | `./gradlew build` |
+| Test suite | **665 JVM tests, 0 failures.** 2 skipped on the author's machine; **20 skipped on a fresh clone**, because the face models and the MockMDS fixtures are not in the repository and the tests that need them skip themselves. Full uncached build from a fresh clone: 8 min 36 s | `./gradlew build` |
 | Flash-challenge unpredictability | 6 colours × 8 steps = 1,679,616 sequences = **20.7 bits** | `./gradlew :core:test --tests '*ChallengeGeneratorTest'` |
 | Challenge uniformity | χ² over 100,000 draws, every parameter, p = 0.001 critical value | same |
 | Photosensitivity | ≤ 3 colour changes/s, steps ≥ 333 ms, checked on 900 sequences | `./gradlew :core:test --tests '*FlashScheduleTest'` |

@@ -209,17 +209,17 @@ front-facing photo (MockMDS supports "switching between different user profiles"
 `third_party/mosip-mock-services/MockMDS/README.md` for where the profile image files live) or use a real
 device once you have one.
 
-**The flow, screen by screen** (`RegistrationScaffold.java`):
+**The flow, screen by screen** (`RegistrationScaffold.java`; the step rail on the left of the window names each one):
 
-1. **Operator login** — a person (you, acting as the operator) completes a liveness check under the strict
+1. **Operator sign-in** (button: *Sign in with face*) — a person (you, acting as the operator) completes a liveness check under the strict
    operator policy (`operator-strict` operating point). Passing logs you in as `operator-1` (configurable with
    `--operator`).
-2. **Resident biometrics** — the same, under the resident policy (more lenient thresholds, an accessibility
+2. **Resident photo** (button: *Start face scan*) — the same, under the resident policy (more lenient thresholds, an accessibility
    picker, a challenge-plan step-up ladder if passive alone isn't conclusive). On ACCEPT, a signed evidence packet
    is written (see 2.4).
 3. **Exception flow** (only if resident liveness reaches no usable action path — e.g. an infant test image) — a
    second, supervisor face-check screen, requiring a distinct supervisor login.
-4. **Approval / capture result** — the final screen shows the outcome.
+4. **Supervisor approval** (button: *Approve with face*) — the final screen shows the outcome.
 
 Nothing on any of these screens ever shows a score, probability, or the word "spoof" (Bible Part 19) — that's
 intentional, not a missing feature. If a session fails, you'll see one of a small number of generic messages
