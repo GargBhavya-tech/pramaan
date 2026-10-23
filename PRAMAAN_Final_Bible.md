@@ -1370,7 +1370,7 @@ panel), `Panels` (one panel per step, re-worded in place so a language switch ke
 `Dialogs` (an audited action asks for administrator and reason in one form, and stays off until it can be accepted), and
 `Theme` (tokens, the two accessibility modes, a Hindi font class). **Rules kept:** the capture view still shows no score, no
 cause, and, on purpose, no progress bar or count of challenge steps, because how many steps a resident is asked for must not
-tell them how the system sees them; the test that no score-like word appears now covers every operator-screen string too. Every
+tell them how the system sees them; the test that no score-like word appears now covers every English operator-screen string too (the Hindi is checked for completeness only, not for forbidden meaning). Every
 outcome the station can report has a message in both languages (tested), and each message says what to do next. **Checked:**
 the screens are rendered offscreen in English, Hindi, large text and high contrast (`desktop/build/reports/scaffold/ui-*.png`),
 and the real scaffold was started once and ran with no exceptions. **Not done, and not claimed:** no resident or operator has

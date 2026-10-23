@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PRAMAAN: solution document (MOSIP Decode 2026, PS04)</title>
+<style>
+  @page { size: A4; margin: 12mm 14mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", "Nirmala UI", Arial, sans-serif; font-size: 10pt; line-height: 1.42; color: #14202e; margin: 0; }
+  .flow { display: flex; gap: 3px; margin: 5px 0 6px; }
+  .flow div { flex: 1; background: #e7eff8; border: 1px solid #1b4f8a; border-radius: 4px; padding: 3px 4px; font-size: 7.9pt; line-height: 1.22; text-align: center; color: #173f70; }
+  .flow div b { display: block; font-size: 10pt; color: #1b4f8a; }
+  .flow div.last { background: #e6f4ea; border-color: #1b6e3c; color: #1b6e3c; }
+  .flow div.last b { color: #1b6e3c; }
+  .shot2 { float: right; width: 80mm; margin: 2px 0 4px 10px; border: 1px solid #cfd6dd; border-radius: 4px; }
+  .cap2 { font-size: 7.4pt; color: #52606d; margin: 0 0 4px 10px; float: right; clear: right; width: 80mm; }
+  header { border-bottom: 2.5px solid #1b4f8a; padding-bottom: 5px; margin-bottom: 7px; }
+  h1 { font-size: 19pt; margin: 0; color: #1b4f8a; letter-spacing: .2px; }
+  h1 span { font-weight: 400; margin-left: 8px; }
+  .sub { color: #3b4a5a; margin: 1px 0 0; font-size: 9.6pt; }
+  .meta { color: #52606d; font-size: 8.3pt; margin-top: 2px; }
+  h2 { font-size: 10.6pt; margin: 8px 0 2px; color: #1b4f8a; }
+  p { margin: 2px 0 3px; }
+  ul { margin: 2px 0 3px; padding-left: 15px; }
+  li { margin: 1px 0; }
+  b { color: #0c1824; }
+  table { border-collapse: collapse; width: 100%; font-size: 8.7pt; margin: 3px 0 4px; }
+  th, td { border: 1px solid #cfd6dd; padding: 2.5px 6px; vertical-align: top; text-align: left; }
+  th { background: #e7eff8; color: #173f70; }
+  .ok th { background: #e6f4ea; color: #1b6e3c; }
+  .no th { background: #fff4d6; color: #6b4500; }
+  .two { display: flex; gap: 8px; }
+  .two > div { flex: 1; }
+  .shot { float: right; width: 74mm; margin: 2px 0 4px 10px; border: 1px solid #cfd6dd; border-radius: 4px; }
+  .cap { font-size: 7.4pt; color: #52606d; margin: 0 0 4px 10px; float: right; clear: right; width: 74mm; }
+  footer { margin-top: 5px; border-top: 1px solid #cfd6dd; padding-top: 3px; font-size: 8pt; color: #3b4a5a; }
+  .limit { background: #fff4d6; border: 1px solid #6b4500; border-radius: 4px; padding: 4px 7px; margin: 4px 0; color: #4a2f00; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PRAMAAN<span>&#2346;&#2381;&#2352;&#2350;&#2366;&#2339;</span></h1>
+  <p class="sub"><b>Proof, not a verdict.</b> Face liveness and presentation-attack detection for the MOSIP Registration Client</p>
+  <div class="meta">MOSIP Decode 2026 &middot; Problem Statement 04 &middot; Team: Bhavya Garg &middot; Code (MPL-2.0): github.com/GargBhavya-tech/pramaan</div>
+</header>
+
+<h2>1. The problem</h2>
+<p>A resident's face is captured through a certified SBI device. Liveness is judged on the device's live <b>preview stream</b>, but the
+photo that gets stored is the device's <b>signed capture</b>, and <b>nothing links the two</b>. Whoever controls the preview can pass
+liveness with one face and have another enrolled. On <b>Android</b> the client never sees preview frames at all. <b>Injected video</b>
+(a virtual camera such as OBS, a deepfake pipeline) is outside ISO/IEC 30107, which covers presentation attacks only. A corrupt
+operator can log in with a photo of a supervisor. And a pass/fail made on the client cannot be re-checked by the server later, or
+re-scored when better models exist.</p>
+
+<h2>2. Our solution</h2>
+<p>PRAMAAN defines the two interfaces the problem statement asks for: <b>FaceFrameSource</b> (frames <i>and</i> the signed capture from the
+same object, which is what makes binding possible) and <b>LivenessEngine</b> (frames in; states, guidance and a decision out, never a score
+to the screen). The same Java engine runs on desktop inside the client (Mode C) and on Android inside the SBI device app as a library (Mode D).
+Before it accepts a face it answers seven questions in order: is the stream from a real sensor, is there one usable face, does it look alive
+without asking anything, does it carry the marks of an attack instrument, what do all the cues say together (accept, challenge or reject),
+did a live person answer a challenge nobody could have predicted, and is the stored face provably the one that passed.</p>
+<div class="flow">
+  <div><b>1</b>Real sensor?<br>source integrity</div>
+  <div><b>2</b>One usable face<br>quality gate</div>
+  <div><b>3</b>Looks alive?<br>passive, no asking</div>
+  <div><b>4</b>Attack marks?<br>print, screen, flat</div>
+  <div><b>5</b>Fusion<br>accept / challenge / reject</div>
+  <div><b>6</b>Live answer?<br>random challenge</div>
+  <div class="last"><b>7</b>Same face?<br>binding + signed evidence</div>
+</div>
+<img class="shot" src="../media/capture-screen.png" alt="The capture screen">
+<p class="cap">The station screen, rendered from the real code (no live camera). One plain sentence and an icon; no score, no cause.</p>
+<ul>
+  <li><b>Capture binding.</b> Four locks before any accept: the session nonce echoed inside the device-signed capture, a hash chain over the frames,
+  identity continuity, and time. They work on <b>unmodified SBI</b>; each swap attack is a test.</li>
+  <li><b>Evidence, not a verdict.</b> A signed JWS in the face BIR <code>others</code> map (the <code>bdb</code> is untouched). A server can re-verify it with one command,
+  or re-score stored crops with a newer model. A transparency log (Merkle, matching the Certificate Transparency test vectors) makes omission detectable.</li>
+  <li><b>Cues that fail differently</b>, fused with per-cue abstention: passive model, moir&eacute;, flash reflection (a random colour code, 20.7 bits),
+  scene and light consistency, stereo depth. Each switches on only if the station has what it needs; otherwise it abstains and is never evidence for a spoof.</li>
+  <li><b>Injection defence.</b> Device identity, the OS camera registrations (DirectShow, so OBS is seen), and a JPEG stream fingerprint.</li>
+  <li><b>Inclusion by design.</b> Blink, pulse and pupil reflex only ever vote <i>for</i> life, because elderly, disabled and darker-skinned residents fail them for innocent
+  reasons. Hindi, icons, text-to-speech, accessibility profiles, an infant mode, a dual-controlled exception flow.</li>
+  <li><b>Insider fraud.</b> A resident capture that matches the logged-in operator's face is blocked; per-operator z-scores against the centre's own baseline.</li>
+  <li><b>An SBI Liveness Profile proposal</b> (signed preview, a signed log of what the device's light showed, a signed burst), with a runnable reference device.</li>
+  <li><b>It attacks itself.</b> Red-team fuzzers searched our own cues and found two real weaknesses (below), which are logged rather than hidden.</li>
+</ul>
+
+<h2>3. Usability</h2>
+<img class="shot2" src="../media/hindi-accessibility.png" alt="The same screen in Hindi">
+<p class="cap2">The same screen in Hindi (machine-drafted, unreviewed), with the larger-text and high-contrast switches in the header.</p>
+<p>The operator sees a step rail (sign-in, resident photo, supervisor approval), plain-language messages and one task at a time; the resident sees one sentence and
+an icon. Quality problems get guidance ("Please improve the lighting") and do not use up an attempt; security problems get a generic message that reveals nothing an
+attacker could adapt to. Larger-text and high-contrast modes, 44 px targets, visible focus, Hindi on every screen. Every status has an icon and a word, never colour alone.</p>
+
+<h2>4. Impact for MOSIP</h2>
+<ul>
+  <li>Deployable on today's SBI: no spec change is needed for the capture-swap lock; JavaFX 11 matches the Registration Client; the engine fails closed.</li>
+  <li>Removes a class of attack (preview/capture swap, injected video) and an audit gap (no re-checkable evidence), without locking out the residents MOSIP most wants to reach.</li>
+  <li>MPL-2.0, like MOSIP's repositories; every dependency and model has a licence row, and two open licence questions are listed for MOSIP rather than assumed away.</li>
+</ul>
+
+<h2>5. What is verified, and what is not</h2>
+<div class="limit"><b>Limits first.</b> No real attack corpus exists, so <b>no APCER or BPCER is claimed</b> and every threshold is provisional. Zero failures in 60 attacks would still allow a true rate near 6%.</div>
+<div class="two">
+<div>
+<table class="ok"><tr><th>Verified (a property of the code, one command each)</th></tr>
+<tr><td><b>665 automated tests pass</b> (2 skipped: they need MockMDS); full build green on 2026-10-24</td></tr>
+<tr><td>Flash code: 6 colours &times; 8 steps = 1,679,616 sequences = <b>20.7 bits</b>; uniform draws (&chi;&sup2;)</td></tr>
+<tr><td>Photosensitivity: at most 3 colour changes a second, checked on 900 sequences</td></tr>
+<tr><td>Insider signal: 6 failures in 40 at a 2% baseline gives z &asymp; 5.87</td></tr>
+<tr><td>Transparency log matches the CT test vectors; capture-swap negative tests; fails closed</td></tr>
+</table>
+</div>
+<div>
+<table class="no"><tr><th>Not done, and not claimed</th></tr>
+<tr><td>No measured error rate on real attacks; flash, stereo, scene cues tested on synthetic data and fakes only</td></tr>
+<tr><td>Not run on a real device, a phone, or a certified SBI device; the desktop app is a <b>scaffold</b>, not the Registration Client</td></tr>
+<tr><td>No operator or resident has used the screens; the Hindi is machine-drafted and unreviewed</td></tr>
+<tr><td><b>Red-team R-01:</b> the moir&eacute; cue is blind at some display pitches. <b>R-03:</b> with no flash light the fusion can accept a synthetic screen replay (4 of 85 pitches; 0 with a flash cue). Fix proposed, not enabled</td></tr>
+</table>
+</div>
+</div>
+
+<h2>6. Next</h2>
+<p>(1) One real experiment: does the flash cue separate a live face from a replay on a laptop (recorder and analyser are built). (2) A consented corpus and the calibrator that is
+already written, so every threshold comes from data. (3) A real device, a second camera, a phone. (4) Ask MOSIP how an SBI extension should be proposed, and settle two model
+licences.</p>
+
+<footer>Every claim, its number and its reproduction command: <b>docs/claim-sheet.md</b>. Design with the reasoning and the maths: <b>PRAMAAN_Final_Bible.md</b> (Parts 0-48).
+Built with an AI coding assistant under the author's direction; see the repository's submission notes.</footer>
+
+</body>
+</html>

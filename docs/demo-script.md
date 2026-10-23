@@ -22,9 +22,9 @@ named prerequisite exists. Do not demo a scene that is marked NOT YET as if it w
 | Models present | `ls models/` | the six `.onnx` files named in `config/operating-points.json` |
 | Build is green | `./gradlew build` | `BUILD SUCCESSFUL` |
 | MockMDS running | the hardware guide, section 2.2 | an HTTP server on a port in 4501–4600 |
-| Scaffold opens | `./gradlew :desktop:runScaffold` | a window titled "Registration Client", tag "PRAMAAN scaffold — not the MOSIP Registration Client (ADR 0003)" |
-| Operator onboarded | step 1 of scene 1, once, with **Onboard my face** | the operator's face template is saved under `build/scaffold/operators` |
-| Offline badge | top bar | "Offline — working normally" |
+| Scaffold opens | `./gradlew :desktop:runScaffold` | a window titled "PRAMAAN — Registration Client scaffold", a step rail on the left, and a strip under the header reading "Scaffold, not the MOSIP Registration Client" |
+| Operator onboarded | step 1 of scene 1, once, with **First time? Enrol my face** | the operator's face template is saved under `build/scaffold/operators`, and the banner says "Face enrolled. You can now sign in with your face." |
+| Offline badge | header chip | "Offline — working normally" |
 
 Keep a terminal open next to the window: scenes 3, 4, 7 and 9 end with a command.
 
@@ -34,12 +34,14 @@ Keep a terminal open next to the window: scenes 3, 4, 7 and 9 end with a command
 
 **Claim shown:** an honest person is not annoyed.
 
-1. Operator id field: type the operator id, click **Log in with face**. The window moves to "2  Resident biometrics —
-   operator …".
-2. Click **Scan face**. Look at the camera, centred in the oval.
+1. Operator ID field: type the operator id, click **Sign in with face**. The step rail moves to "Resident photo" and the
+   header shows "Operator <id>".
+2. Click **Start face scan**. Look at the camera, centred in the oval.
 3. Expected on-screen text, in order: `Connecting to the camera…` → `Centre your face in the oval` →
    `Checking face liveness…` → `Hold still` → `Good, face captured successfully`.
-4. The "Captured photo" panel fills in. Click **Diagnostics…** to show the audited cue view.
+4. The "Captured photo" panel fills in and a green banner says the packet was written with signed liveness evidence.
+   Open **Station tools ▸ Diagnostics…**, give an administrator id and a reason in the one form, to show the audited cue
+   view (never with a resident in front of the screen).
 
 **Say:** "Nothing was asked of the resident. Passive checks decided; the evidence is signed and stored."
 
@@ -50,14 +52,14 @@ check the device.` is correct behaviour — restart MockMDS and rescan. Do not c
 
 **Claim shown:** we do not punish poor conditions.
 
-1. With the resident in strong backlight (a window behind them, or MockMDS fed the backlit sample), click **Scan face**.
+1. With the resident in strong backlight (a window behind them, or MockMDS fed the backlit sample), click **Start face scan**.
 2. Expected: a guidance line such as `Please move so that the light is not behind you`, or `Too much light on your
    face. Please move away from the bright light`. The attempt counter does **not** advance on a quality problem.
 3. Move; the scan continues to `Good, face captured successfully`.
 
 **Say:** "Quality problems get guidance. They are never reported as a spoof."
 
-**Fallback:** if the guidance does not appear, show the quality components in **Diagnostics…** and say which one
+**Fallback:** if the guidance does not appear, show the quality components in **Station tools ▸ Diagnostics…** and say which one
 is below threshold.
 
 ## Scene 3 — A printed photo  `LIVE` or `HARNESS`
@@ -65,10 +67,11 @@ is below threshold.
 **Claim shown:** cues that fail differently — print is caught by colour-texture and flatness.
 
 1. Hold a printed photo of the enrolled person to the camera (or feed the print clip from the corpus).
-2. Click **Scan face**.
+2. Click **Start face scan**.
 3. Expected on screen: only the generic message, `We could not verify face liveness. Please try again.`
    No reason, no score.
-4. Click **Diagnostics…** (operator-gated, audited): the cues that voted against are listed.
+4. Open **Station tools ▸ Diagnostics…** (operator-gated, audited; the form asks for administrator and reason): the
+   cues that voted against are listed.
 5. Harness version: `./gradlew :harness:runCorpus` over the print clip, then `:harness:evaluate`; show the PAIS row.
 
 **Say:** "The resident learns nothing they could use to adapt. The operator can see which cues fired."
@@ -82,11 +85,11 @@ carried by the passive model and flatness alone. Say that if it is the case.
 **Claim shown:** the scene that separates us from passive-only systems. Rehearse this one the most.
 
 1. A teammate's recorded video of blinking, smiling and turning plays on a phone held to the camera.
-2. Click **Scan face**. The engine issues a parameterised challenge the video cannot contain (for example `Please
+2. Click **Start face scan**. The engine issues a parameterised challenge the video cannot contain (for example `Please
    turn your head to your left`, then `Please blink 2 times`).
 3. Expected: the video does not perform the requested action in time → the generic message, `We could not verify
    face liveness. Please try again.`
-4. **Diagnostics…** shows the challenge step failed on wrong action or latency, and the moiré cue's peakiness.
+4. **Station tools ▸ Diagnostics…** shows the challenge step failed on wrong action or latency, and the moiré cue's peakiness.
 5. Harness version: the phone-replay clip through `:harness:runCorpus`; the PAIS row shows it rejected.
 
 **Say:** "A recording has every action a person can do, but not the one we randomly picked, at the time we picked it."
@@ -98,10 +101,10 @@ The challenge failure is the claim; moiré is supporting.
 
 **Claim shown:** the strict tier protects the people who protect the system.
 
-1. At "1  Operator login", hold the supervisor's photo to the camera and click **Log in with face**.
+1. At step "Operator sign-in", hold the supervisor's photo to the camera and click **Sign in with face**.
 2. Expected: the operator workflow runs at a stricter operating point than the resident's (Bible Part 9), so the
-   attempt ends with `Face verification could not be completed. Please try again.` or `Face not recognised for this
-   operator.`
+   attempt ends with `Face verification could not be completed. Please try again.` or `Your face was not recognised for
+   this operator ID. Check the ID and try again.`
 3. Open the audit log (`:harness:fraudReport` reads it) and show the failed attempt with the operator id.
 
 **Say:** "Operators and supervisors get the strictest operating point, and the attempt is logged."
@@ -117,16 +120,18 @@ showing; never claim a flash result you did not see.  **NOT YET (flash on real h
 **Claim shown:** the attack the problem statement never names.
 
 1. Install OBS Virtual Camera; select it as the capture source for MockMDS or a device service.
-2. Click **Scan face**.
-3. Expected: the injection guard's hard veto — the generic message only; **Diagnostics…** and the audit log show
-   `INJECTION_DETECTED`.
+2. Click **Start face scan**.
+3. Expected: the injection guard's hard veto — the generic message only; **Station tools ▸ Diagnostics…** and the audit
+   log show `INJECTION_DETECTED`.
 4. A normal webcam with an odd driver name is **not** vetoed; show one to prove it.
 
 **Say:** "A virtual camera bound to the capture path is vetoed before fusion even runs."
 
-**Fallback / limit:** the veto matches the *device's reported make/model/code* against a built-in denylist; it does
-**not** yet enumerate OS cameras or verify the device-identity certificate chain (Build Map #84, "Built (partial)").
-Say so. **NOT YET (OS-level enumeration; flash correlation ρ ≈ 0).**
+**Fallback / limit:** the veto matches the *device's reported make/model/code* and, on Windows, the OS's camera
+registrations (DirectShow and Plug and Play, read at start-up) against a built-in denylist, and a signed `digitalId`
+that fails its certificate chain is a veto. It was tried on one real PC with OBS installed and nowhere else (claim L9):
+a driver can pick any name, no registered device was tried, and there is no sensor-noise (PRNU) check. Say so.
+**NOT YET (a renamed virtual camera; flash correlation ρ ≈ 0 on real hardware).**
 
 ## Scene 7 — Capture swap  `HARNESS`
 
@@ -145,11 +150,13 @@ aloud; each is one row of the Bible's binding table.
 
 **Claim shown:** inclusion is executable.
 
-1. Start the scaffold in Hindi: `./gradlew :desktop:runScaffold --args="--lang hi"` (add `--speech true` for audio).
-2. On the resident screen tick **NO_VISION** under "Accessibility (operator selects)" before **Scan face**.
+1. Start the scaffold in Hindi: `./gradlew :desktop:runScaffold --args="--lang hi"` (add `--speech true` for audio), or
+   click the language button in the header (it reads हिन्दी / English) at any step: what was typed and answered stays.
+   Show **A+** (larger text) and the contrast button next to it.
+2. On the resident screen tick **Cannot see the screen** under "Accessibility needs" before **Start face scan**.
 3. Expected: prompts in Hindi with icons, **no gaze challenge**; the attempt completes for a real person.
-4. **Diagnostics…** shows the accessibility profile recorded; the operator's use of profiles is counted as a fraud
-   signal (Build Map #88), not hidden.
+4. **Station tools ▸ Diagnostics…** shows the accessibility profile recorded; the operator's use of profiles is counted
+   as a fraud signal (Build Map #88), not hidden.
 
 **Say:** "A resident who cannot see a dot on the screen still gets through, and over-use of the profile is itself visible."
 

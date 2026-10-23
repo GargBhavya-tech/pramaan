@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PRAMAAN: pitch (MOSIP Decode 2026, PS04)</title>
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", "Nirmala UI", Arial, sans-serif; color: #14202e; background: #fff; }
+  .slide { width: 1280px; height: 720px; padding: 46px 64px 40px; position: relative; overflow: hidden; page-break-after: always; break-after: page; background: #fff; }
+  .slide:last-child { page-break-after: auto; break-after: auto; }
+  .num { position: absolute; right: 36px; bottom: 22px; font-size: 16px; color: #52606d; }
+  .brand { position: absolute; left: 64px; bottom: 22px; font-size: 16px; color: #52606d; letter-spacing: .3px; }
+  h1 { font-size: 46px; margin: 0 0 6px; color: #1b4f8a; line-height: 1.12; }
+  h2 { font-size: 22px; margin: 0 0 22px; color: #3b4a5a; font-weight: 400; }
+  p, li { font-size: 22px; line-height: 1.42; }
+  ul { margin: 8px 0; padding-left: 26px; }
+  li { margin: 7px 0; }
+  b { color: #0c1824; }
+  .tag { display: inline-block; background: #fff4d6; border: 2px solid #6b4500; color: #4a2f00; border-radius: 8px; padding: 6px 14px; font-size: 20px; font-weight: 600; }
+  .ok { background: #e6f4ea; border: 2px solid #1b6e3c; border-radius: 10px; padding: 14px 20px; }
+  .no { background: #fff4d6; border: 2px solid #6b4500; border-radius: 10px; padding: 14px 20px; }
+  .ok h3 { color: #1b6e3c; } .no h3 { color: #6b4500; }
+  h3 { margin: 0 0 6px; font-size: 24px; }
+  .ok li, .no li { font-size: 20px; margin: 5px 0; }
+  .cols { display: flex; gap: 26px; }
+  .cols > div { flex: 1; }
+  .box { border: 2px solid #1b4f8a; background: #e7eff8; color: #173f70; border-radius: 10px; padding: 12px 16px; font-size: 21px; text-align: center; font-weight: 600; }
+  .arrow { font-size: 24px; color: #52606d; text-align: center; }
+  .bad { border-color: #8e1220; background: #fde8ea; color: #8e1220; }
+  .good { border-color: #1b6e3c; background: #e6f4ea; color: #1b6e3c; }
+  .flow { display: flex; gap: 8px; margin: 18px 0; }
+  .flow div { flex: 1; background: #e7eff8; border: 2px solid #1b4f8a; border-radius: 10px; padding: 10px 6px; text-align: center; font-size: 18px; line-height: 1.25; color: #173f70; }
+  .flow div b { display: block; font-size: 28px; color: #1b4f8a; }
+  .flow .last { background: #e6f4ea; border-color: #1b6e3c; color: #1b6e3c; } .flow .last b { color: #1b6e3c; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px 28px; margin-top: 8px; }
+  .grid h3 { color: #1b4f8a; margin: 0 0 4px; font-size: 24px; }
+  .grid p { font-size: 19px; margin: 0; line-height: 1.38; }
+  .shots { display: flex; gap: 18px; margin-top: 6px; }
+  .shots figure { margin: 0; flex: 1; }
+  .shots img { width: 100%; border: 1px solid #cfd6dd; border-radius: 8px; display: block; }
+  .shots figcaption { font-size: 17px; color: #3b4a5a; margin-top: 6px; line-height: 1.3; }
+  .big { font-size: 64px; font-weight: 700; color: #1b4f8a; }
+  .small { font-size: 17px; color: #52606d; }
+  table { border-collapse: collapse; font-size: 19px; }
+  td, th { border: 1px solid #cfd6dd; padding: 6px 12px; text-align: left; }
+  th { background: #e7eff8; color: #173f70; }
+</style>
+</head>
+<body>
+
+<!-- 1 -->
+<section class="slide" style="background:#1b4f8a;color:#fff">
+  <div style="margin-top:118px">
+    <div style="font-size:92px;font-weight:700;letter-spacing:1px;line-height:1">PRAMAAN <span style="font-weight:400">&#2346;&#2381;&#2352;&#2350;&#2366;&#2339;</span></div>
+    <div style="font-size:42px;margin-top:14px;font-weight:600">Proof, not a verdict.</div>
+    <div style="font-size:27px;margin-top:20px;max-width:980px;line-height:1.4">Face liveness and presentation-attack detection for the MOSIP Registration Client, desktop and Android, that leaves evidence a server can re-check.</div>
+    <div style="margin-top:44px;font-size:22px;line-height:1.6">MOSIP Decode 2026 &middot; Problem Statement 04<br>Team: Bhavya Garg &middot; github.com/GargBhavya-tech/pramaan &middot; MPL-2.0</div>
+    <div style="margin-top:30px"><span class="tag">A working engine, not yet measured on real attacks</span></div>
+  </div>
+  <div class="num" style="color:#cfe0f2">1 / 7</div>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <h1>The gap nobody names</h1>
+  <h2>The preview is unsigned. The capture is signed. Nothing links them.</h2>
+  <div style="display:flex;align-items:center;gap:14px;margin:8px 0 18px">
+    <div class="box" style="width:170px">Camera / SBI device</div>
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:12px"><div class="arrow" style="width:250px">unsigned preview &rarr;</div><div class="box bad" style="flex:1">Liveness check passes on face A</div></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px"><div class="arrow" style="width:250px">signed capture &rarr;</div><div class="box bad" style="flex:1">Registration packet stores face B</div></div>
+    </div>
+  </div>
+  <ul>
+    <li><b>Capture swap:</b> whoever controls the preview can pass liveness with one face and enrol another.</li>
+    <li><b>Android:</b> the client never sees preview frames at all; the device app shows the stream and returns only the signed capture.</li>
+    <li><b>Injected video</b> (OBS, deepfake pipelines) is outside ISO/IEC 30107. <b>Insiders</b> can log in with a supervisor's photo.</li>
+    <li><b>No audit trail:</b> a client-side pass/fail cannot be re-checked by the server later or re-scored with a better model.</li>
+  </ul>
+  <div class="brand">PRAMAAN &middot; MOSIP Decode 2026 &middot; PS04</div><div class="num">2 / 7</div>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <h1>Our answer: two interfaces, seven questions</h1>
+  <h2>The problem statement asks to define the frame-streaming interface and the liveness/PAD interface. We did, and bound them together.</h2>
+  <div class="cols">
+    <div class="box" style="text-align:left"><b>FaceFrameSource</b><br><span style="font-weight:400;font-size:19px">frames <i>and</i> the signed capture from the same object, so the capture can be bound to what was watched</span></div>
+    <div class="box" style="text-align:left"><b>LivenessEngine</b><br><span style="font-weight:400;font-size:19px">frames in; states, guidance and a decision out; never a score on the screen; fails closed</span></div>
+  </div>
+  <div class="flow">
+    <div><b>1</b>Real sensor?<br>source integrity</div>
+    <div><b>2</b>One usable face<br>quality gate</div>
+    <div><b>3</b>Looks alive?<br>passive, asks nothing</div>
+    <div><b>4</b>Attack marks?<br>print, screen, flat</div>
+    <div><b>5</b>Fusion<br>accept / challenge / reject</div>
+    <div><b>6</b>Live answer?<br>random challenge</div>
+    <div class="last"><b>7</b>Same face?<br>binding + signed evidence</div>
+  </div>
+  <ul>
+    <li><b>Mode C (desktop):</b> the engine runs in the client, on the unsigned M-JPEG stream (3 fps guaranteed, so every cue is gated on the measured frame rate).</li>
+    <li><b>Mode D (Android):</b> the engine ships as a library inside the SBI device app, where the frames actually are.</li>
+  </ul>
+  <div class="brand">PRAMAAN &middot; MOSIP Decode 2026 &middot; PS04</div><div class="num">3 / 7</div>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <h1>What is different</h1>
+  <h2>Each idea is built and tested. None is claimed beyond what the claim sheet allows.</h2>
+  <div class="grid">
+    <div><h3>Capture binding</h3><p>Four locks before any accept: nonce echoed in the device-signed capture, frame hash chain, identity continuity, time. Works on <b>unmodified SBI</b>.</p></div>
+    <div><h3>Evidence, not a verdict</h3><p>A signed JWS in the face BIR. One command re-verifies it; a newer model can re-score stored crops. Merkle transparency log.</p></div>
+    <div><h3>Cues that fail differently</h3><p>Passive, moir&eacute;, flash reflection (20.7-bit random colour code), scene, stereo. Each abstains when the station lacks the hardware.</p></div>
+    <div><h3>Injection defence</h3><p>Device identity chain, OS camera registrations (OBS found via DirectShow), JPEG stream fingerprint. Not a renamed-driver defence.</p></div>
+    <div><h3>Inclusion by design</h3><p>Blink, pulse and pupil reflex only ever vote <i>for</i> life. Hindi, icons, speech, accessibility profiles, infant mode, dual-control exceptions.</p></div>
+    <div><h3>An SBI proposal</h3><p>An optional Liveness Profile (signed preview, signed light log, signed burst) with a runnable reference device. Our own draft; not yet posted to MOSIP.</p></div>
+  </div>
+  <div class="brand">PRAMAAN &middot; MOSIP Decode 2026 &middot; PS04</div><div class="num">4 / 7</div>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <h1>The station, as built</h1>
+  <h2>Rendered from the real code, offscreen. One plain sentence, an icon, no score. No live camera in these images.</h2>
+  <div class="shots">
+    <figure><img src="../media/capture-screen.png" alt="Capture screen"><figcaption><b>Resident capture.</b> Step rail, one instruction, Offline chip, the scaffold labelled as a scaffold.</figcaption></figure>
+    <figure><img src="../media/hindi-accessibility.png" alt="Hindi screen"><figcaption><b>Hindi, larger text, high contrast</b> are one click. (Machine-drafted Hindi, not yet reviewed.)</figcaption></figure>
+  </div>
+  <p style="margin:10px 0 0;font-size:20px"><b>Fails closed.</b> If the policy, the operating-point table or a model does not verify, nothing can be registered and the screen says what to check (<i>docs/media/fails-closed.png</i>). Failures show the resident one generic sentence and never the cause.</p>
+  <div class="brand">PRAMAAN &middot; MOSIP Decode 2026 &middot; PS04</div><div class="num">5 / 7</div>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <h1>What is verified, and what is not</h1>
+  <h2>No real attack corpus exists, so no APCER or BPCER is claimed. Zero failures in 60 attacks would still allow a true rate near 6%.</h2>
+  <div class="cols">
+    <div class="ok"><h3>Verified (one command each)</h3>
+      <ul>
+        <li><b>665 automated tests pass</b> (2 skipped, need MockMDS)</li>
+        <li>Flash code: 1,679,616 sequences = <b>20.7 bits</b></li>
+        <li>At most 3 colour changes a second, 900 sequences</li>
+        <li>Insider signal: 6 in 40 at 2% gives z &asymp; 5.87</li>
+        <li>Transparency log matches the CT test vectors</li>
+        <li>Each capture-swap attack is a failing test</li>
+      </ul></div>
+    <div class="no"><h3>Not done, not claimed</h3>
+      <ul>
+        <li>No error rate on real attacks; thresholds provisional</li>
+        <li>Not run on a device, a phone or a certified SBI device</li>
+        <li>Desktop app is a scaffold, not the Registration Client</li>
+        <li>No user has tried the screens; Hindi unreviewed</li>
+        <li>Flash, stereo, scene cues: synthetic data and fakes only</li>
+      </ul></div>
+  </div>
+  <p style="margin-top:14px;font-size:21px"><b>We attacked ourselves.</b> On synthetic screen replays with the passive model assumed fooled and no flash light, the fusion accepted <b>4 of 85</b> display pitches; with the flash cue, <b>0</b>. Logged as R-03 with R-01 (moir&eacute; blind pitches); the fix is proposed, not enabled.</p>
+  <div class="brand">PRAMAAN &middot; MOSIP Decode 2026 &middot; PS04</div><div class="num">6 / 7</div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <h1>Impact and next steps</h1>
+  <h2>Deployable on today's SBI, honest about what is unmeasured.</h2>
+  <div class="cols">
+    <div>
+      <h3 style="color:#1b4f8a;margin-bottom:4px">For MOSIP</h3>
+      <ul>
+        <li>Closes the capture-swap gap with no spec change</li>
+        <li>Leaves proof a server can re-check or re-score</li>
+        <li>MPL-2.0; JavaFX 11 as in the Registration Client</li>
+        <li>Inclusion rules keep it from locking residents out</li>
+      </ul>
+      <h3 style="color:#1b4f8a;margin:14px 0 4px">What we would ask MOSIP</h3>
+      <ul>
+        <li>How should an SBI extension be proposed?</li>
+        <li>Licence terms of two anti-spoofing models?</li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="color:#1b4f8a;margin-bottom:4px">Next, in order</h3>
+      <ol style="font-size:22px;line-height:1.42;padding-left:28px;margin:8px 0">
+        <li><b>One real experiment:</b> does the flash cue separate a live face from a replay on a laptop? (recorder and analyser built)</li>
+        <li><b>A consented corpus</b>, then every threshold from data (calibrator built)</li>
+        <li><b>A real device, a second camera, a phone</b></li>
+        <li><b>Real users:</b> operators and residents, a native Hindi review</li>
+      </ol>
+      <div style="margin-top:22px;font-size:20px;line-height:1.5"><b>Repo:</b> github.com/GargBhavya-tech/pramaan<br><b>Every claim and its command:</b> docs/claim-sheet.md</div>
+    </div>
+  </div>
+  <div class="brand">PRAMAAN &middot; MOSIP Decode 2026 &middot; PS04</div><div class="num">7 / 7</div>
+</section>
+
+</body>
+</html>

@@ -92,7 +92,9 @@ and the registration scaffold (`desktop`). The Android AAR (Phase 12) builds but
 The Phase 13 differentiators (flash reflection, stereo depth, scene and illumination consistency, pupil light reflex,
 the SBI Liveness Profile) are wired into the engine. Each one switches on only when the station has the hardware it
 needs. They are tested with fakes and synthetic data, because **no station with the extra hardware, and no device
-that speaks the profile, exists yet**. The CI workflow has not yet run on GitHub.
+that speaks the profile, exists yet**. The CI workflow has not yet run on GitHub. The desktop screens have a designed
+theme, a step rail, Hindi, larger-text and high-contrast modes; they are checked by offscreen renders and tests, and **no
+operator or resident has used them yet**.
 
 ## Setup and run
 
@@ -126,14 +128,35 @@ Registration Client) · Jackson · JUnit 5 · Android AAR · Python tooling for 
 
 ## Screenshots / demo
 
-> To capture: these are placeholders.
+These screens are **rendered offscreen from the real JavaFX code** (`StationViewRenderTest`), so they show the layout,
+words and states exactly, but **no live camera or device** is behind them: the camera area shows its placeholder.
 
-- [ ] `docs/media/capture-screen.png`: the desktop capture screen mid-session (step rail, task panel)
+| | |
+|---|---|
+| ![Resident capture, a head-turn prompt](docs/media/capture-screen.png) | ![The same screen in Hindi](docs/media/hindi-accessibility.png) |
+| Resident capture: step rail, one instruction, the scaffold labelled as a scaffold | Hindi (machine-drafted, not yet reviewed) |
+| ![Operator sign-in](docs/media/operator-sign-in.png) | ![Fails closed](docs/media/fails-closed.png) |
+| Operator sign-in | Fails closed: nothing can be registered, and it says what to check |
+| ![Exception flow](docs/media/exception-flow.png) | ![Audited dialog](docs/media/audited-dialog.png) |
+| Exception flow (supervisor approval, dual control) | An audited action asks for administrator and reason in one form |
+
+More: `docs/media/hindi-large-text.png`, `docs/media/hindi-high-contrast.png`, `docs/media/supervisor-approval.png`,
+`docs/media/resident-done.png`.
+
+Still to capture (each needs hardware or a real run, so they are not faked):
+
 - [ ] `docs/media/flash-challenge.gif`: the flash colour challenge playing on the resident's screen (`--flash-screen primary`)
 - [ ] `docs/media/injection-veto.png`: OBS Virtual Camera selected and vetoed
-- [ ] `docs/media/evaluation-report.png`: the harness HTML report (APCER/BPCER table and DET plot, synthetic rows labelled)
-- [ ] `docs/media/hindi-accessibility.png`: the Hindi and icon/accessibility mode
-- [ ] A 60–90 s demo video following `docs/demo-script.md`
+- [ ] `docs/media/evaluation-report.png`: the harness HTML report (needs a corpus; synthetic rows would be labelled)
+- [ ] A demo video: `docs/submission/07-demo-video-script.md` (3 min) or the live script `docs/demo-script.md`
+
+## Submission (MOSIP Decode 2026, problem statement 04)
+
+Everything for the submission is in [`docs/submission/`](docs/submission/00-START-HERE.md): the 1-2 page
+[solution document](docs/submission/PRAMAAN-solution-2page.pdf), the 7-slide
+[pitch](docs/submission/PRAMAAN-pitch-7slides.pdf), a judging map, 25 prepared questions, the checklist and a video
+script. Start with `docs/submission/00-START-HERE.md`: it says what is confirmed, what to verify, and what only the
+team can do.
 
 ## Documents
 
