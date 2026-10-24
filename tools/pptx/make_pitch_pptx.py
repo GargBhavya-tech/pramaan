@@ -524,7 +524,7 @@ def slide_status(deck, n=7):
           "rate near 6%.")
     box(s, 0.6, 1.95, 4.0, 3.75, fill=OK_BG, line=OK, name="Verified", anchor=MSO_ANCHOR.TOP, size=14, color=INK, space_after=5,
         paras=[[("Verified (one command each)", {"bold": True, "size": 17, "color": OK})],
-               [("673 automated tests pass", {"bold": True}), (" (20 skip on a fresh clone: no models)", {"size": 12})],
+               [("686 automated tests pass", {"bold": True}), (" (20 skip on a fresh clone: no models)", {"size": 12})],
                "Each capture-swap attack is a test",
                "Flash code: 20.7 bits; ≤ 3 changes a second",
                "Insider signal: 6 in 40 at 2% gives z ≈ 5.87",
@@ -551,7 +551,7 @@ def slide_status(deck, n=7):
                [("For: ", {"bold": True}), ("registration centres, operators and supervisors, residents, and server operators.  ", {}),
                 ("Code: ", {"bold": True}), ("github.com/GargBhavya-tech/pramaan (MPL-2.0)", {})]])
     footer(s, deck, n)
-    notes(s, "What we verify and what we do not claim. Six hundred seventy three automated tests pass; on a fresh clone twenty "
+    notes(s, "What we verify and what we do not claim. Six hundred eighty six automated tests pass; on a fresh clone twenty "
              "skip because the face models are not in the repository. We have not measured an error rate on real attacks because "
              "no real corpus exists. It has not run on a real device or a phone, it is a scaffold, and no user has tried the "
              "screens yet. Our own red team found that, on synthetic replays with no flash light, the fusion accepted four of "

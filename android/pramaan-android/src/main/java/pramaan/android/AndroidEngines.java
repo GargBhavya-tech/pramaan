@@ -14,6 +14,8 @@ import java.io.InputStream;
 import java.security.SecureRandom;
 import pramaan.core.crypto.JwsTrust;
 import pramaan.core.engine.StandardEngines;
+import pramaan.core.inference.InferenceOptions;
+import pramaan.core.inference.OnnxModel;
 import pramaan.core.session.EngineBundle;
 import pramaan.core.session.EngineUnavailableException;
 
@@ -30,8 +32,30 @@ public final class AndroidEngines {
     private AndroidEngines() {
     }
 
+    /**
+     * The profile used when the host app does not choose one: few threads and sequential execution so the camera and
+     * the UI keep their cores on a low-end phone, on the CPU path the operating points were calibrated on. A hardware
+     * accelerator is opt-in ({@link #loadFromAssets(AssetManager, String, InferenceOptions)}) because it can change
+     * scores slightly; see docs/android-low-resource.md.
+     */
+    public static InferenceOptions defaultOptions() {
+        return InferenceOptions.lowResource(Runtime.getRuntime().availableProcessors(),
+                InferenceOptions.Accelerator.CPU);
+    }
+
     public static EngineBundle loadFromAssets(AssetManager assets, String dir)
             throws IOException, EngineUnavailableException {
+        return loadFromAssets(assets, dir, defaultOptions());
+    }
+
+    /**
+     * Loads the bundle with explicit inference options, for example
+     * {@code InferenceOptions.lowResource(cores, Accelerator.XNNPACK)} after {@code AcceleratorParity} showed the
+     * accelerated scores stay close to the CPU's on this device. Sets the process-wide default used by model loading.
+     */
+    public static EngineBundle loadFromAssets(AssetManager assets, String dir, InferenceOptions options)
+            throws IOException, EngineUnavailableException {
+        OnnxModel.setDefaultOptions(options);
         return StandardEngines.loadBundle(read(assets, dir + "/pramaan-policy.yaml"),
                 read(assets, dir + "/operating-points.json"), name -> read(assets, dir + "/models/" + name));
     }

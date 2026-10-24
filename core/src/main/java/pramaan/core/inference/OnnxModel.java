@@ -34,10 +34,17 @@ public final class OnnxModel implements AutoCloseable {
     private final OrtSession session;
     private final String inputName;
     private final String outputName;
+    private final InferenceOptions.Accelerator provider;
+    private final String fallbackReason;
 
-    private OnnxModel(OrtEnvironment environment, OrtSession session) throws OrtException {
+    private static volatile InferenceOptions defaultOptions = InferenceOptions.cpu();
+
+    private OnnxModel(OrtEnvironment environment, OrtSession session, InferenceOptions.Accelerator provider,
+            String fallbackReason) throws OrtException {
         this.environment = environment;
         this.session = session;
+        this.provider = provider;
+        this.fallbackReason = fallbackReason;
         if (session.getNumInputs() != 1 || session.getNumOutputs() < 1) {
             session.close();
             throw new IllegalArgumentException("expected one input and at least one output, got "
@@ -53,11 +60,87 @@ public final class OnnxModel implements AutoCloseable {
      * @throws IllegalStateException if the ONNX Runtime native library cannot be initialised
      */
     public static OnnxModel load(byte[] modelBytes) throws OrtException {
+        return load(modelBytes, defaultOptions);
+    }
+
+    /**
+     * Sets the options every later {@link #load(byte[])} uses: a host (the Android library, a low-power station) calls
+     * this once before it loads the engine bundle, so no model-loading code has to know about accelerators.
+     */
+    public static void setDefaultOptions(InferenceOptions options) {
+        defaultOptions = Objects.requireNonNull(options, "options");
+    }
+
+    /**
+     * Loads a model with the given threads and accelerator. A requested accelerator that this runtime or device cannot
+     * provide is not an error: the model is loaded on the CPU and {@link #fallbackReason()} says why. The model bytes
+     * and everything downstream (hash binding, thresholds, fusion) are the same either way.
+     */
+    public static OnnxModel load(byte[] modelBytes, InferenceOptions requested) throws OrtException {
         Objects.requireNonNull(modelBytes, "modelBytes");
+        Objects.requireNonNull(requested, "requested");
         OrtEnvironment environment = environment();
-        try (OrtSession.SessionOptions options = new OrtSession.SessionOptions()) {
-            return new OnnxModel(environment, environment.createSession(modelBytes, options));
+        String reason = null;
+        if (requested.accelerator() != InferenceOptions.Accelerator.CPU) {
+            try (OrtSession.SessionOptions options = sessionOptions(requested, true)) {
+                return new OnnxModel(environment, environment.createSession(modelBytes, options),
+                        requested.accelerator(), null);
+            } catch (OrtException | UnsatisfiedLinkError | RuntimeException e) {
+                reason = requested.accelerator() + " is not available here: " + e.getMessage();
+            }
         }
+        try (OrtSession.SessionOptions options = sessionOptions(requested, false)) {
+            return new OnnxModel(environment, environment.createSession(modelBytes, options),
+                    InferenceOptions.Accelerator.CPU, reason);
+        }
+    }
+
+    private static OrtSession.SessionOptions sessionOptions(InferenceOptions o, boolean withAccelerator)
+            throws OrtException {
+        OrtSession.SessionOptions options = new OrtSession.SessionOptions();
+        try {
+            if (o.intraOpThreads() > 0) {
+                options.setIntraOpNumThreads(o.intraOpThreads());
+            }
+            if (o.interOpThreads() > 0) {
+                options.setInterOpNumThreads(o.interOpThreads());
+            }
+            if (o.sequential()) {
+                options.setExecutionMode(OrtSession.SessionOptions.ExecutionMode.SEQUENTIAL);
+            }
+            if (withAccelerator) {
+                switch (o.accelerator()) {
+                    case NNAPI:
+                        options.addNnapi();
+                        break;
+                    case XNNPACK:
+                        options.addXnnpack(o.xnnpackOptions());
+                        break;
+                    case DIRECTML:
+                        options.addDirectML(0);
+                        break;
+                    case COREML:
+                        options.addCoreML();
+                        break;
+                    default:
+                        break;
+                }
+            }
+            return options;
+        } catch (OrtException | RuntimeException e) {
+            options.close();
+            throw e;
+        }
+    }
+
+    /** The execution provider the model is really running on: the CPU if a requested accelerator was unavailable. */
+    public InferenceOptions.Accelerator provider() {
+        return provider;
+    }
+
+    /** Why a requested accelerator was not used, or {@code null} if none was requested or it was used. */
+    public String fallbackReason() {
+        return fallbackReason;
     }
 
     /**

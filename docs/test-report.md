@@ -12,11 +12,11 @@ python tools/test_report.py
 
 | | Tests | Passed | Skipped | Failed | Time (s) |
 |---|---:|---:|---:|---:|---:|
-| `core` | 367 | 367 | 0 | 0 | 44 |
+| `core` | 380 | 380 | 0 | 0 | 91 |
 | `sbi` | 37 | 35 | 2 | 0 | 6 |
-| `desktop` | 61 | 61 | 0 | 0 | 53 |
-| `harness` | 208 | 208 | 0 | 0 | 182 |
-| **all** | **673** | **671** | **2** | **0** | **285** |
+| `desktop` | 61 | 61 | 0 | 0 | 92 |
+| `harness` | 208 | 208 | 0 | 0 | 449 |
+| **all** | **686** | **684** | **2** | **0** | **637** |
 
 **What "skipped" means here.** A test that needs a file that is not in the repository (the face models in `models/`, the
 MockMDS stream sample, a Windows camera, a graphics toolkit) skips itself instead of failing. The author's machine has
@@ -27,7 +27,7 @@ those files, so few tests skip there; a fresh clone has none of them, so more sk
 | Package | Tests | Skipped | Failed |
 |---|---:|---:|---:|
 | `core` | 3 | 0 | 0 |
-| `core.audit` | 9 | 0 | 0 |
+| `core.audit` | 15 | 0 | 0 |
 | `core.binding` | 39 | 0 | 0 |
 | `core.challenge` | 49 | 0 | 0 |
 | `core.crypto` | 4 | 0 | 0 |
@@ -36,7 +36,7 @@ those files, so few tests skip there; a fresh clone has none of them, so more sk
 | `core.evidence` | 8 | 0 | 0 |
 | `core.fusion` | 20 | 0 | 0 |
 | `core.gate` | 4 | 0 | 0 |
-| `core.inference` | 3 | 0 | 0 |
+| `core.inference` | 10 | 0 | 0 |
 | `core.pad` | 72 | 0 | 0 |
 | `core.passive` | 3 | 0 | 0 |
 | `core.policy` | 19 | 0 | 0 |
@@ -66,7 +66,7 @@ those files, so few tests skip there; a fresh clone has none of them, so more sk
 ## Edge cases and attacks the tests cover
 
 A test whose name says it rejects, refuses, breaks, drops, delays, forges, swaps or finds something stale, missing,
-malformed or out of bounds is a **negative case**: it proves the system says no. 264 of the 673 tests are named like that.
+malformed or out of bounds is a **negative case**: it proves the system says no. 268 of the 686 tests are named like that.
 The full list is below, grouped by class.
 
 <details><summary><code>core.audit.AuditLogTest</code> (core): 3 negative cases</summary>
@@ -80,6 +80,14 @@ The full list is below, grouped by class.
 <details><summary><code>core.audit.FraudAnalyticsTest</code> (core): 1 negative cases</summary>
 
 - anOperatorFailingFarMoreThanTheirCentreIsFlaggedAndTheOthersAreNot()
+
+</details>
+
+<details><summary><code>core.audit.LivenessMetricsTest</code> (core): 3 negative cases</summary>
+
+- usesTheInjectedClockWhenUsedAsAnAuditConsumerAndForgetsSessionIds()
+- countsRetriesAndFailuresPerWorkflowSeparately()
+- eventsWithoutASessionOrAnUnknownWorkflowAreIgnored()
 
 </details>
 
@@ -222,6 +230,12 @@ The full list is below, grouped by class.
 <details><summary><code>core.gate.GateAndTrackerTest</code> (core): 1 negative cases</summary>
 
 - aFaceSwapAfterA500msGapStartsANewTrackAndReportsTheLoss()
+
+</details>
+
+<details><summary><code>core.inference.InferenceOptionsTest</code> (core): 1 negative cases</summary>
+
+- negativeThreadCountsAreRefused()
 
 </details>
 
@@ -791,60 +805,62 @@ The full list is below, grouped by class.
 
 | Class | Tests | Skipped | Failed | Time (s) |
 |---|---:|---:|---:|---:|
-| `core.audit.AuditLogTest` | 5 | 0 | 0 | 1.9 |
+| `core.audit.AuditLogTest` | 5 | 0 | 0 | 2.1 |
 | `core.audit.FraudAnalyticsTest` | 4 | 0 | 0 | 0.1 |
-| `core.binding.CaptureBinderTest` | 18 | 0 | 0 | 0.3 |
+| `core.audit.LivenessMetricsTest` | 6 | 0 | 0 | 0.1 |
+| `core.binding.CaptureBinderTest` | 18 | 0 | 0 | 0.4 |
 | `core.binding.IsoFaceRecordTest` | 2 | 0 | 0 | 0.0 |
-| `core.binding.SignedStreamLockTest` | 11 | 0 | 0 | 1.3 |
-| `core.binding.StreamKeyAgreementTest` | 8 | 0 | 0 | 0.9 |
-| `core.challenge.ActionDetectorsTest` | 17 | 0 | 0 | 0.4 |
-| `core.challenge.ChallengeGeneratorTest` | 12 | 0 | 0 | 5.9 |
+| `core.binding.SignedStreamLockTest` | 11 | 0 | 0 | 1.7 |
+| `core.binding.StreamKeyAgreementTest` | 8 | 0 | 0 | 0.5 |
+| `core.challenge.ActionDetectorsTest` | 17 | 0 | 0 | 0.3 |
+| `core.challenge.ChallengeGeneratorTest` | 12 | 0 | 0 | 3.5 |
 | `core.challenge.ChallengePromptTest` | 2 | 0 | 0 | 0.0 |
 | `core.challenge.EmissionLogTest` | 7 | 0 | 0 | 0.1 |
 | `core.challenge.FlashRunLogTest` | 5 | 0 | 0 | 0.0 |
 | `core.challenge.FlashScheduleTest` | 6 | 0 | 0 | 0.1 |
-| `core.CoreIsolationTest` | 1 | 0 | 0 | 8.5 |
+| `core.CoreIsolationTest` | 1 | 0 | 0 | 0.6 |
 | `core.crypto.JwsTest` | 4 | 0 | 0 | 0.1 |
-| `core.detect.DetectionLogicTest` | 2 | 0 | 0 | 0.1 |
+| `core.detect.DetectionLogicTest` | 2 | 0 | 0 | 0.0 |
 | `core.engine.AttemptPhasesTest` | 9 | 0 | 0 | 0.6 |
-| `core.engine.EngineUnitsTest` | 5 | 0 | 0 | 0.1 |
-| `core.engine.SceneContextTest` | 10 | 0 | 0 | 3.9 |
-| `core.evidence.EvidenceTest` | 8 | 0 | 0 | 2.3 |
-| `core.fusion.ConformalThresholdTest` | 6 | 0 | 0 | 0.3 |
-| `core.fusion.RiskFusionTest` | 14 | 0 | 0 | 0.4 |
-| `core.gate.GateAndTrackerTest` | 4 | 0 | 0 | 0.0 |
-| `core.inference.OnnxModelTest` | 3 | 0 | 0 | 0.8 |
-| `core.NoInsecureRandomTest` | 1 | 0 | 0 | 0.3 |
+| `core.engine.EngineUnitsTest` | 5 | 0 | 0 | 0.3 |
+| `core.engine.SceneContextTest` | 10 | 0 | 0 | 19.0 |
+| `core.evidence.EvidenceTest` | 8 | 0 | 0 | 12.0 |
+| `core.fusion.ConformalThresholdTest` | 6 | 0 | 0 | 0.7 |
+| `core.fusion.RiskFusionTest` | 14 | 0 | 0 | 2.4 |
+| `core.gate.GateAndTrackerTest` | 4 | 0 | 0 | 0.1 |
+| `core.inference.InferenceOptionsTest` | 7 | 0 | 0 | 5.9 |
+| `core.inference.OnnxModelTest` | 3 | 0 | 0 | 1.1 |
+| `core.NoInsecureRandomTest` | 1 | 0 | 0 | 0.4 |
 | `core.NoWallClockInCoreTest` | 1 | 0 | 0 | 0.3 |
-| `core.pad.CueBankTest` | 8 | 0 | 0 | 0.3 |
-| `core.pad.FlashReflectionCueTest` | 10 | 0 | 0 | 0.0 |
-| `core.pad.LightDirectionConsistencyCueTest` | 6 | 0 | 0 | 0.0 |
-| `core.pad.OnnxPersonSegmenterTest` | 6 | 0 | 0 | 0.2 |
-| `core.pad.PersonMaskTest` | 8 | 0 | 0 | 0.2 |
-| `core.pad.PupilLightReflexCueTest` | 9 | 0 | 0 | 0.1 |
-| `core.pad.SceneConsistencyCueTest` | 8 | 0 | 0 | 0.7 |
-| `core.pad.StereoDepthCueTest` | 10 | 0 | 0 | 0.0 |
-| `core.pad.WhitePointConsistencyCueTest` | 7 | 0 | 0 | 0.0 |
-| `core.passive.LogitsAndCalibrationTest` | 3 | 0 | 0 | 9.5 |
+| `core.pad.CueBankTest` | 8 | 0 | 0 | 7.0 |
+| `core.pad.FlashReflectionCueTest` | 10 | 0 | 0 | 0.1 |
+| `core.pad.LightDirectionConsistencyCueTest` | 6 | 0 | 0 | 0.3 |
+| `core.pad.OnnxPersonSegmenterTest` | 6 | 0 | 0 | 2.5 |
+| `core.pad.PersonMaskTest` | 8 | 0 | 0 | 4.1 |
+| `core.pad.PupilLightReflexCueTest` | 9 | 0 | 0 | 2.6 |
+| `core.pad.SceneConsistencyCueTest` | 8 | 0 | 0 | 6.4 |
+| `core.pad.StereoDepthCueTest` | 10 | 0 | 0 | 0.5 |
+| `core.pad.WhitePointConsistencyCueTest` | 7 | 0 | 0 | 0.3 |
+| `core.passive.LogitsAndCalibrationTest` | 3 | 0 | 0 | 12.0 |
 | `core.policy.BundleManifestTest` | 9 | 0 | 0 | 0.1 |
-| `core.policy.PolicyLoaderTest` | 10 | 0 | 0 | 0.2 |
+| `core.policy.PolicyLoaderTest` | 10 | 0 | 0 | 0.1 |
 | `core.quality.QualityAndGuidanceTest` | 4 | 0 | 0 | 0.1 |
-| `core.session.AccessibilityAndAttemptTest` | 9 | 0 | 0 | 0.3 |
+| `core.session.AccessibilityAndAttemptTest` | 9 | 0 | 0 | 0.4 |
 | `core.session.EngineBundleSignedTest` | 3 | 0 | 0 | 0.1 |
-| `core.session.ErrorTaxonomyTest` | 9 | 0 | 0 | 0.2 |
-| `core.session.EvidenceResetTest` | 6 | 0 | 0 | 0.1 |
+| `core.session.ErrorTaxonomyTest` | 9 | 0 | 0 | 0.1 |
+| `core.session.EvidenceResetTest` | 6 | 0 | 0 | 0.0 |
 | `core.session.ExceptionFlowTest` | 5 | 0 | 0 | 0.2 |
-| `core.session.LivenessSessionMachineTest` | 17 | 0 | 0 | 0.2 |
-| `core.session.PacketApprovalTest` | 3 | 0 | 0 | 0.1 |
+| `core.session.LivenessSessionMachineTest` | 17 | 0 | 0 | 0.1 |
+| `core.session.PacketApprovalTest` | 3 | 0 | 0 | 0.0 |
 | `core.session.SessionNonceTest` | 2 | 0 | 0 | 0.1 |
 | `core.source.DeviceIdentityTest` | 5 | 0 | 0 | 0.0 |
 | `core.source.FaceFrameSourceContractTest` | 1 | 0 | 0 | 0.0 |
 | `core.source.FrameRateAndGatingTest` | 6 | 0 | 0 | 0.0 |
 | `core.source.InjectionGuardTest` | 9 | 0 | 0 | 0.0 |
-| `core.source.JpegSignatureTest` | 15 | 0 | 0 | 0.9 |
+| `core.source.JpegSignatureTest` | 15 | 0 | 0 | 0.6 |
 | `core.source.TimingWatchTest` | 4 | 0 | 0 | 0.0 |
 | `core.testing.TestClockTest` | 3 | 0 | 0 | 0.0 |
-| `core.transparency.MerkleLogTest` | 7 | 0 | 0 | 1.7 |
+| `core.transparency.MerkleLogTest` | 7 | 0 | 0 | 0.7 |
 
 ### sbi
 
@@ -853,70 +869,70 @@ The full list is below, grouped by class.
 | `sbi.capture.RCaptureResponseTest` | 2 | 0 | 0 | 0.0 |
 | `sbi.capture.RealRCaptureFixtureTest` | 4 | 0 | 0 | 0.2 |
 | `sbi.LiveMockMdsTest` | 2 | 2 | 0 | 0.0 |
-| `sbi.MjpegStreamReaderTest` | 6 | 0 | 0 | 0.4 |
-| `sbi.SbiConstantsTest` | 2 | 0 | 0 | 0.1 |
-| `sbi.SbiFrameSourceStubTest` | 6 | 0 | 0 | 3.8 |
-| `sbi.SbiLivenessProfileTest` | 12 | 0 | 0 | 1.7 |
+| `sbi.MjpegStreamReaderTest` | 6 | 0 | 0 | 0.2 |
+| `sbi.SbiConstantsTest` | 2 | 0 | 0 | 0.0 |
+| `sbi.SbiFrameSourceStubTest` | 6 | 0 | 0 | 3.4 |
+| `sbi.SbiLivenessProfileTest` | 12 | 0 | 0 | 1.8 |
 | `sbi.SbiRequestsTest` | 3 | 0 | 0 | 0.0 |
 
 ### desktop
 
 | Class | Tests | Skipped | Failed | Time (s) |
 |---|---:|---:|---:|---:|
-| `desktop.capture.CaptureScreenModelTest` | 9 | 0 | 0 | 0.1 |
-| `desktop.capture.DesktopEnginesTest` | 2 | 0 | 0 | 33.0 |
-| `desktop.capture.FaceCaptureViewRenderTest` | 1 | 0 | 0 | 4.5 |
+| `desktop.capture.CaptureScreenModelTest` | 9 | 0 | 0 | 3.5 |
+| `desktop.capture.DesktopEnginesTest` | 2 | 0 | 0 | 69.4 |
+| `desktop.capture.FaceCaptureViewRenderTest` | 1 | 0 | 0 | 3.0 |
 | `desktop.capture.FlashWindowTest` | 4 | 0 | 0 | 0.0 |
-| `desktop.capture.HindiCatalogueTest` | 4 | 0 | 0 | 0.1 |
+| `desktop.capture.HindiCatalogueTest` | 4 | 0 | 0 | 0.0 |
 | `desktop.capture.PromptIconTest` | 3 | 0 | 0 | 0.0 |
-| `desktop.capture.WindowsCameraInventoryTest` | 9 | 0 | 0 | 0.3 |
-| `desktop.DesktopWiringTest` | 1 | 0 | 0 | 0.1 |
-| `desktop.experiment.FlashExperimentTest` | 7 | 0 | 0 | 4.7 |
+| `desktop.capture.WindowsCameraInventoryTest` | 9 | 0 | 0 | 0.4 |
+| `desktop.DesktopWiringTest` | 1 | 0 | 0 | 2.2 |
+| `desktop.experiment.FlashExperimentTest` | 7 | 0 | 0 | 5.3 |
 | `desktop.scaffold.BackdropRetakeTest` | 5 | 0 | 0 | 1.1 |
-| `desktop.scaffold.BackdropToolTest` | 6 | 0 | 0 | 0.2 |
-| `desktop.showcase.UiShowcaseTest` | 4 | 0 | 0 | 5.5 |
-| `desktop.ui.StationViewRenderTest` | 6 | 0 | 0 | 3.3 |
+| `desktop.scaffold.BackdropToolTest` | 6 | 0 | 0 | 0.1 |
+| `desktop.showcase.UiShowcaseTest` | 4 | 0 | 0 | 4.1 |
+| `desktop.ui.StationViewRenderTest` | 6 | 0 | 0 | 2.4 |
 
 ### harness
 
 | Class | Tests | Skipped | Failed | Time (s) |
 |---|---:|---:|---:|---:|
-| `harness.corpus.CorpusManifestTest` | 3 | 0 | 0 | 0.5 |
-| `harness.engine.CaptureScreenEndToEndTest` | 3 | 0 | 0 | 0.7 |
-| `harness.engine.DiagnosticModeTest` | 3 | 0 | 0 | 1.5 |
+| `harness.corpus.CorpusManifestTest` | 3 | 0 | 0 | 0.3 |
+| `harness.engine.CaptureScreenEndToEndTest` | 3 | 0 | 0 | 1.1 |
+| `harness.engine.DiagnosticModeTest` | 3 | 0 | 0 | 0.5 |
 | `harness.engine.EvidencePackagerTest` | 3 | 0 | 0 | 0.8 |
-| `harness.engine.InjectionFindingsEngineTest` | 10 | 0 | 0 | 5.0 |
-| `harness.engine.InjectionGuardEngineTest` | 2 | 0 | 0 | 0.8 |
-| `harness.engine.LivenessEngineTest` | 12 | 0 | 0 | 15.2 |
-| `harness.engine.OperatorAuthenticationTest` | 4 | 0 | 0 | 0.9 |
-| `harness.engine.StationWiringEngineTest` | 21 | 0 | 0 | 7.6 |
-| `harness.eval.CalibrateFromRowsTest` | 10 | 0 | 0 | 5.0 |
-| `harness.eval.EvaluationTest` | 9 | 0 | 0 | 2.7 |
-| `harness.eval.FraudReportTest` | 2 | 0 | 0 | 2.3 |
-| `harness.eval.FusionLearnerTest` | 7 | 0 | 0 | 2.4 |
-| `harness.eval.PseudoLabelerTest` | 5 | 0 | 0 | 0.0 |
-| `harness.experiment.FlashExperimentAnalysisTest` | 10 | 0 | 0 | 14.5 |
-| `harness.factory.FusedRedTeamTest` | 6 | 0 | 0 | 1.3 |
-| `harness.factory.PersonSegmentationTest` | 8 | 0 | 0 | 2.8 |
-| `harness.factory.RedTeamFuzzTest` | 7 | 0 | 0 | 2.6 |
+| `harness.engine.InjectionFindingsEngineTest` | 10 | 0 | 0 | 3.8 |
+| `harness.engine.InjectionGuardEngineTest` | 2 | 0 | 0 | 0.7 |
+| `harness.engine.LivenessEngineTest` | 12 | 0 | 0 | 13.0 |
+| `harness.engine.OperatorAuthenticationTest` | 4 | 0 | 0 | 1.0 |
+| `harness.engine.StationWiringEngineTest` | 21 | 0 | 0 | 4.8 |
+| `harness.eval.CalibrateFromRowsTest` | 10 | 0 | 0 | 2.8 |
+| `harness.eval.EvaluationTest` | 9 | 0 | 0 | 1.5 |
+| `harness.eval.FraudReportTest` | 2 | 0 | 0 | 1.4 |
+| `harness.eval.FusionLearnerTest` | 7 | 0 | 0 | 22.2 |
+| `harness.eval.PseudoLabelerTest` | 5 | 0 | 0 | 0.2 |
+| `harness.experiment.FlashExperimentAnalysisTest` | 10 | 0 | 0 | 37.6 |
+| `harness.factory.FusedRedTeamTest` | 6 | 0 | 0 | 8.9 |
+| `harness.factory.PersonSegmentationTest` | 8 | 0 | 0 | 9.7 |
+| `harness.factory.RedTeamFuzzTest` | 7 | 0 | 0 | 5.5 |
 | `harness.factory.StationSelfTestTest` | 4 | 0 | 0 | 0.0 |
-| `harness.factory.SyntheticAttackFactoryTest` | 13 | 0 | 0 | 1.0 |
-| `harness.HarnessWiringTest` | 1 | 0 | 0 | 0.2 |
-| `harness.mock.BindingAttacksTest` | 8 | 0 | 0 | 2.7 |
-| `harness.mock.FaultOutcomesTest` | 7 | 0 | 0 | 2.4 |
-| `harness.mock.MockDeviceProfileConformanceTest` | 7 | 0 | 0 | 0.1 |
-| `harness.mock.MockFrameSourceTest` | 6 | 0 | 0 | 2.8 |
-| `harness.mock.ProfileStubDeviceTest` | 9 | 0 | 0 | 11.5 |
-| `harness.RealLandmarksTest` | 2 | 0 | 0 | 14.5 |
+| `harness.factory.SyntheticAttackFactoryTest` | 13 | 0 | 0 | 0.7 |
+| `harness.HarnessWiringTest` | 1 | 0 | 0 | 0.1 |
+| `harness.mock.BindingAttacksTest` | 8 | 0 | 0 | 7.7 |
+| `harness.mock.FaultOutcomesTest` | 7 | 0 | 0 | 9.1 |
+| `harness.mock.MockDeviceProfileConformanceTest` | 7 | 0 | 0 | 0.9 |
+| `harness.mock.MockFrameSourceTest` | 6 | 0 | 0 | 2.9 |
+| `harness.mock.ProfileStubDeviceTest` | 9 | 0 | 0 | 17.9 |
+| `harness.RealLandmarksTest` | 2 | 0 | 0 | 27.5 |
 | `harness.RealModelsTest` | 3 | 0 | 0 | 6.6 |
-| `harness.RealSFaceTest` | 1 | 0 | 0 | 20.3 |
-| `harness.run.CorpusRunnerTest` | 2 | 0 | 0 | 26.5 |
-| `harness.run.DegradeToolTest` | 1 | 0 | 0 | 4.6 |
-| `harness.SignBundleTest` | 3 | 0 | 0 | 1.6 |
-| `harness.verify.DeviceCaTrustTest` | 3 | 0 | 0 | 14.6 |
+| `harness.RealSFaceTest` | 1 | 0 | 0 | 3.2 |
+| `harness.run.CorpusRunnerTest` | 2 | 0 | 0 | 191.3 |
+| `harness.run.DegradeToolTest` | 1 | 0 | 0 | 12.3 |
+| `harness.SignBundleTest` | 3 | 0 | 0 | 2.3 |
+| `harness.verify.DeviceCaTrustTest` | 3 | 0 | 0 | 25.3 |
 | `harness.verify.PlanRegenerationTest` | 4 | 0 | 0 | 0.0 |
-| `harness.verify.RecheckVerifierTest` | 8 | 0 | 0 | 4.8 |
-| `harness.verify.RetroactiveRescanTest` | 1 | 0 | 0 | 0.8 |
+| `harness.verify.RecheckVerifierTest` | 8 | 0 | 0 | 24.6 |
+| `harness.verify.RetroactiveRescanTest` | 1 | 0 | 0 | 1.2 |
 
 ## What these results are not
 

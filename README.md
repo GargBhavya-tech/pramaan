@@ -74,7 +74,7 @@ What *is* measured and reproducible:
 
 | | Number | Reproduce |
 |---|---|---|
-| Test suite | **673 JVM tests, 0 failures.** 2 skipped on the author's machine; **20 skipped on a fresh clone**, because the face models and the MockMDS fixtures are not in the repository and the tests that need them skip themselves. Full uncached build from a fresh clone: 8 min 36 s | `./gradlew build` |
+| Test suite | **686 JVM tests, 0 failures.** 2 skipped on the author's machine; **20 skipped on a fresh clone**, because the face models and the MockMDS fixtures are not in the repository and the tests that need them skip themselves. Full uncached build from a fresh clone: 8 min 36 s | `./gradlew build` |
 | Flash-challenge unpredictability | 6 colours × 8 steps = 1,679,616 sequences = **20.7 bits** | `./gradlew :core:test --tests '*ChallengeGeneratorTest'` |
 | Challenge uniformity | χ² over 100,000 draws, every parameter, p = 0.001 critical value | same |
 | Photosensitivity | ≤ 3 colour changes/s, steps ≥ 333 ms, checked on 900 sequences | `./gradlew :core:test --tests '*FlashScheduleTest'` |
@@ -122,7 +122,7 @@ cd pramaan
 ./gradlew build          # compiles with -Xlint:all -Werror, runs every test; about 9 minutes the first time
 ```
 
-Expect `BUILD SUCCESSFUL`. On a fresh clone that is **673 tests, 0 failures, 20 skipped**: the skipped ones need the face
+Expect `BUILD SUCCESSFUL`. On a fresh clone that is **686 tests, 0 failures, 20 skipped**: the skipped ones need the face
 models or MockMDS fixtures, which are not in the repository (see section 4). Details: `docs/test-report.md`.
 
 ### 3. Five minutes, with nothing else (no camera, no models, no device)
@@ -234,6 +234,9 @@ Where each deliverable the Decode submission guidelines name is:
 | Usage and installation instructions | "Installation and usage" above |
 | API documentation | [`docs/api/README.md`](docs/api/README.md) (Java API, the device interface over HTTP with real captured exchanges, tools and files) |
 | Architecture diagram | [`docs/architecture/README.md`](docs/architecture/README.md) |
+| Sequence diagrams (resident, operator, supervisor, binding, offline and updates, errors) | [`docs/architecture/sequence-diagrams.md`](docs/architecture/sequence-diagrams.md) |
+| Android low-resource tuning and hardware acceleration (code written, not yet run on a phone) | [`docs/android-low-resource.md`](docs/android-low-resource.md) |
+| Anonymised operational metrics (processing time, challenge time, retry and failure rate) | [`docs/metrics.md`](docs/metrics.md) |
 | Design mockups and wireframes | [`docs/design/README.md`](docs/design/README.md) (the screens, the flow, tokens, accessibility) |
 | Test data | [`docs/test-data.md`](docs/test-data.md) |
 | Test cases and results | [`docs/test-report.md`](docs/test-report.md), generated from the JUnit results by `tools/test_report.py` |
