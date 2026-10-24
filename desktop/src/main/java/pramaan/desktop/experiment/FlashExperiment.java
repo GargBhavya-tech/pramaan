@@ -213,8 +213,7 @@ public final class FlashExperiment {
             light.off();
             long offAt = System.currentTimeMillis();
             Thread.sleep(tail);
-            ffmpeg.destroy();
-            ffmpeg.waitFor(5, TimeUnit.SECONDS);
+            stop(ffmpeg);
             reader.join(3000);
             Files.write(folder.resolve("frames.csv"), ("index,epochMs,file\n" + String.join("\n", index) + "\n")
                     .getBytes(StandardCharsets.UTF_8));
@@ -223,14 +222,31 @@ public final class FlashExperiment {
             out.println("done: " + frames.get() + " frames, " + steps.size() + " colours, " + folder.resolve("run.json"));
             return 0;
         } finally {
-            ffmpeg.destroyForcibly();
             try {
-                // Windows keeps ffmpeg.log locked until the process is really gone; a caller that deletes the folder
-                // straight after this returns (the test's temp directory) would otherwise fail.
-                ffmpeg.waitFor(5, TimeUnit.SECONDS);
+                stop(ffmpeg);
                 reader.join(3000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    /**
+     * Ends ffmpeg and everything it started, and waits until they are gone. On Windows ffmpeg is often a shim (a
+     * Chocolatey one on CI) that launches the real ffmpeg as a child: ending only the shim leaves the child holding
+     * {@code ffmpeg.log} open, and a caller that then deletes the folder (a test's temp directory) fails.
+     */
+    private static void stop(Process ffmpeg) throws InterruptedException {
+        List<ProcessHandle> tree = new ArrayList<>();
+        ffmpeg.descendants().forEach(tree::add);
+        tree.forEach(ProcessHandle::destroyForcibly);
+        ffmpeg.destroyForcibly();
+        ffmpeg.waitFor(5, TimeUnit.SECONDS);
+        for (ProcessHandle h : tree) {
+            try {
+                h.onExit().get(5, TimeUnit.SECONDS);
+            } catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+                // already gone, or it will not die: nothing more to do here
             }
         }
     }
