@@ -1,0 +1,16 @@
+Test report for: ./gradlew :harness:test --tests "*BindingAttacksTest"  (from harness/build/test-results)
+
+BindingAttacksTest (each case is one row of the capture-binding attack table)
+
+  PASSED  theGenuineAttemptBinds   (3.429 s)
+  PASSED  theSbiChainLinksWhenTheCaptureChainsOntoTheEarlierOne   (0.481 s)
+  PASSED  delayingTheCaptureBy5SecondsIsRejected   (1.055 s)
+  PASSED  droppingAFrameFromTheChainIsRejected   (0.519 s)
+  PASSED  theCaptureCanBeRequestedOnlyOncePerAttempt   (0.493 s)
+  PASSED  passingTheChallengesThenReturningADifferentFaceIsRejected   (0.364 s)
+  PASSED  returningAnOldSignedCaptureIsRejected   (0.454 s)
+  PASSED  breakingTheSbiCaptureChainIsRejected   (0.246 s)
+
+  8 tests, 0 skipped, 0 failures, 0 errors
+
+BUILD SUCCESSFUL

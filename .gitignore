@@ -43,6 +43,9 @@ harness/out/
 reports/*.html
 !reports/.gitkeep
 
+# ---- The private upload folder for the submission: large files (video, models bundle) and working notes, never published ----
+/submission-package/
+
 # ---- Secrets / keys ----
 *.pem
 *.key

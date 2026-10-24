@@ -1,0 +1,11 @@
+$ ./gradlew :harness:fusedRedTeam
+
+SYNTHETIC. Accept at p >= 0.85, reject at p <= 0.20, otherwise the engine challenges.
+pitch  scene  moire  | p      no flash  | p      flash    
+0.80   0.87   0.98   | 0.986  ACCEPT    | 0.459  CHALLENGE
+1.00   0.90   0.98   | 0.989  ACCEPT    | 0.526  CHALLENGE
+1.20   0.98   0.97   | 0.994  ACCEPT    | 0.657  CHALLENGE
+2.00   0.84   0.92   | 0.949  ACCEPT    | 0.185  REJECT   
+
+of 85 pitches: accepted without the flash cue 4, accepted with it 0, left to the challenge with it 3
+
