@@ -211,7 +211,9 @@ class AttemptPhasesTest {
             assertEquals(PupilPhase.FLASHES, iris.stimuli.size());
             for (int g = 1; g < iris.stimuli.size(); g++) {
                 long gap = iris.stimuli.get(g) - iris.stimuli.get(g - 1);
-                assertTrue(gap >= PupilPhase.GAP_MIN_MS && gap < PupilPhase.GAP_MIN_MS + PupilPhase.GAP_SPAN_MS + 66,
+                // Flashes are scheduled at nominal offsets and fire on the first frame at or after each one, so the
+                // observed gap is the nominal gap plus or minus up to one frame (33 ms here) at either end.
+                assertTrue(gap >= PupilPhase.GAP_MIN_MS - 33 && gap < PupilPhase.GAP_MIN_MS + PupilPhase.GAP_SPAN_MS + 66,
                         "gap " + gap);
             }
             assertFalse(phase.results().get(0).abstained());
