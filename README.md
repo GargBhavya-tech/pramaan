@@ -138,6 +138,19 @@ cd pramaan
 ./gradlew build          # compiles with -Xlint:all -Werror, runs every test; about 9 minutes the first time
 ```
 
+**One command instead (needs Python 3):** it fetches and verifies the models, then runs the same build.
+
+```bash
+python tools/setup.py                                  # models, then ./gradlew build
+python tools/setup.py --task :desktop:showcase         # models, then the station screens
+```
+
+YuNet and SFace come from OpenCV's public zoo and are checked against the SHA-256 in `config/operating-points.json`. The other four
+models are our own conversions and are **not in this repository** (a model binary is never committed here: see
+`docs/licences.md`). They are taken from the zip named in `models/bundle-url.txt`, if the repository owner has set one, or you can
+put them in `models/` by hand; the script checks every file's hash and says which are missing. With a model missing it still
+builds, the tests that need one skip themselves, and the showcase and the reference device need none.
+
 Expect `BUILD SUCCESSFUL`. On a fresh clone that is **694 tests, 0 failures, 20 skipped**: the skipped ones need the face
 models or MockMDS fixtures, which are not in the repository (see section 4). Details: `docs/test-report.md`.
 

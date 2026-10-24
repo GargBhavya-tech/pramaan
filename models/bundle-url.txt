@@ -1,0 +1,12 @@
+# A direct-download link to a zip with the four models we converted ourselves (the two MiniFASNet and the two MediaPipe .onnx files).
+# tools/fetch_models.py and tools/setup.py read the first line that is not a comment. Leave this empty to skip the bundle, or set
+# the PRAMAAN_MODELS_URL environment variable, or pass --bundle-url.
+#
+# What the zip may hold is the owner's decision (docs/licences.md): the script takes only files whose name is in
+# config/operating-points.json and whose SHA-256 matches, and ignores everything else in the zip. SFace need not be in it: the
+# script downloads that one from the OpenCV Zoo itself.
+#
+# A Google Drive link must be a direct-download link, for example
+#   https://drive.google.com/uc?export=download&id=<file id>
+# A GitHub Release asset URL also works:
+#   https://github.com/GargBhavya-tech/pramaan/releases/download/<tag>/<file>.zip
