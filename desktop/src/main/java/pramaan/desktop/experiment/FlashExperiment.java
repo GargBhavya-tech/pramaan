@@ -224,6 +224,14 @@ public final class FlashExperiment {
             return 0;
         } finally {
             ffmpeg.destroyForcibly();
+            try {
+                // Windows keeps ffmpeg.log locked until the process is really gone; a caller that deletes the folder
+                // straight after this returns (the test's temp directory) would otherwise fail.
+                ffmpeg.waitFor(5, TimeUnit.SECONDS);
+                reader.join(3000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
