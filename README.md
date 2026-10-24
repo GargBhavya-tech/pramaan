@@ -228,7 +228,7 @@ Where each deliverable the Decode submission guidelines name is:
 | Source code | this repository |
 | Git repository with version history | this repository |
 | Working prototype or demo | `./gradlew :desktop:showcase` (the real screens, a simulated session, no hardware); the reference device and tools in "Installation and usage" section 3; the registration scaffold in section 4 |
-| Pitch deck (7 slides) | [`docs/submission/PRAMAAN-pitch-7slides.pdf`](docs/submission/PRAMAAN-pitch-7slides.pdf) |
+| Pitch deck (7 slides) | [`docs/submission/PRAMAAN-pitch-7slides.pdf`](docs/submission/PRAMAAN-pitch-7slides.pdf) and an editable [PowerPoint](docs/submission/PRAMAAN-pitch-7slides.pptx) with speaker notes (rebuilt by `tools/pptx/make_pitch_pptx.py`) |
 | Solution document (2 pages) | [`docs/submission/PRAMAAN-solution-2page.pdf`](docs/submission/PRAMAAN-solution-2page.pdf) |
 | Video demo | provided with the submission; its script is [`docs/submission/07-demo-video-script.md`](docs/submission/07-demo-video-script.md) and it is rebuilt by `tools/video/make_video.ps1` from the real screens, with a synthetic voice and an on-screen "simulated session" label |
 | Usage and installation instructions | "Installation and usage" above |
