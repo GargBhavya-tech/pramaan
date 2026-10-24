@@ -1,0 +1,119 @@
+{
+  "discovery": {
+    "deviceId": "1",
+    "deviceStatus": "Ready",
+    "certification": "L0",
+    "purpose": "Registration",
+    "digitalId": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsIng1...<2042 chars>",
+    "deviceCode": "pramaan-profile-stub",
+    "specVersion": [
+      "0.9.5"
+    ],
+    "deviceSubId": [
+      "0"
+    ],
+    "livenessProfile": {
+      "version": "0.1",
+      "signedStream": true,
+      "captureBurst": true,
+      "illuminatorControl": [
+        "VISIBLE_WHITE"
+      ],
+      "sensorTimestamps": true,
+      "depth": false,
+      "focusControl": false,
+      "onDevicePad": {
+        "algorithm": "mock-pad",
+        "version": "0.1",
+        "certification": "none"
+      }
+    }
+  },
+  "discovery_digitalId_header": {
+    "alg": "RS256",
+    "typ": "JWT",
+    "x5c": [
+      "<1064-char certificate>"
+    ]
+  },
+  "discovery_digitalId_payload": {
+    "serialNo": "PRAMAAN-PROFILE-0001",
+    "make": "PRAMAAN",
+    "model": "ProfileStub",
+    "type": "Face",
+    "deviceProvider": "PRAMAAN development",
+    "dateTime": "2026-10-24T05:08:19.492463600Z"
+  },
+  "stream_answer_header": {
+    "alg": "RS256",
+    "typ": "JWT",
+    "x5c": [
+      "<1064-char certificate>"
+    ]
+  },
+  "stream_answer_payload": {
+    "version": "0.1",
+    "transactionId": "0123456789abcdef0123456789abcdef",
+    "deviceEphemeralKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEOdtg...<124 chars>",
+    "clientEphemeralKeyHash": "309365fadfa5f8215d8892ccfcb62b3e35ece55f5041b54312a93f5dfaac96b7"
+  },
+  "stream_part_headers": [
+    "--BoundaryString",
+    "Content-Type:image/jpeg",
+    "Content-Length:11850",
+    "X-SBI-LP-Time:0",
+    "X-SBI-LP-Tag:74e1084d9d54aedf9bd21552ebe052e1b506f8f28d38d7f7660bef33b305c09b"
+  ],
+  "rcapture_entry": {
+    "specVersion": "0.9.5",
+    "data": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsIng1...<23496 chars>",
+    "hash": "7851FD0A3D208545734B26AD2F2021EBCE5CB006290079E4632E608BB9D58BDC"
+  },
+  "rcapture_payload": {
+    "bioType": "Face",
+    "bioSubType": "",
+    "purpose": "Registration",
+    "env": "Staging",
+    "transactionId": "0123456789abcdef0123456789abcdef",
+    "timestamp": "2026-10-24T05:08:47.763411300Z",
+    "bioValue": "RkFDADAzMAAAAC6OAAEAAAAAAC59AAAAAAAAAAAA...<15891 chars>",
+    "qualityScore": "80",
+    "deviceCode": "pramaan-profile-stub",
+    "deviceServiceVersion": "pramaan-profile-stub",
+    "streamTagHead": "158b9f4cdc6ca35c7d22a3bd7b05359221737d5a71589f9509cb413365e13e73"
+  },
+  "rcapture_hash": "7851FD0A3D208545734B26AD2F2021EBCE5CB006290079E4632E608BB9D58BDC",
+  "illuminate_payload": {
+    "version": "0.1",
+    "transactionId": "0123456789abcdef0123456789abcdef",
+    "emissions": [
+      {
+        "colour": "GREEN",
+        "atMs": "0",
+        "durationMs": "400"
+      },
+      {
+        "colour": "BLUE",
+        "atMs": "400",
+        "durationMs": "450"
+      }
+    ]
+  },
+  "burst": [
+    {
+      "index": "0",
+      "hash": "7851FD0A3D208545734B26AD2F2021EBCE5CB006290079E4632E608BB9D58BDC",
+      "transactionId": "0123456789abcdef0123456789abcdef"
+    },
+    {
+      "index": "1",
+      "hash": "0A8E50992D4574BA83F9C3CBAF794B8D8C54F87EBCDC8FE9B24E88D2112C60B3",
+      "transactionId": "0123456789abcdef0123456789abcdef"
+    },
+    {
+      "index": "2",
+      "hash": "8FFCBD3D4B8E7AF2739A605B15B8481A3A7594BF6FD261563532ADE439718ED7",
+      "transactionId": "0123456789abcdef0123456789abcdef"
+    }
+  ]
+}

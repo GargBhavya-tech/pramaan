@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" width="1200" height="620" role="img"
+     aria-label="User flow of the station: start-up check, operator sign-in, resident photo with retries, an exception branch approved by a different supervisor, and supervisor approval of the packet.">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b4a5a"/>
+    </marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8e1220"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: "Segoe UI", Arial, sans-serif; fill: #14202e; }
+    .t { font-size: 22px; font-weight: 700; }
+    .h { font-size: 15px; font-weight: 700; }
+    .s { font-size: 13px; fill: #3b4a5a; }
+    .l { font-size: 12px; font-weight: 600; fill: #3b4a5a; }
+    .step { fill: #e7eff8; stroke: #1b4f8a; stroke-width: 2; }
+    .good { fill: #e6f4ea; stroke: #1b6e3c; stroke-width: 2; }
+    .bad { fill: #fde8ea; stroke: #8e1220; stroke-width: 2; }
+    .warn { fill: #fff4d6; stroke: #6b4500; stroke-width: 2; }
+    .line { stroke: #3b4a5a; stroke-width: 2; fill: none; }
+    .red { stroke: #8e1220; stroke-width: 2; fill: none; stroke-dasharray: 7 5; }
+  </style>
+  <rect width="1200" height="620" fill="#ffffff"/>
+  <text class="t" x="40" y="38">Station user flow: one task at a time, and a way through when a resident cannot pass</text>
+  <text class="s" x="40" y="58">Rendered screens for each step are in docs/media. The resident sees one sentence and an icon on every screen; never a score or a cause.</text>
+
+  <!-- main path -->
+  <rect class="warn" x="30" y="100" width="170" height="96" rx="10"/>
+  <text class="h" x="44" y="126">Start-up</text>
+  <text class="s" x="44" y="146">verify policy, table,</text>
+  <text class="s" x="44" y="162">models, certificate</text>
+  <text class="s" x="44" y="180">(fails closed)</text>
+
+  <rect class="step" x="250" y="100" width="190" height="96" rx="10"/>
+  <text class="h" x="264" y="126">1  Operator sign-in</text>
+  <text class="s" x="264" y="146">face + operator ID,</text>
+  <text class="s" x="264" y="162">strict operating point</text>
+
+  <rect class="step" x="490" y="100" width="200" height="96" rx="10"/>
+  <text class="h" x="504" y="126">2  Resident photo</text>
+  <text class="s" x="504" y="146">operator ticks accessibility</text>
+  <text class="s" x="504" y="162">needs; system picks checks</text>
+
+  <rect class="step" x="740" y="100" width="190" height="96" rx="10"/>
+  <text class="h" x="754" y="126">Scan</text>
+  <text class="s" x="754" y="146">passive, then a random</text>
+  <text class="s" x="754" y="162">challenge, then capture</text>
+
+  <rect class="good" x="980" y="100" width="190" height="96" rx="10"/>
+  <text class="h" x="994" y="126">Accepted</text>
+  <text class="s" x="994" y="146">all four locks held;</text>
+  <text class="s" x="994" y="162">packet written with</text>
+  <text class="s" x="994" y="178">signed evidence</text>
+
+  <line class="line" x1="200" y1="148" x2="248" y2="148" marker-end="url(#a)"/>
+  <line class="line" x1="440" y1="148" x2="488" y2="148" marker-end="url(#a)"/>
+  <text class="l" x="446" y="140">signed in</text>
+  <line class="line" x1="690" y1="148" x2="738" y2="148" marker-end="url(#a)"/>
+  <line class="line" x1="930" y1="148" x2="978" y2="148" marker-end="url(#a)"/>
+
+  <rect class="good" x="980" y="260" width="190" height="96" rx="10"/>
+  <text class="h" x="994" y="286">3  Supervisor approval</text>
+  <text class="s" x="994" y="306">a supervisor approves the</text>
+  <text class="s" x="994" y="322">packet with their own face;</text>
+  <text class="s" x="994" y="338">not the operator</text>
+  <line class="line" x1="1075" y1="196" x2="1075" y2="258" marker-end="url(#a)"/>
+  <text class="l" x="1083" y="232">continue</text>
+
+  <!-- failure branches -->
+  <rect class="bad" x="250" y="250" width="190" height="96" rx="10"/>
+  <text class="h" x="264" y="276">Sign-in failed</text>
+  <text class="s" x="264" y="296">"check the ID and try again"</text>
+  <text class="s" x="264" y="312">after the last try: locked,</text>
+  <text class="s" x="264" y="328">operator alerted</text>
+  <line class="red" x1="345" y1="196" x2="345" y2="248" marker-end="url(#ar)"/>
+  <text class="l" x="353" y="228" style="fill:#8e1220">not recognised</text>
+
+  <rect class="bad" x="740" y="250" width="190" height="96" rx="10"/>
+  <text class="h" x="754" y="276">Attempt failed</text>
+  <text class="s" x="754" y="296">one generic sentence,</text>
+  <text class="s" x="754" y="312">"Attempt 2 of 3", a wait of</text>
+  <text class="s" x="754" y="328">2, 4, 8 s by count only</text>
+  <line class="red" x1="835" y1="196" x2="835" y2="248" marker-end="url(#ar)"/>
+  <text class="l" x="843" y="228" style="fill:#8e1220">not verified</text>
+  <path class="line" d="M740,298 C 700,298 700,170 738,160" marker-end="url(#a)"/>
+  <text class="l" x="688" y="282">retry</text>
+
+  <rect class="warn" x="490" y="410" width="200" height="110" rx="10"/>
+  <text class="h" x="504" y="436">Locked: exception flow</text>
+  <text class="s" x="504" y="456">a supervisor, not the</text>
+  <text class="s" x="504" y="472">operator, approves with a</text>
+  <text class="s" x="504" y="488">reason, after their own</text>
+  <text class="s" x="504" y="504">fresh liveness check</text>
+  <line class="red" x1="835" y1="346" x2="835" y2="380"/>
+  <path class="red" d="M835,380 L835,466 L692,466" marker-end="url(#ar)"/>
+  <text class="l" x="843" y="400" style="fill:#8e1220">attempts used up</text>
+
+  <rect class="bad" x="250" y="430" width="190" height="96" rx="10"/>
+  <text class="h" x="264" y="456">Refused</text>
+  <text class="s" x="264" y="476">same person as operator;</text>
+  <text class="s" x="264" y="492">capture looked like a photo</text>
+  <text class="s" x="264" y="508">of a photo; daily limit spent</text>
+  <line class="red" x1="488" y1="466" x2="442" y2="474" marker-end="url(#ar)"/>
+  <text class="l" x="290" y="548">referred for central review</text>
+
+  <rect class="good" x="740" y="430" width="190" height="96" rx="10"/>
+  <text class="h" x="754" y="456">Exception approved</text>
+  <text class="s" x="754" y="476">packet flagged EXCEPTION</text>
+  <text class="s" x="754" y="492">for central review</text>
+  <line class="line" x1="692" y1="500" x2="738" y2="500" marker-end="url(#a)"/>
+  <path class="line" d="M930,478 C 1010,478 1075,420 1075,358" marker-end="url(#a)"/>
+
+  <!-- always available -->
+  <rect x="30" y="250" width="190" height="270" rx="10" fill="#f3f5f7" stroke="#52606d" stroke-width="2" stroke-dasharray="7 5"/>
+  <text class="h" x="44" y="276">At any step</text>
+  <text class="s" x="44" y="298">Language: English / Hindi</text>
+  <text class="s" x="44" y="316">Larger text</text>
+  <text class="s" x="44" y="334">High contrast</text>
+  <text class="s" x="44" y="352">Spoken prompts, icons</text>
+  <text class="s" x="44" y="382">Station tools (administrator,</text>
+  <text class="s" x="44" y="400">audited, with a reason):</text>
+  <text class="s" x="44" y="418">diagnostics, re-take the</text>
+  <text class="s" x="44" y="436">empty-room backdrop</text>
+  <text class="s" x="44" y="466">The Offline badge and the</text>
+  <text class="s" x="44" y="484">"scaffold, not the MOSIP</text>
+  <text class="s" x="44" y="502">client" strip stay visible</text>
+</svg>

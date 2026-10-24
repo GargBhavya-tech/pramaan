@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700" role="img"
+     aria-label="PRAMAAN architecture: an unsigned preview and a signed capture leave the device by different paths; the engine analyses the preview and the capture binder links the two before evidence is signed and sent to the server.">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b4a5a"/>
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8e1220"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1b6e3c"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: "Segoe UI", Arial, sans-serif; fill: #14202e; }
+    .t { font-size: 22px; font-weight: 700; }
+    .h { font-size: 15px; font-weight: 700; }
+    .s { font-size: 13px; fill: #3b4a5a; }
+    .l { font-size: 13px; font-weight: 600; }
+    .box { fill: #e7eff8; stroke: #1b4f8a; stroke-width: 2; }
+    .ok { fill: #e6f4ea; stroke: #1b6e3c; stroke-width: 2; }
+    .warn { fill: #fff4d6; stroke: #6b4500; stroke-width: 2; }
+    .zone { fill: none; stroke: #52606d; stroke-width: 2; stroke-dasharray: 8 6; }
+    .line { stroke: #3b4a5a; stroke-width: 2; fill: none; }
+  </style>
+  <rect width="1200" height="700" fill="#ffffff"/>
+  <text class="t" x="40" y="40">PRAMAAN: two paths leave the device, and the binder links them</text>
+  <text class="s" x="40" y="62">Limits: the device here is MockMDS or our reference device; no certified device has implemented the optional Liveness Profile.</text>
+
+  <!-- device -->
+  <rect class="zone" x="30" y="110" width="250" height="400" rx="14"/>
+  <text class="s" x="44" y="130">Device trust boundary</text>
+  <text class="s" x="44" y="146">(L0: key in software; L1: in hardware)</text>
+  <rect class="box" x="50" y="160" width="210" height="150" rx="10"/>
+  <text class="h" x="66" y="188">Camera</text>
+  <text class="s" x="66" y="210">the sensor</text>
+  <rect class="box" x="50" y="340" width="210" height="140" rx="10"/>
+  <text class="h" x="66" y="368">SBI device service</text>
+  <text class="s" x="66" y="390">127.0.0.1, ports 4501-4600</text>
+  <text class="s" x="66" y="410">signs every capture with</text>
+  <text class="s" x="66" y="428">the session nonce inside</text>
+  <text class="s" x="66" y="452">optional: Liveness Profile</text>
+  <line class="line" x1="155" y1="310" x2="155" y2="338" marker-end="url(#arrow)"/>
+
+  <!-- paths -->
+  <line x1="262" y1="230" x2="372" y2="230" stroke="#8e1220" stroke-width="3" stroke-dasharray="9 6" marker-end="url(#arrowRed)"/>
+  <text class="l" x="288" y="214" style="fill:#8e1220">unsigned</text>
+  <text class="s" x="288" y="252">preview,</text>
+  <text class="s" x="288" y="268">M-JPEG,</text>
+  <text class="s" x="288" y="284">3 fps+</text>
+  <line x1="262" y1="410" x2="372" y2="410" stroke="#1b6e3c" stroke-width="3" marker-end="url(#arrowGreen)"/>
+  <text class="l" x="288" y="394" style="fill:#1b6e3c">signed</text>
+  <text class="s" x="288" y="432">capture,</text>
+  <text class="s" x="288" y="448">with nonce</text>
+
+  <!-- station -->
+  <rect class="zone" x="360" y="100" width="520" height="560" rx="14"/>
+  <text class="h" x="376" y="124">Station: Registration Client (desktop, Mode C) or SBI app (Android, Mode D)</text>
+
+  <rect class="box" x="380" y="150" width="200" height="86" rx="10"/>
+  <text class="h" x="394" y="176">SbiFrameSource</text>
+  <text class="s" x="394" y="196">implements FaceFrameSource</text>
+  <text class="s" x="394" y="214">frames and capture, one object</text>
+
+  <rect class="box" x="620" y="150" width="240" height="270" rx="10"/>
+  <text class="h" x="634" y="176">LivenessEngine</text>
+  <text class="s" x="634" y="198">1  source integrity, injection veto</text>
+  <text class="s" x="634" y="218">2  one usable face, quality gate</text>
+  <text class="s" x="634" y="238">3  passive model, asks nothing</text>
+  <text class="s" x="634" y="258">4  attack cues: moire, flash, scene,</text>
+  <text class="s" x="634" y="276">    flatness, stereo (each may abstain)</text>
+  <text class="s" x="634" y="298">5  fusion: accept / challenge / reject</text>
+  <text class="s" x="634" y="318">6  random challenge, onset, latency</text>
+  <text class="s" x="634" y="346">fails closed; thresholds only in</text>
+  <text class="s" x="634" y="364">operating-points.json (hash-bound)</text>
+  <text class="s" x="634" y="390">no score ever reaches a screen</text>
+  <line class="line" x1="580" y1="193" x2="618" y2="193" marker-end="url(#arrow)"/>
+  <text class="s" x="584" y="184">frames</text>
+
+  <rect class="ok" x="380" y="300" width="200" height="140" rx="10"/>
+  <text class="h" x="394" y="326">CaptureBinder: four locks</text>
+  <text class="s" x="394" y="348">nonce echoed in the capture</text>
+  <text class="s" x="394" y="366">hash chain over the frames</text>
+  <text class="s" x="394" y="384">same face as was watched</text>
+  <text class="s" x="394" y="402">recent enough (time)</text>
+  <text class="s" x="394" y="426">+ stream lock, burst (profile)</text>
+  <line class="line" x1="480" y1="236" x2="480" y2="298" marker-end="url(#arrow)"/>
+  <text class="s" x="488" y="272">capture</text>
+  <line class="line" x1="620" y1="360" x2="582" y2="360" marker-end="url(#arrow)"/>
+  <text class="s" x="590" y="350">verdict</text>
+
+  <rect class="box" x="620" y="470" width="240" height="84" rx="10"/>
+  <text class="h" x="634" y="496">EvidencePackager</text>
+  <text class="s" x="634" y="516">signed JWS: decision, cues,</text>
+  <text class="s" x="634" y="534">model hashes, binding level</text>
+  <line class="line" x1="480" y1="440" x2="480" y2="512" marker-end="url(#arrow)"/>
+  <line class="line" x1="480" y1="512" x2="618" y2="512" marker-end="url(#arrow)"/>
+  <text class="s" x="496" y="500">only if all locks held</text>
+
+  <rect class="warn" x="380" y="580" width="480" height="58" rx="10"/>
+  <text class="h" x="394" y="604">Station screens (EngineListener only)</text>
+  <text class="s" x="394" y="624">one plain sentence and an icon; guidance for quality, silence for security</text>
+  <line class="line" x1="740" y1="420" x2="740" y2="468"/>
+
+  <!-- packet and server -->
+  <rect class="box" x="920" y="170" width="250" height="130" rx="10"/>
+  <text class="h" x="934" y="196">Registration packet</text>
+  <text class="s" x="934" y="218">face BIR: bdb untouched</text>
+  <text class="s" x="934" y="238">others = signed evidence JWS</text>
+  <text class="s" x="934" y="258">encrypted sample crops</text>
+  <line class="line" x1="862" y1="512" x2="900" y2="512"/>
+  <line class="line" x1="900" y1="512" x2="900" y2="235"/>
+  <line class="line" x1="900" y1="235" x2="918" y2="235" marker-end="url(#arrow)"/>
+
+  <rect class="ok" x="920" y="380" width="250" height="230" rx="10"/>
+  <text class="h" x="934" y="406">Server (any time later)</text>
+  <text class="s" x="934" y="428">verifyEvidence: one command</text>
+  <text class="s" x="934" y="446">re-checks signature, binding,</text>
+  <text class="s" x="934" y="464">allow-list, sample crops</text>
+  <text class="s" x="934" y="490">rescanEvidence: re-score with a</text>
+  <text class="s" x="934" y="508">newer model years later</text>
+  <text class="s" x="934" y="534">transparency log: omission is</text>
+  <text class="s" x="934" y="552">detectable (Merkle)</text>
+  <text class="s" x="934" y="578">fraud analytics per operator</text>
+  <line class="line" x1="1045" y1="300" x2="1045" y2="378" marker-end="url(#arrow)"/>
+  <text class="s" x="1053" y="344">sync</text>
+
+  <text class="s" x="40" y="676">Android clients never see the preview: there the engine runs inside the SBI app (Mode D). The preview is unsigned; the capture is signed; the binder is what links them.</text>
+</svg>

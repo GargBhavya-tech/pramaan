@@ -74,7 +74,7 @@ What *is* measured and reproducible:
 
 | | Number | Reproduce |
 |---|---|---|
-| Test suite | **665 JVM tests, 0 failures.** 2 skipped on the author's machine; **20 skipped on a fresh clone**, because the face models and the MockMDS fixtures are not in the repository and the tests that need them skip themselves. Full uncached build from a fresh clone: 8 min 36 s | `./gradlew build` |
+| Test suite | **673 JVM tests, 0 failures.** 2 skipped on the author's machine; **20 skipped on a fresh clone**, because the face models and the MockMDS fixtures are not in the repository and the tests that need them skip themselves. Full uncached build from a fresh clone: 8 min 36 s | `./gradlew build` |
 | Flash-challenge unpredictability | 6 colours × 8 steps = 1,679,616 sequences = **20.7 bits** | `./gradlew :core:test --tests '*ChallengeGeneratorTest'` |
 | Challenge uniformity | χ² over 100,000 draws, every parameter, p = 0.001 critical value | same |
 | Photosensitivity | ≤ 3 colour changes/s, steps ≥ 333 ms, checked on 900 sequences | `./gradlew :core:test --tests '*FlashScheduleTest'` |
@@ -96,21 +96,77 @@ that speaks the profile, exists yet**. The CI workflow has not yet run on GitHub
 theme, a step rail, Hindi, larger-text and high-contrast modes; they are checked by offscreen renders and tests, and **no
 operator or resident has used them yet**.
 
-## Setup and run
+## Installation and usage
 
-Requirements: JDK 24 (CI uses Temurin 24). Gradle comes via the wrapper. `ffmpeg` is needed for some harness tests.
+Tested on Windows 11 with JDK 24. The CI workflow also targets Linux (Ubuntu, under `xvfb` for the JavaFX tests), but it has
+**never run**, so treat Linux and macOS as untried. No API keys, accounts or environment secrets are needed anywhere.
+
+### 1. What you need
+
+| Need | Version | For |
+|---|---|---|
+| JDK | **24** (CI uses Temurin 24); the code compiles to Java 11 bytecode | everything |
+| Git | any | cloning |
+| A graphics display | any (on Linux: `xvfb`) | the JavaFX screens and their tests; without one those tests skip |
+| ffmpeg with libx264 | any | optional: a few harness tests and the flash-experiment recorder |
+| Windows PowerShell 5.1, Microsoft Edge, ffmpeg | | optional: `tools/video/make_video.ps1` (the demo video) |
+| Android SDK | compileSdk 34 | optional: the Android library only |
+
+Gradle comes with the repository (`./gradlew`); the first run downloads its dependencies.
+
+### 2. Get it and build it
 
 ```bash
-./gradlew build                      # everything, with tests
-./gradlew :desktop:runScaffold       # the capture screen against MockMDS on 127.0.0.1:4501
+git clone https://github.com/GargBhavya-tech/pramaan.git
+cd pramaan
+./gradlew build          # compiles with -Xlint:all -Werror, runs every test; about 9 minutes the first time
 ```
 
-`runScaffold` needs the face models in `models/` and a running MockMDS. Neither is in the repository: models are
-listed with their licences in `docs/licences.md`, and MockMDS is fetched into `third_party/`. Tests that need them
-skip themselves.
+Expect `BUILD SUCCESSFUL`. On a fresh clone that is **673 tests, 0 failures, 20 skipped**: the skipped ones need the face
+models or MockMDS fixtures, which are not in the repository (see section 4). Details: `docs/test-report.md`.
 
-The Android engine (Mode D) is a separate build that needs the Android SDK (`android/local.properties` with
-`sdk.dir`, or `ANDROID_HOME`):
+### 3. Five minutes, with nothing else (no camera, no models, no device)
+
+```bash
+./gradlew :desktop:showcase                 # the real station screens with a SIMULATED session: SPACE pauses, arrows step
+./gradlew :harness:fusedRedTeam             # our red team against the whole decision (synthetic): 4 of 85 pitches accepted without a flash cue, 0 with
+./gradlew :harness:test --tests '*BindingAttacksTest'      # each capture-swap attack is a test, and each is rejected
+./gradlew :harness:runProfileDevice --args="--port 4533 --frame any.jpg"    # a device that speaks the Liveness Profile; any JPEG will do
+bash docs/api/examples/try-the-device.sh    # in a second terminal: calls every endpoint of it and decodes the signed answers
+```
+
+### 4. Run the registration scaffold against a device
+
+You need the **models** and a **device**.
+
+1. **Models.** Place the six files listed in [`models/README.md`](models/README.md) in `models/` (it gives each file's size,
+   SHA-256, source and licence, and how to regenerate the two we converted). Without them the engine refuses to start.
+2. **A device**, either:
+   - MOSIP's **MockMDS** on `127.0.0.1:4501` (setup: `docs/hardware-testing-guide.md`, section 2.2). It replays an image file,
+     and its stock face never passes the quality gate, so the screen stays on guidance ("Please move closer"); give it a
+     larger, evenly lit face for a full run (`docs/sbi-notes.md`); or
+   - **our reference device**: `./gradlew :harness:runProfileDevice --args="--port 4533 --frame some-face.jpg"` prints the CA
+     file to use, then in another terminal
+     `./gradlew :desktop:runScaffold --args="--device-ca build/profile-device/device-ca.cer --ports 4533"`.
+3. **Run:** `./gradlew :desktop:runScaffold` (add `--args="--lang hi --speech true"` for Hindi and spoken prompts, `--flash-screen
+   primary` to use the resident's own screen as the flash light, `--backdrop file` for a stored empty-room fingerprint). All
+   options: `docs/api/README.md`, section C.
+
+A **certified device** has not been tried, and neither has a real camera behind an SBI device service (`docs/claim-sheet.md`,
+L5, L13, L17). In the window: sign in with the operator ID (first time: "Enrol my face"), scan the resident, approve. Larger
+text, high contrast and the language switch are in the header; diagnostics and the backdrop re-take are under "Station tools".
+Default test IDs: `docs/test-data.md`.
+
+### 5. Verify, evaluate, calibrate
+
+Each is one Gradle task with documented arguments (`docs/api/README.md`, section C): `:harness:verifyEvidence` (the server
+re-check of a stored evidence record), `:harness:evaluate` (ISO/IEC 30107-3 report with intervals), `:harness:calibrate` (a
+proposal split by person; it never edits the table). Without a real corpus none of the numbers they would print is a measured
+error rate.
+
+### 6. Android (Mode D)
+
+A separate build that needs the Android SDK (`android/local.properties` with `sdk.dir`, or `ANDROID_HOME`):
 
 ```bash
 ./gradlew -p android :pramaan-android:check               # unit tests, lint, core's Android API check
@@ -118,8 +174,21 @@ The Android engine (Mode D) is a separate build that needs the Android SDK (`and
 ./gradlew -p android :pramaan-android:connectedDebugAndroidTest            # on a phone or emulator
 ```
 
-No API keys or environment secrets are needed. Station options are command-line flags (`--flash-screen N`,
-`--backdrop file`) and the signed policy bundle.
+The `check` passes; it has **not** run a liveness session on a phone.
+
+### 7. If something goes wrong
+
+| You see | Cause and fix |
+|---|---|
+| `Error: JavaFX runtime components are missing` | start the app through the Gradle task (`:desktop:runScaffold`, `:desktop:showcase`), not `java -jar` or by running an `Application` class directly |
+| `UnsatisfiedLinkError ... onnxruntime.dll: A dynamic link library (DLL) initialization routine failed` | ONNX Runtime is pinned to 1.20.0 on purpose; do not bump it. Why and how to check: `tools/versions.md` |
+| The scaffold shows "Face verification is not available" | the policy, the operating-point table or a model did not verify. Check `--config` and `--models`, and the six hashes in `models/README.md`; the console has the details |
+| "Camera not connected. Please check the device." | no device answered on the ports in `--ports`. Start MockMDS or the reference device |
+| The scan stays on "Please move closer" | the stock MockMDS face is too small and unevenly lit for the quality gate; that is guidance working, not a fault |
+| About 20 tests skipped | expected without the models and fixtures; a skip is never counted as a pass |
+| Hindi shows empty boxes | the machine lacks a Devanagari font (Nirmala UI ships with Windows) |
+| `WARNING: A restricted method in java.lang.System has been called` | Gradle's own native library on JDK 24; harmless |
+| `Address already in use` | pick another `--port` for the reference device |
 
 ## Tech stack
 
@@ -152,11 +221,22 @@ Still to capture (each needs hardware or a real run, so they are not faked):
 
 ## Submission (MOSIP Decode 2026, problem statement 04)
 
-Everything for the submission is in [`docs/submission/`](docs/submission/00-START-HERE.md): the 1-2 page
-[solution document](docs/submission/PRAMAAN-solution-2page.pdf), the 7-slide
-[pitch](docs/submission/PRAMAAN-pitch-7slides.pdf), a judging map, 25 prepared questions, the checklist and a video
-script. Start with `docs/submission/00-START-HERE.md`: it says what is confirmed, what to verify, and what only the
-team can do.
+Where each deliverable the Decode submission guidelines name is:
+
+| Deliverable | Where |
+|---|---|
+| Source code | this repository |
+| Git repository with version history | this repository |
+| Working prototype or demo | `./gradlew :desktop:showcase` (the real screens, a simulated session, no hardware); the reference device and tools in "Installation and usage" section 3; the registration scaffold in section 4 |
+| Pitch deck (7 slides) | [`docs/submission/PRAMAAN-pitch-7slides.pdf`](docs/submission/PRAMAAN-pitch-7slides.pdf) |
+| Solution document (2 pages) | [`docs/submission/PRAMAAN-solution-2page.pdf`](docs/submission/PRAMAAN-solution-2page.pdf) |
+| Video demo | provided with the submission; its script is [`docs/submission/07-demo-video-script.md`](docs/submission/07-demo-video-script.md) and it is rebuilt by `tools/video/make_video.ps1` from the real screens, with a synthetic voice and an on-screen "simulated session" label |
+| Usage and installation instructions | "Installation and usage" above |
+| API documentation | [`docs/api/README.md`](docs/api/README.md) (Java API, the device interface over HTTP with real captured exchanges, tools and files) |
+| Architecture diagram | [`docs/architecture/README.md`](docs/architecture/README.md) |
+| Design mockups and wireframes | [`docs/design/README.md`](docs/design/README.md) (the screens, the flow, tokens, accessibility) |
+| Test data | [`docs/test-data.md`](docs/test-data.md) |
+| Test cases and results | [`docs/test-report.md`](docs/test-report.md), generated from the JUnit results by `tools/test_report.py` |
 
 ## Documents
 
@@ -164,6 +244,9 @@ team can do.
 - `PRAMAAN_Build_Map.md`: the build, as 100 tickets in strict order, each with Build / Watch out / Test / Done when.
 - `docs/claim-sheet.md`: every claim, with its number, reproduction command and matching limitation.
 - `docs/red-team-log.md`, `docs/sbi-liveness-profile.md`, `docs/adr/`: findings, the standard proposal, and decisions.
+- `docs/api/`, `docs/architecture/`, `docs/design/`, `docs/test-report.md`, `docs/test-data.md`, `models/README.md`: the reference
+  documents named in the table above.
+- `CONTRIBUTING.md`: how to build, the rules that are easy to get wrong, and what must never be committed.
 
 ## Licence
 

@@ -152,7 +152,7 @@ the one generic security message at the user interface — differing text would 
 | T8 | A compromised or counterfeit device | Same | Same: a signed capture from a bad device is still a signed capture | Device certification is the control |
 | T9 | Forged emission log to fake a flash response | n/a | The log is signed by the device | A device that lies about its own light |
 | T10 | A device hides `captureBurst` so the client takes no burst and the `burst` lock never runs | n/a | The main capture still faces the identity lock; the burst is an extra check, not the only one | A device that wants to skip only the burst check. **Not closed:** unlike `requireSignedStream` there is no policy flag that makes the burst mandatory. A device that advertises it and then fails is refused (`BURST_FAILED`); one that never advertises it is not. |
-| T10 | Server cannot verify HMAC (it never had `Ks`) | n/a | Checkpoints are device-signed, so the evidence record can carry a verifiable head | The server trusts the client's report of per-frame verification; it can verify the checkpoints only |
+| T11 | Server cannot verify HMAC (it never had `Ks`) | n/a | Checkpoints are device-signed, so the evidence record can carry a verifiable head | The server trusts the client's report of per-frame verification; it can verify the checkpoints only |
 
 ## 6. Compatibility and cost
 

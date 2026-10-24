@@ -180,7 +180,7 @@ Fix the gap in the standard, not only in our client. Optional and backward compa
 - signed preview stream (per-frame tags, signed checkpoints)
 - a signed **log of what the device's light actually showed**
 - a burst of signed frames, device-side hooks
-- threat table T1–T10 and JSON schemas; a **runnable reference device**
+- threat table T1–T11 and JSON schemas; a **runnable reference device**
 
 *Nothing has been posted to MOSIP: we first ask how proposals are accepted (Q12).*
 
