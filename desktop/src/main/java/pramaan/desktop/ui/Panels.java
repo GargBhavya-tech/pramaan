@@ -141,8 +141,15 @@ public final class Panels {
                 kids.add(hint);
             }
             kids.addAll(List.of(body));
-            kids.add(status);
+            if (!kids.contains(status)) {
+                kids.add(status);
+            }
             getChildren().setAll(kids);
+        }
+
+        /** The answer banner, for a panel that wants it somewhere other than last. */
+        final Banner banner() {
+            return status;
         }
 
         /** Re-words the whole panel; the typed values and the last answer stay. */
@@ -378,6 +385,7 @@ public final class Panels {
             }
             body.add(scan);
             body.add(next);
+            body.add(banner()); // right under the buttons: the operator must not have to scroll to learn whether the scan worked
             body.add(photoTitle);
             body.add(frame);
             build(body.toArray(new Node[0]));

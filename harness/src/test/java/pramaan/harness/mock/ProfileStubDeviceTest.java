@@ -175,4 +175,47 @@ class ProfileStubDeviceTest {
             }
         }
     }
+
+    // ------------------------------------------------------------------------------------------ error paths (docs/api)
+
+    /** The status code the device answers a raw request with, or -1 if it dropped the connection without an answer. */
+    private static int statusOf(String method, String body) throws Exception {
+        try (java.net.Socket s = new java.net.Socket(java.net.InetAddress.getLoopbackAddress(), device.port())) {
+            s.setSoTimeout(10_000);
+            byte[] b = body.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            String head = method + " / HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: " + b.length
+                    + "\r\nConnection: close\r\n\r\n";
+            java.io.OutputStream out = s.getOutputStream();
+            out.write(head.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            out.write(b);
+            out.flush();
+            java.io.BufferedReader in = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(s.getInputStream(), java.nio.charset.StandardCharsets.US_ASCII));
+            String line = in.readLine();
+            return line == null ? -1 : Integer.parseInt(line.split(" ")[1]);
+        }
+    }
+
+    @Test
+    void aBodyThatIsNotJsonGetsA400AndNotADroppedConnection() throws Exception {
+        assertEquals(400, statusOf("RCAPTURE", "not json"));
+    }
+
+    @Test
+    void anUnknownVerbGetsA405() throws Exception {
+        assertEquals(405, statusOf("GET", ""));
+    }
+
+    @Test
+    void aBurstOutsideTheProfilesRangeGetsA400() throws Exception {
+        String txn = "0123456789abcdef0123456789abcdef";
+        assertEquals(400, statusOf("CAPTUREBURST", "{\"transactionId\":\"" + txn + "\",\"count\":\"500\",\"intervalMs\":\"200\"}"));
+        assertEquals(400, statusOf("CAPTUREBURST", "{\"transactionId\":\"" + txn + "\",\"count\":\"3\",\"intervalMs\":\"5\"}"));
+    }
+
+    @Test
+    void illuminatingForASessionThatNeverAgreedAKeyGetsA400() throws Exception {
+        assertEquals(400, statusOf("ILLUMINATE", "{\"transactionId\":\"ffffffffffffffffffffffffffffffff\","
+                + "\"schedule\":[{\"colour\":\"GREEN\",\"durationMs\":\"400\"}]}"));
+    }
 }

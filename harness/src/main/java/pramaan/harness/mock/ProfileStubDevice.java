@@ -113,7 +113,9 @@ public final class ProfileStubDevice implements AutoCloseable {
                 default:
                     ex.sendResponseHeaders(405, -1);
             }
-        } catch (GeneralSecurityException | RuntimeException e) {
+        } catch (GeneralSecurityException | RuntimeException | com.fasterxml.jackson.core.JsonProcessingException e) {
+            // A body that is not JSON is a JsonProcessingException, an IOException: without it here the handler would let the
+            // connection drop with no answer at all, where a client should get a plain 400.
             try {
                 ex.sendResponseHeaders(400, -1);
             } catch (IOException ignored) {

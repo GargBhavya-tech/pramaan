@@ -68,6 +68,26 @@ tasks.register<JavaExec>("streamSignature") {
     workingDir = rootProject.projectDir
 }
 
+// A walk through the station screens that needs no camera, device or models: the real UI driven by simulated events.
+// ./gradlew :desktop:showcase                                interactive window (SPACE pauses, arrows step)
+// ./gradlew :desktop:showcaseRender --args="build/showcase"  one PNG per screen plus beats.json, for the demo video
+tasks.register<JavaExec>("showcase") {
+    group = "application"
+    description = "Opens the station screens with a simulated session (no camera, device or models needed)."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.desktop.showcase.ShowcaseLauncher")
+    workingDir = rootProject.projectDir
+}
+
+tasks.register<JavaExec>("showcaseRender") {
+    group = "verification"
+    description = "Renders the simulated station walk-through offscreen to PNG files and a beats.json."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.desktop.showcase.ShowcaseLauncher")
+    args("--render", "build/showcase")
+    workingDir = rootProject.projectDir
+}
+
 // Docs: docs/research-plan-real-data.md (E1). Plays the engine's flash sequence on a screen while a camera records, and
 // writes frames, a frame index and a run log for the analyser. Records only with --consent-given.
 // ./gradlew :desktop:flashExperiment --args="--list-cameras"

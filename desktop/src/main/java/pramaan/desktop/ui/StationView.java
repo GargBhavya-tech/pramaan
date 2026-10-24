@@ -105,7 +105,14 @@ public final class StationView extends BorderPane {
         setCenter(centre);
 
         panelScroll.setFitToWidth(true);
-        panelScroll.setFitToHeight(true);
+        // Not fitToHeight: that squeezes the content to the window height and shrinks anything with a minimum size (the photo
+        // frame). The panel instead gets the viewport height as its MINIMUM, so its background fills the column while the
+        // content keeps its natural size and scrolls when it is taller.
+        panelScroll.viewportBoundsProperty().addListener((o, was, now) -> {
+            if (panel != null && now != null) {
+                panel.setMinHeight(now.getHeight());
+            }
+        });
         panelScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         panelScroll.setMinWidth(PANEL_WIDTH);
         panelScroll.setPrefWidth(PANEL_WIDTH);
@@ -167,6 +174,9 @@ public final class StationView extends BorderPane {
     public void setPanel(Panels.Panel next) {
         this.panel = next;
         next.retext(messages);
+        if (panelScroll.getViewportBounds() != null) {
+            next.setMinHeight(panelScroll.getViewportBounds().getHeight());
+        }
         panelScroll.setContent(next);
         panelScroll.setVvalue(0);
         next.focusFirst();
