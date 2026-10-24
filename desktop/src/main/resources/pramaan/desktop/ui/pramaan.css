@@ -206,8 +206,9 @@
 .stage-strip {
     -fx-background-color: -p-surface;
     -fx-border-color: -p-line;
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(20, 32, 46, 0.10), 8, 0, 0, 2);
     -fx-padding: 14 18 14 18;
     -fx-spacing: 14;
     -fx-alignment: center-left;
@@ -233,6 +234,31 @@
 .stage-attempt {
     -fx-font-size: 0.9em;
     -fx-text-fill: -p-ink-3;
+}
+
+/* Where this session is: position, verify, capture. A tick or a number and a word on each, so never colour alone. */
+.progress-step {
+    -fx-padding: 8 10 8 10;
+    -fx-min-height: 40;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-border-width: 1.5;
+    -fx-font-weight: bold;
+    -fx-font-size: 0.95em;
+}
+.progress-todo { -fx-background-color: -p-surface; -fx-border-color: -p-line; -fx-text-fill: -p-ink-3; }
+.progress-now { -fx-background-color: -p-info-bg; -fx-border-color: -p-primary; -fx-text-fill: -p-info; }
+.progress-done { -fx-background-color: -p-ok-bg; -fx-border-color: -p-ok; -fx-text-fill: -p-ok; }
+.progress-failed { -fx-background-color: -p-err-bg; -fx-border-color: -p-err; -fx-text-fill: -p-err; }
+
+/* Over the preview while liveness is being checked (PS04: a clear indication that it is). */
+.liveness-chip {
+    -fx-background-color: rgba(20, 32, 46, 0.88);
+    -fx-background-radius: 18;
+    -fx-padding: 8 14 8 12;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-font-size: 0.95em;
 }
 
 .stage-strip.stage-success { -fx-border-color: -p-ok; -fx-border-width: 2; }
@@ -304,6 +330,44 @@
 
 .button:hover {
     -fx-background-color: -p-info-bg;
+}
+
+.button:pressed {
+    -fx-background-color: derive(-p-info-bg, -8%);
+}
+
+.button.primary:pressed {
+    -fx-background-color: derive(-p-primary-hover, -12%);
+}
+
+/* A folded section (the accessibility options): one row until opened. */
+.fold {
+    -fx-box-border: transparent;
+}
+.fold > .title {
+    -fx-background-color: -p-surface;
+    -fx-border-color: -p-line;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 10 14 10 14;
+    -fx-min-height: 44;
+}
+.fold > .title > .text {
+    -fx-font-weight: bold;
+    -fx-text-fill: -p-ink;
+}
+.fold > .title > .arrow-button > .arrow {
+    -fx-background-color: -p-ink;
+}
+.fold:focused > .title {
+    -fx-border-color: -p-focus;
+    -fx-border-width: 3;
+}
+.fold > .content {
+    -fx-background-color: -p-surface;
+    -fx-border-color: -p-line;
+    -fx-border-width: 0 1 1 1;
+    -fx-padding: 12;
 }
 
 .button.primary {

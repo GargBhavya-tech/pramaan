@@ -34,6 +34,12 @@ public final class ZoneDecider {
     public static final long MIN_DELAY_MS = 200;
     public static final long MAX_DELAY_MS = 600;
 
+    /**
+     * The cues an attacker cannot answer by showing the camera a screen: the flash cue needs the live face to reflect the
+     * station's own random light, the stereo cue needs real depth. Names as in the operating-point table.
+     */
+    public static final Set<String> UNFAKEABLE_CUES = Set.of("flash", "stereo");
+
     private final DoubleSupplier uniform;
     private final double disagreementLogitGap;
 
@@ -60,6 +66,15 @@ public final class ZoneDecider {
         return decide(fusion, point, profile, vetoes, false);
     }
 
+    private static boolean hasUnfakeableLiveVote(FusionResult fusion) {
+        for (java.util.Map.Entry<String, Double> c : fusion.contributions().entrySet()) {
+            if (UNFAKEABLE_CUES.contains(c.getKey()) && c.getValue() > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private Decision decide(FusionResult fusion, OperatingPoint point, WorkflowProfile profile, Set<Veto> vetoes,
             boolean auditEligible) {
         long delay = MIN_DELAY_MS + (long) Math.floor(uniform.getAsDouble() * (MAX_DELAY_MS - MIN_DELAY_MS + 1));
@@ -77,6 +92,13 @@ public final class ZoneDecider {
         if (zone == Zone.ACCEPT_CANDIDATE && fusion.logitGap() > disagreementLogitGap) {
             zone = Zone.CHALLENGE;
             reasons.add(Decision.Reason.DISAGREEMENT);
+        }
+        if (zone == Zone.ACCEPT_CANDIDATE && auditEligible && profile.requireUnfakeableVote()
+                && !hasUnfakeableLiveVote(fusion)) {
+            // Red-team R-03: scene and moire, both shown by the attacker, can add up to an accept. Ask for a challenge.
+            // Not applied after a challenge: passing it is the live vote.
+            zone = Zone.CHALLENGE;
+            reasons.add(Decision.Reason.NO_DISPLAY_PROOF);
         }
         if (zone == Zone.ACCEPT_CANDIDATE) {
             if (auditEligible && profile.activeEnabled() && uniform.getAsDouble() < profile.auditChallengeProbability()) {

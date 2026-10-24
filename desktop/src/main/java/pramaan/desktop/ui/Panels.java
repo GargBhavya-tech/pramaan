@@ -342,6 +342,8 @@ public final class Panels {
         private final Label accessibility = new Label();
         private final Label accessibilityHint = new Label();
         private final List<CheckBox> boxes = new ArrayList<>();
+        /** The accessibility options, folded away until needed so the buttons stay in view; the header counts the ticks. */
+        private final javafx.scene.control.TitledPane accessibilityPane = new javafx.scene.control.TitledPane();
         private final Label photoTitle = new Label();
         private final Label photoEmpty = new Label();
         private final ImageView photo = new ImageView();
@@ -371,17 +373,23 @@ public final class Panels {
             List<Node> body = new ArrayList<>();
             body.add(registration);
             if (!profiles.isEmpty()) {
-                body.add(accessibility);
-                body.add(accessibilityHint);
+                VBox options = new VBox(6);
+                options.getChildren().add(accessibilityHint);
                 for (AccessibilityProfile p : profiles) {
                     CheckBox b = new CheckBox();
                     b.setUserData(p);
                     b.setWrapText(true);
                     b.setMaxWidth(Double.MAX_VALUE);
                     b.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+                    b.selectedProperty().addListener((o, was, is) -> retitleAccessibility());
                     boxes.add(b);
-                    body.add(b);
+                    options.getChildren().add(b);
                 }
+                accessibilityPane.setContent(options);
+                accessibilityPane.setExpanded(false);
+                accessibilityPane.setAnimated(false);
+                accessibilityPane.getStyleClass().add("fold");
+                body.add(accessibilityPane);
             }
             body.add(scan);
             body.add(next);
@@ -405,6 +413,7 @@ public final class Panels {
         void relabel() {
             registration.setText(t("pramaan.ui.resident.registration", Map.of("id", registrationId)));
             accessibility.setText(t("pramaan.ui.resident.accessibility"));
+            retitleAccessibility();
             accessibilityHint.setText(t("pramaan.ui.resident.accessibility.hint"));
             for (CheckBox b : boxes) {
                 b.setText(t("pramaan.ui.profile." + ((AccessibilityProfile) b.getUserData()).name()));
@@ -419,6 +428,11 @@ public final class Panels {
         @Override
         Node initialFocus() {
             return scan;
+        }
+
+        private void retitleAccessibility() {
+            long ticked = boxes.stream().filter(CheckBox::isSelected).count();
+            accessibilityPane.setText(accessibility.getText() + (ticked > 0 ? "  (" + ticked + ")" : ""));
         }
 
         /** The profiles the operator has ticked. */
@@ -442,6 +456,11 @@ public final class Panels {
 
         public List<CheckBox> boxes() {
             return boxes;
+        }
+
+        /** Opens the folded accessibility options (the showcase and tests tick boxes that would otherwise be hidden). */
+        public void expandAccessibility() {
+            accessibilityPane.setExpanded(true);
         }
     }
 

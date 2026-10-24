@@ -66,6 +66,11 @@ final class StrictNode {
         return value.booleanValue();
     }
 
+    /** An optional true/false: {@code fallback} when the key is absent, an error when it is present but not a boolean. */
+    boolean boolOr(String key, boolean fallback) {
+        return node.has(key) ? bool(key) : fallback;
+    }
+
     String text(String key) {
         JsonNode value = take(key);
         if (!value.isTextual()) {

@@ -98,10 +98,14 @@ How it worked: `FusedRedTeam` (./gradlew :harness:fusedRedTeam) fused the scene 
                accepted: three fall to the CHALLENGE zone and one is rejected.
 Why the controls missed it: weights are positive evidence that adds up, and nothing requires one of the cues in an ACCEPT to be
                independent of what the attacker shows to the camera. The ACCEPT zone issues no challenge.
-Decision:      DISCLOSED, with a design suggestion, not a fix (claim-sheet L21). Conditional on the passive CNN being fooled (not modelled:
+Decision:      FIXED for operators and supervisors, DISCLOSED for residents (claim-sheet L21). Fix: policy field `requireUnfakeableVote`
+               (on for OPERATOR and SUPERVISOR) and `ZoneDecider`: a first-decision ACCEPT needs a positive contribution from `flash`
+               or `stereo`, else CHALLENGE with reason NO_DISPLAY_PROOF; a passed challenge is the live vote, so the re-decision is not
+               blocked again. `ZoneDeciderUnfakeableVoteTest`, 8 cases. Not re-measured on a corpus.
+               Original text of the suggestion follows. Conditional on the passive CNN being fooled (not modelled:
                it is likely not) and on no flash light. Suggested rule, to be set on the corpus: an ACCEPT needs at least one live
                vote from a cue the display cannot fake (flash, stereo, a passed challenge), else the session goes to the
-               challenge. Not implemented: it would change BPCER at every station without a light, which cannot be priced without #65.
+               challenge. Not applied to residents: it would change BPCER at every station without a light, which cannot be priced without #65.
 Re-run result: pending real phones and the passive scorer on real replays.
 ```
 

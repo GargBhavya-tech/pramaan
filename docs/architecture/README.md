@@ -3,7 +3,7 @@
 ![PRAMAAN architecture: two paths leave the device, and the binder links them](architecture.svg)
 
 *Source: [`architecture.svg`](architecture.svg) (PNG copy: [`architecture.png`](architecture.png)). The full design, with the
-reasoning and the maths for every layer, is `PRAMAAN_Final_Bible.md` (Parts 0 to 48).*
+reasoning and the maths for every layer, is `docs/PRAMAAN_Final_Bible.md` (Parts 0 to 48).*
 
 Limits first: the device in this diagram is MOSIP's MockMDS or our own reference device. No certified device implements the
 optional Liveness Profile, the desktop app is a scaffold and not the MOSIP Registration Client, and the Android library has

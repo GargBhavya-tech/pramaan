@@ -20,7 +20,7 @@ test pass by deleting it, and do not loosen `-Xlint:all -Werror`.
 
 ## Rules that are easy to get wrong
 
-These are in `CLAUDE.md` in full; the ones a contributor most often breaks:
+These are argued in full in `docs/PRAMAAN_Final_Bible.md`; the ones a contributor most often breaks:
 
 - **No thresholds in code or in the policy YAML.** Every fusion number lives in `config/operating-points.json`, bound to the
   SHA-256 of each loaded model. Add or swap a model and the engine refuses to start until the table is regenerated.

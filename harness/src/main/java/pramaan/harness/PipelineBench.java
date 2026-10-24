@@ -82,6 +82,11 @@ public final class PipelineBench {
                         pipeline.latency().percentileMillis(stage, 50), pipeline.latency().percentileMillis(stage, 95),
                         pipeline.latency().count(stage));
             }
+            Runtime rt = Runtime.getRuntime();
+            System.gc();
+            System.out.printf("java heap      : %.0f MB in use after the run (max %.0f MB); Java heap only, ONNX Runtime keeps the models in native memory%n",
+                    (rt.totalMemory() - rt.freeMemory()) / 1048576.0, rt.maxMemory() / 1048576.0);
+            System.out.println("cores          : " + rt.availableProcessors());
         }
     }
 }

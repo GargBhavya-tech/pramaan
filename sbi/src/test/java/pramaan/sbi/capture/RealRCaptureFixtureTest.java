@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Build Map #4: the SBI contract, proven on a real response from MOSIP's MockMDS rather than assumed.
  *
- * <p>The fixture holds a face image, so it is never committed (CLAUDE.md). Regenerate it with a running
+ * <p>The fixture holds a face image, so it is never committed (see .gitignore and docs/test-data.md). Regenerate it with a running
  * MockMDS: {@code python tools/capture_sbi_fixtures.py}. Without it this test is skipped, not passed.
  */
 class RealRCaptureFixtureTest {

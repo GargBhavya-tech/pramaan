@@ -8,6 +8,17 @@ that table, keyed by its exact file name (`./gradlew check` fails otherwise).
 a hash mismatch), and the tests that need them skip themselves. So a fresh clone builds and passes its tests, with about 20
 skips, but cannot run the scaffold until the six files below are placed here.
 
+## Fetching and checking them
+
+```bash
+python tools/fetch_models.py --check     # verify what is here against config/operating-points.json; downloads nothing
+python tools/fetch_models.py             # download YuNet and SFace from the OpenCV Zoo (hash-checked), verify all six
+```
+
+The script refuses any file whose SHA-256 differs from the table and never overwrites a file that is already there. The other four
+files are our own conversions and have no public URL: regenerate them (below) or copy them from the models bundle; the script says
+which are missing. Its tests (`python -m unittest tools/test_fetch_models.py`) run against a local server and download nothing.
+
 ## The verified bundle (six files)
 
 `config/operating-points.json` binds every one of these to its SHA-256: swap a file for another and the engine will not start

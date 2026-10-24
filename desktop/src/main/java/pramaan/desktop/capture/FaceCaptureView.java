@@ -21,6 +21,7 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -70,6 +71,12 @@ public final class FaceCaptureView extends VBox {
     private final StackPane stageIcon = new StackPane();
     private final VBox words = new VBox(4, headline, guidance, notice, attempt);
     private final StackPane waiting = new StackPane();
+    /** Position, verify, capture: where this session is, as words and a tick or number, never colour alone. */
+    private final HBox progress = new HBox(8);
+    private final Label[] steps = {label("progress-step"), label("progress-step"), label("progress-step")};
+    private static final String[] STEP_IDS = {"pramaan.step.position", "pramaan.step.verify", "pramaan.step.capture"};
+    /** Over the preview while liveness is being checked: PS04 asks for a clear sign that it is. */
+    private final Label livenessChip = label("liveness-chip");
     private final AtomicReference<Image> pendingFrame = new AtomicReference<>();
     private CaptureScreenModel.Screen shown;
     private final Speech speech;
@@ -119,7 +126,28 @@ public final class FaceCaptureView extends VBox {
         StackPane.setAlignment(icon, Pos.TOP_RIGHT);
         StackPane.setMargin(icon, new Insets(14));
 
-        StackPane viewport = new StackPane(backdrop, waiting, preview, vignette, new Group(oval), arrow, icon);
+        StackPane clockIcon = Icons.CLOCK.node(18);
+        clockIcon.getStyleClass().add("icon-on-dark");
+        livenessChip.setGraphic(clockIcon);
+        livenessChip.setGraphicTextGap(8);
+        livenessChip.setVisible(false);
+        livenessChip.setManaged(false);
+        livenessChip.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        StackPane.setAlignment(livenessChip, Pos.TOP_LEFT);
+        StackPane.setMargin(livenessChip, new Insets(14));
+
+        progress.setAlignment(Pos.CENTER);
+        progress.setMaxWidth(PREVIEW_WIDTH);
+        progress.setMinWidth(PREVIEW_WIDTH);
+        progress.getStyleClass().add("progress-row");
+        for (Label step : steps) {
+            step.setMaxWidth(Double.MAX_VALUE);
+            step.setAlignment(Pos.CENTER);
+            HBox.setHgrow(step, Priority.ALWAYS);
+        }
+        progress.getChildren().setAll(steps);
+
+        StackPane viewport = new StackPane(backdrop, waiting, preview, vignette, new Group(oval), arrow, icon, livenessChip);
         viewport.setMinSize(PREVIEW_WIDTH, PREVIEW_HEIGHT);
         viewport.setPrefSize(PREVIEW_WIDTH, PREVIEW_HEIGHT);
         viewport.setMaxSize(PREVIEW_WIDTH, PREVIEW_HEIGHT);
@@ -143,7 +171,8 @@ public final class FaceCaptureView extends VBox {
         setSpacing(14);
         setPadding(new Insets(20));
         setAlignment(Pos.TOP_CENTER);
-        getChildren().addAll(viewport, strip);
+        getChildren().addAll(viewport, progress, strip);
+        showProgress(CaptureScreenModel.Stage.CONNECTING);
     }
 
     private static Label label(String styleClass) {
@@ -231,6 +260,7 @@ public final class FaceCaptureView extends VBox {
         set(guidance, s.guidance());
         set(notice, s.notice());
         set(attempt, s.attempt());
+        showProgress(s.stage());
         oval.setStroke(colour(s.stage()));
         oval.setStrokeWidth(s.stage() == CaptureScreenModel.Stage.CHALLENGE ? 7 : 5);
         if (stageClass != null) {
@@ -349,6 +379,48 @@ public final class FaceCaptureView extends VBox {
             }
         }
         return g;
+    }
+
+    /** Which of the three steps a stage belongs to: 0 position, 1 verify (checking and the challenge), 2 capture, 3 all done. */
+    static int stepOf(CaptureScreenModel.Stage stage) {
+        switch (stage) {
+            case CONNECTING:
+            case POSITIONING:
+                return 0;
+            case CHECKING:
+            case CHALLENGE:
+            case RETRY:
+                return 1;
+            case CAPTURING:
+                return 2;
+            case SUCCESS:
+                return 3;
+            case STOPPED:
+            default:
+                return -1;
+        }
+    }
+
+    private void showProgress(CaptureScreenModel.Stage stage) {
+        int now = stepOf(stage);
+        boolean failed = stage == CaptureScreenModel.Stage.RETRY || stage == CaptureScreenModel.Stage.STOPPED;
+        for (int i = 0; i < steps.length; i++) {
+            Label l = steps[i];
+            String name = messages.resolve(Text.of(STEP_IDS[i]));
+            boolean done = now > i;
+            boolean current = now == i;
+            l.setText((done ? "✓  " : failed && current ? "!  " : (i + 1) + "  ") + name);
+            l.getStyleClass().removeAll("progress-done", "progress-now", "progress-failed", "progress-todo");
+            l.getStyleClass().add(done ? "progress-done" : current ? (failed ? "progress-failed" : "progress-now") : "progress-todo");
+            l.setVisible(true);
+            l.setManaged(true);
+        }
+        boolean checking = stage == CaptureScreenModel.Stage.CHECKING || stage == CaptureScreenModel.Stage.CHALLENGE;
+        livenessChip.setText(messages.resolve(Text.of("pramaan.status.checking")));
+        livenessChip.setVisible(checking);
+        livenessChip.setManaged(checking);
+        progress.setAccessibleText(String.join(", ", java.util.Arrays.stream(steps).map(Label::getText)
+                .collect(java.util.stream.Collectors.toList())));
     }
 
     private void set(Label node, Text text) {

@@ -211,7 +211,7 @@ LAYER 1 — Face gate & quality: "one face, usable quality?"    (errors: no face
 **Two design rules hold everywhere:**
 
 1. **Every layer is a separate, independently testable module** passing explicit, immutable result objects. No hidden shared state.
-2. **Every time-dependent function takes an explicit timestamp** instead of reading a clock — so tests can simulate a 30-second challenge timeout in milliseconds. (Same discipline as TamperGuard.)
+2. **Every time-dependent function takes an explicit timestamp** instead of reading a clock — so tests can simulate a 30-second challenge timeout in milliseconds.
 
 **Extensions:** fifteen further additions (multimodal liveness, reflex challenges, stereo, SBI Liveness Profile, transparency log, fraud intelligence and more) plug into this pipeline through five plugin interfaces — see Parts 31–46.
 
@@ -394,7 +394,7 @@ against a real attacker; and PRNU remains not built.
 - **Quality (ISO/IEC 29794-5 style, OFIQ-inspired):**
   - Inter-ocular distance (IOD) ≥ 60 px for liveness frames; ≥ 90 px for the stored capture (19794-5 guidance).
   - Pose: |yaw| ≤ 15°, |pitch| ≤ 15° for passive frames.
-  - Sharpness: variance of Laplacian on the face crop (TamperGuard Part 4.2's metric).
+  - Sharpness: variance of Laplacian on the face crop (the standard focus measure).
   - Illumination: mean luminance in [60, 200]; uniformity = |mean(left half) − mean(right half)| / mean ≤ 0.35.
   - Occlusion: landmark visibility confidence.
 
@@ -487,7 +487,7 @@ Raw CNN outputs aren't probabilities. Fit **Platt scaling** ($p = \sigma(a\ell +
 **Package:** `pramaan.pad`
 **One-line goal:** independent, *physically different* evidence of an attack instrument — so an attack that fools one cue is caught by another.
 
-Design principle (from TamperGuard's classical + CNN fusion): **cues must fail differently.** A CNN, a frequency test, a geometry test, a physiology test and a physics test don't share blind spots.
+Design principle (classical plus CNN fusion): **cues must fail differently.** A CNN, a frequency test, a geometry test, a physiology test and a physics test don't share blind spots.
 
 | Cue | Catches | Blind to | Tier |
 |---|---|---|---|
@@ -625,7 +625,7 @@ $$\text{Zone} = \begin{cases} \text{ACCEPT-candidate} & P_{\text{live}} \ge \tau
 
 The PS describes one threshold. That's incomplete: a *clear* attack (blazing moiré) should be rejected, not handed a challenge to practise against.
 
-### Tiers (WHITE / BLUE / RED, reused from SecondSense)
+### Tiers (WHITE / BLUE / RED)
 
 | Tier | Meaning | Action |
 |---|---|---|
@@ -938,7 +938,7 @@ Liveness runs on the **unsigned** preview; the packet stores the **signed** rcap
 
 $$H_0 = \text{SHA256}(\text{nonce}), \qquad H_i = \text{SHA256}\big(H_{i-1}\ \|\ \text{SHA256}(\text{frame}_i)\ \|\ t_i\big)$$
 
-The head $H_n$ goes into the evidence package; any removed, reordered or substituted frame changes it (TamperGuard's evidence hashing, made sequential).
+The head $H_n$ goes into the evidence package; any removed, reordered or substituted frame changes it (the same idea as evidence hashing, made sequential).
 
 *As built (#52/#53, `FrameHashChain`):* the nonce is hashed as the 32 ASCII hex characters sent as `transactionId`; $\text{frame}_i$ is the exact decoded bytes the engine analysed; $t_i$ is arrival time in epoch milliseconds, 8 bytes big-endian; time may not run backwards within a chain. Each attempt owns one chain, one track and its cue results (`AttemptEvidence`). On face loss — a reported track loss, a frame gap over the track gap (300 ms; 1.5 frame intervals on a slower stream, Part 6), or a frame from a different `trackId` — the whole object is replaced, not edited, and no decision is accepted until frames from the new face have been hashed. A challenge's re-decision needs at least one frame hashed during the challenge.
 
@@ -1299,7 +1299,7 @@ $$z = \frac{x - n p_0}{\sqrt{n p_0 (1 - p_0)}}$$
 
 ### 18.3 Output
 
-Signals go into the audit log (hash-chained, append-only — TamperGuard's audit-log pattern) and sync to a server-side fraud dashboard. The client never blocks on analytics alone except for the operator-face cross-check (a hard rule).
+Signals go into the audit log (hash-chained, append-only) and sync to a server-side fraud dashboard. The client never blocks on analytics alone except for the operator-face cross-check (a hard rule).
 
 ### How to test
 
@@ -1658,13 +1658,13 @@ iBeta PAD Level 1/2 (ISO 30107-3), FIDO Face Verification certification (PAD + i
 
 ---
 
-## Part 26 — Review of the Earlier Draft ("AEGIS"): What Was Kept, What Was Fixed
+## Part 26 — Review of the Earlier Draft: What Was Kept, What Was Fixed
 
-The AEGIS draft had the right instincts — adversarial framing, mock-device harness, APCER/BPCER, session-seeded challenges, injection awareness. This bible keeps all of that and fixes the following:
+The earlier draft (named AEGIS, never published) had the right instincts — adversarial framing, mock-device harness, APCER/BPCER, session-seeded challenges, injection awareness. This bible keeps all of that and fixes the following:
 
 | # | Draft said | Problem | Fixed in |
 |---|---|---|---|
-| 1 | Name "AEGIS" | Placeholder; replaced | PRAMAAN ("proof") |
+| 1 | The draft's working name | Placeholder; replaced | PRAMAAN ("proof") |
 | 2 | Diagram: RISK → final decision → PAD → clients | PAD placed *after* the decision; PAD must be an input to fusion | Part 3 |
 | 3 | MiniFASNet weights "MIT-licensed" | Silent-Face-Anti-Spoofing is Apache-2.0 | Part 7, 23.2 |
 | 4 | MediaPipe "468 points", "Java desktop path" | Face Landmarker gives 478 (incl. iris) + blendshapes; no official desktop-Java Tasks API | Part 11, 20.1 |
@@ -1683,7 +1683,7 @@ The AEGIS draft had the right instincts — adversarial framing, mock-device har
 | 17 | Flatness via geometry implied to catch replays | Video of a real 3D face shows parallax | Part 8.3 (honest limits) |
 | 18 | Scope: capture binding absent from CORE | It's cheap and essential | Part 27 |
 
-Kept from the draft, deliberately: the CORE/STRETCH/CRAZY tiering; promoting the mock device to CORE; the Phantos-style FFmpeg degradation gauntlet; TamperGuard's classical + CNN fusion and debounce/state-machine discipline; SecondSense's WHITE/BLUE/RED tiers; the demo arc structure; the "integrate into the real repo vs faithful scaffold" decision.
+Kept from the draft, deliberately: the CORE/STRETCH/CRAZY tiering; promoting the mock device to CORE; an FFmpeg degradation gauntlet; classical plus CNN fusion and debounce/state-machine discipline; SecondSense's WHITE/BLUE/RED tiers; the demo arc structure; the "integrate into the real repo vs faithful scaffold" decision.
 
 ---
 
@@ -1720,7 +1720,7 @@ Kept from the draft, deliberately: the CORE/STRETCH/CRAZY tiering; promoting the
 | **STRETCH** | Second-camera stereo depth (Part 38) | $15 of hardware makes flat spoofs trivial |
 | **STRETCH** | Reference hardware kit + signed peripheral protocol (Part 40) | Makes physics cues work at resident capture |
 | **STRETCH** | Evidence transparency log (Part 42) | Failed attempts can't be deleted |
-| **STRETCH** | Background & illumination consistency (Part 43) | Reuses TamperGuard calibration + FOV proxy |
+| **STRETCH** | Background & illumination consistency (Part 43) | Reuses a scene-calibration layer and a field-of-view proxy |
 | **STRETCH** | Attack map / fraud intelligence (Part 44) | National-scale fraud-ring detection |
 | **STRETCH** | Synthetic attack factory (Part 45) | Unlimited realistic attack data |
 | **CRAZY** | SBI Liveness Profile proposal + mock reference implementation (Part 41) | Fixes the trust gap at the standard level |
@@ -2448,13 +2448,13 @@ Layer 9 (Part 14) → append leaf → packet carries the leaf index and local ST
 **Plugin:** `PadCue` `SceneConsistencyCue` (requires `KNOWN_BACKDROP` for part A)
 **One-line goal:** the face must belong to *this room* — right backdrop, right light.
 
-### A. Scene fingerprint (reusing TamperGuard's calibration layer)
+### A. Scene fingerprint (reusing a scene-calibration layer)
 
-At installation (and after any confirmed camera move), capture the empty scene and store a fingerprint — exactly TamperGuard's Layer 0 calibration: colour layout, edge density, ORB keypoints. At capture time, segment the person (e.g., MediaPipe selfie segmentation) and compare the **visible background** to the fingerprint:
+At installation (and after any confirmed camera move), capture the empty scene and store a fingerprint — a Layer 0 calibration: colour layout, edge density, ORB keypoints. At capture time, segment the person (e.g., MediaPipe selfie segmentation) and compare the **visible background** to the fingerprint:
 
 $$S_{\text{bg}} = \alpha \cdot \text{HistCorr}_{\text{bg}} + (1-\alpha) \cdot \frac{\#\text{ORB matches}}{\#\text{fingerprint keypoints}}$$
 
-An injected video recorded elsewhere shows the wrong room → low $S_{\text{bg}}$. And TamperGuard's **FOV proxy** detects when the camera has been moved, triggering an audited re-fingerprint instead of false alarms.
+An injected video recorded elsewhere shows the wrong room → low $S_{\text{bg}}$. And a **field-of-view proxy** detects when the camera has been moved, triggering an audited re-fingerprint instead of false alarms.
 
 ### B. Illumination consistency
 
@@ -2470,7 +2470,7 @@ Room lit by warm ceiling lights: backdrop chromaticity (r, g) = (0.40, 0.36). Li
 
 ### Edge cases
 
-People walking behind (exclude moving regions via background subtraction — TamperGuard's MOG2), backdrop replaced (re-fingerprint, audited), mixed lighting (window + lamps: widen tolerance using the centre's calibration statistics), no backdrop fingerprint (cue abstains).
+People walking behind (exclude moving regions via background subtraction — MOG2), backdrop replaced (re-fingerprint, audited), mixed lighting (window + lamps: widen tolerance using the centre's calibration statistics), no backdrop fingerprint (cue abstains).
 
 ### How to test
 
@@ -2547,7 +2547,7 @@ where $p_d'$ is the display pitch as projected onto the sensor.
 
 **2. Print.** Gamut reduction to a CMYK profile, halftone screening at a random LPI (e.g., 85–175), paper texture, gloss specular highlights, curvature warps (bent photos), cut-out eye holes with a live eye behind.
 
-**3. Replay.** Chains of H.264 re-encodes at random bitrates (the Phantos "gauntlet"), frame-rate conversion artefacts.
+**3. Replay.** Chains of H.264 re-encodes at random bitrates (a re-encoding "gauntlet"), frame-rate conversion artefacts.
 
 **4. Digital.** Face swap / reenactment outputs of consenting team members; virtual-camera-style clean injections.
 

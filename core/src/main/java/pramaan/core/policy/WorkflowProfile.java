@@ -24,9 +24,11 @@ public final class WorkflowProfile {
     private final ChallengePolicy challenge;
     private final RetryPolicy retries;
     private final LockoutAction onLockout;
+    private final boolean requireUnfakeableVote;
 
     private WorkflowProfile(String operatingPoint, boolean activeEnabled, double auditChallengeProbability, int minCues,
-            ChallengePolicy challenge, RetryPolicy retries, LockoutAction onLockout) {
+            ChallengePolicy challenge, RetryPolicy retries, LockoutAction onLockout, boolean requireUnfakeableVote) {
+        this.requireUnfakeableVote = requireUnfakeableVote;
         this.operatingPoint = operatingPoint;
         this.activeEnabled = activeEnabled;
         this.auditChallengeProbability = auditChallengeProbability;
@@ -44,6 +46,7 @@ public final class WorkflowProfile {
         ChallengePolicy challenge = ChallengePolicy.read(n.object("challenge"));
         RetryPolicy retries = RetryPolicy.read(n.object("retries"));
         LockoutAction onLockout = n.enumValue("onLockout", LockoutAction.class);
+        boolean requireUnfakeableVote = n.boolOr("requireUnfakeableVote", false);
         n.finish();
 
         String p = n.path();
@@ -57,11 +60,21 @@ public final class WorkflowProfile {
         if (minCues < 1) {
             throw new InvalidPolicyException(p + ".minCues: must be at least 1, got " + minCues);
         }
-        return new WorkflowProfile(operatingPoint, activeEnabled, audit, minCues, challenge, retries, onLockout);
+        return new WorkflowProfile(operatingPoint, activeEnabled, audit, minCues, challenge, retries, onLockout,
+                requireUnfakeableVote);
     }
 
     public String operatingPoint() {
         return operatingPoint;
+    }
+
+    /**
+     * Red-team finding R-03: an ACCEPT on the first decision needs at least one live vote from a cue the screen cannot
+     * fake (flash reflection or stereo depth). Without one the session goes to the challenge instead, and a passed
+     * challenge is the live vote. Optional, default false; the shipped policy turns it on for operators and supervisors.
+     */
+    public boolean requireUnfakeableVote() {
+        return requireUnfakeableVote;
     }
 
     public boolean activeEnabled() {

@@ -1,6 +1,6 @@
 # Running and testing PRAMAAN on real devices — a step-by-step guide
 
-This is a practical companion to `PRAMAAN_Final_Bible.md` (design) and `PRAMAAN_Build_Map.md` (tickets). It answers
+This is a practical companion to `PRAMAAN_Final_Bible.md` (design) and `PRAMAAN_Build_Map.md` (tickets), both in this folder. It answers
 one question: **what do I actually plug in, run, and look at, to see this thing work?**
 
 ## 0. The honest picture first

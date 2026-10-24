@@ -233,6 +233,7 @@ public final class UiShowcase extends Application {
                 "If the passive checks are not enough, the engine asks for something a recording cannot contain, chosen at random, "
                         + "with an icon and a spoken prompt.",
                 s -> {
+                    resident[0].expandAccessibility();
                     resident[0].boxes().get(1).setSelected(true);
                     s.screen(SessionState.CHALLENGING, Guidance.NONE, turn, false, null, null);
                 }));

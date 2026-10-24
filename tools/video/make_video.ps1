@@ -105,7 +105,7 @@ $scenes = @(
     (Beat "fails-closed"),
     @{ image = (Join-Path $img "term-binding.png"); text = "Now the capture binding. Four locks run before any accept: the session nonce echoed inside the device signed capture, a hash chain over the frames, identity continuity, and time. Each attack is a test, and each is rejected. These locks work on unmodified S B I." },
     @{ image = (Join-Path $img "term-redteam.png"); text = "We also attacked ourselves. This is synthetic data. With the passive model assumed fooled and no flash light, the fusion accepted four of eighty five display pitches. With the flash cue, none. We logged it, proposed a fix, and did not turn it on." },
-    @{ image = (Join-Path $img "slide-6.png"); text = "What we verify, and what we do not claim. Six hundred eighty six automated tests pass. We have not measured an error rate on real attacks, because no real corpus exists. It has not run on a real device or a phone, and no user has tried the screens yet." },
+    @{ image = (Join-Path $img "slide-6.png"); text = "What we verify, and what we do not claim. Six hundred ninety four automated tests pass. We have not measured an error rate on real attacks, because no real corpus exists. It has not run on a real device or a phone, and no user has tried the screens yet." },
     @{ image = (Join-Path $img "slide-7.png"); text = "Next: one real experiment, a consented corpus, and a real device. We would like to ask MOSIP how an S B I extension should be proposed. The code is M P L two point zero, like MOSIP. Thank you." }
 )
 

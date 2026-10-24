@@ -29,7 +29,9 @@ public final class Decision {
         /** Contributing cues disagreed by more than the table's gap, so an accept became a challenge. */
         DISAGREEMENT,
         /** A random audit challenge in WHITE. */
-        AUDIT
+        AUDIT,
+        /** The profile needs a live vote from a cue the display cannot fake, and none was cast (red-team R-03). */
+        NO_DISPLAY_PROOF
     }
 
     private final Zone zone;

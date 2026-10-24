@@ -8,6 +8,20 @@ Built for MOSIP Decode 2026, problem statement 04. *Pramaan* is Sanskrit for "pr
 [![build](https://github.com/GargBhavya-tech/pramaan/actions/workflows/build.yml/badge.svg)](https://github.com/GargBhavya-tech/pramaan/actions/workflows/build.yml)
 ![Java](https://img.shields.io/badge/Java-24-blue) ![licence](https://img.shields.io/badge/licence-MPL--2.0-green)
 
+## A judge in three minutes
+
+| Minute | Do this | What you will see |
+|---|---|---|
+| 1 | Read [`docs/submission/PRAMAAN-solution-2page.pdf`](docs/submission/PRAMAAN-solution-2page.pdf), or the 7-slide [pitch](docs/submission/PRAMAAN-pitch-7slides.pdf) | The problem, the idea (**proof, not a verdict**), and the limits stated first |
+| 2 | `./gradlew :desktop:showcase` (or look at [`docs/media/`](docs/media/)) | The real station screens, driven by a simulated session: resident capture, challenge, Hindi, accessibility modes, fails closed |
+| 2 | `./gradlew :harness:test --tests '*BindingAttacksTest'` | The capture-swap attack is a test, and each swap is rejected; `./gradlew build` runs everything |
+| 3 | Read [`docs/claim-sheet.md`](docs/claim-sheet.md) | Every claim, its number, its reproduction command, and what we do **not** claim |
+
+What is **not** here, so you do not have to look for it: no measured error rate on real attacks (no corpus exists), nothing run
+on a live device or phone yet, and the desktop app is a scaffold, not the Registration Client. The design is in
+[`docs/PRAMAAN_Final_Bible.md`](docs/PRAMAAN_Final_Bible.md) and the build order in [`docs/PRAMAAN_Build_Map.md`](docs/PRAMAAN_Build_Map.md).
+Both are long; the claim sheet is the short route in.
+
 ## The problem
 
 National ID enrolment (MOSIP) captures a resident's face through a certified biometric device (SBI). Liveness checks
@@ -74,7 +88,7 @@ What *is* measured and reproducible:
 
 | | Number | Reproduce |
 |---|---|---|
-| Test suite | **686 JVM tests, 0 failures.** 2 skipped on the author's machine; **20 skipped on a fresh clone**, because the face models and the MockMDS fixtures are not in the repository and the tests that need them skip themselves. Full uncached build from a fresh clone: 8 min 36 s | `./gradlew build` |
+| Test suite | **694 JVM tests, 0 failures.** 2 skipped on the author's machine; **20 skipped on a fresh clone**, because the face models and the MockMDS fixtures are not in the repository and the tests that need them skip themselves. Full uncached build from a fresh clone: 8 min 36 s | `./gradlew build` |
 | Flash-challenge unpredictability | 6 colours × 8 steps = 1,679,616 sequences = **20.7 bits** | `./gradlew :core:test --tests '*ChallengeGeneratorTest'` |
 | Challenge uniformity | χ² over 100,000 draws, every parameter, p = 0.001 critical value | same |
 | Photosensitivity | ≤ 3 colour changes/s, steps ≥ 333 ms, checked on 900 sequences | `./gradlew :core:test --tests '*FlashScheduleTest'` |
@@ -83,7 +97,9 @@ What *is* measured and reproducible:
 | Stereo cue (synthetic) | real-face relief ≈ 25 mm vs flat print ≈ 0 mm (±4 mm) | `./gradlew :core:test --tests '*StereoDepthCueTest'` |
 
 The repo also records its own red-team findings honestly. For example, R-03 in `docs/red-team-log.md` shows that
-without a flash cue, attacker-controlled cues can sum to an accept on a synthetic screen replay.
+without a flash cue, attacker-controlled cues can sum to an accept on a synthetic screen replay. It is fixed for operators and
+supervisors (an accept needs a live flash or stereo vote, else a challenge) and still open for residents, where the same rule would
+raise false rejections that cannot be priced without real data.
 
 ## Status
 
@@ -122,7 +138,7 @@ cd pramaan
 ./gradlew build          # compiles with -Xlint:all -Werror, runs every test; about 9 minutes the first time
 ```
 
-Expect `BUILD SUCCESSFUL`. On a fresh clone that is **686 tests, 0 failures, 20 skipped**: the skipped ones need the face
+Expect `BUILD SUCCESSFUL`. On a fresh clone that is **694 tests, 0 failures, 20 skipped**: the skipped ones need the face
 models or MockMDS fixtures, which are not in the repository (see section 4). Details: `docs/test-report.md`.
 
 ### 3. Five minutes, with nothing else (no camera, no models, no device)
@@ -237,14 +253,15 @@ Where each deliverable the Decode submission guidelines name is:
 | Sequence diagrams (resident, operator, supervisor, binding, offline and updates, errors) | [`docs/architecture/sequence-diagrams.md`](docs/architecture/sequence-diagrams.md) |
 | Android low-resource tuning and hardware acceleration (code written, not yet run on a phone) | [`docs/android-low-resource.md`](docs/android-low-resource.md) |
 | Anonymised operational metrics (processing time, challenge time, retry and failure rate) | [`docs/metrics.md`](docs/metrics.md) |
+| Performance, measured on one laptop (per-stage latency; Android unmeasured) | [`docs/performance.md`](docs/performance.md) |
 | Design mockups and wireframes | [`docs/design/README.md`](docs/design/README.md) (the screens, the flow, tokens, accessibility) |
 | Test data | [`docs/test-data.md`](docs/test-data.md) |
 | Test cases and results | [`docs/test-report.md`](docs/test-report.md), generated from the JUnit results by `tools/test_report.py` |
 
 ## Documents
 
-- `PRAMAAN_Final_Bible.md`: the design, with the reasoning, the math, the threat model and the research log (Parts 0–48).
-- `PRAMAAN_Build_Map.md`: the build, as 100 tickets in strict order, each with Build / Watch out / Test / Done when.
+- `docs/PRAMAAN_Final_Bible.md`: the design, with the reasoning, the math, the threat model and the research log (Parts 0–48).
+- `docs/PRAMAAN_Build_Map.md`: the build, as 100 tickets in strict order, each with Build / Watch out / Test / Done when.
 - `docs/claim-sheet.md`: every claim, with its number, reproduction command and matching limitation.
 - `docs/red-team-log.md`, `docs/sbi-liveness-profile.md`, `docs/adr/`: findings, the standard proposal, and decisions.
 - `docs/api/`, `docs/architecture/`, `docs/design/`, `docs/test-report.md`, `docs/test-data.md`, `models/README.md`: the reference
