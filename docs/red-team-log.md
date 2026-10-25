@@ -108,8 +108,11 @@ Decision:      FIXED for operators and supervisors, DISCLOSED for residents (cla
                challenge. Not applied to residents, for two reasons. It would change BPCER at every station without a light, which cannot be priced without #65.
                And it turns an accept into a challenge: a resident who ticked an accessibility profile (infant, cannot see the screen,
                limited movement) is asked fewer or gentler checks by design, so a rule that forces a challenge on them could lock out
-               exactly the people the inclusion rules protect. Enabling it for residents needs the session to pass the profiles to the
-               decider so the rule can stand down for them; that is designed, not built.
+               exactly the people the inclusion rules protect. The stand-down is now built: the engine passes whether the session has an
+               accessibility profile (`ZoneDecider.decide(..., accessibilityAdjusted)`), and the rule does not apply to such a session
+               (`ZoneDeciderUnfakeableVoteTest`). Residents stay OFF by default because switching it on sends every resident at a station
+               without a flash light through a challenge, which is friction that cannot be priced without #65; turning it on is the one
+               line `requireUnfakeableVote: true` under RESIDENT in `config/pramaan-policy.yaml`.
 Re-run result: pending real phones and the passive scorer on real replays.
 ```
 

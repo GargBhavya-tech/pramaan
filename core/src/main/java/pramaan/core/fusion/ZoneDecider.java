@@ -54,7 +54,19 @@ public final class ZoneDecider {
 
     /** The first decision of an attempt, audit challenge included. */
     public Decision decide(FusionResult fusion, OperatingPoint point, WorkflowProfile profile, Set<Veto> vetoes) {
-        return decide(fusion, point, profile, vetoes, true);
+        return decide(fusion, point, profile, vetoes, true, false);
+    }
+
+    /**
+     * As {@link #decide(FusionResult, OperatingPoint, WorkflowProfile, Set)}, for a session whose operator chose an
+     * accessibility profile. Such a resident is asked fewer or gentler checks by design (infant, cannot see the screen,
+     * limited movement), so the "needs a live vote from a cue the display cannot fake" rule (red-team R-03) stands down for
+     * them rather than force a challenge they may not be able to answer: it must never lock out the people the inclusion
+     * rules protect.
+     */
+    public Decision decide(FusionResult fusion, OperatingPoint point, WorkflowProfile profile, Set<Veto> vetoes,
+            boolean accessibilityAdjusted) {
+        return decide(fusion, point, profile, vetoes, true, accessibilityAdjusted);
     }
 
     /**
@@ -63,7 +75,7 @@ public final class ZoneDecider {
      */
     public Decision decideAfterChallenge(FusionResult fusion, OperatingPoint point, WorkflowProfile profile,
             Set<Veto> vetoes) {
-        return decide(fusion, point, profile, vetoes, false);
+        return decide(fusion, point, profile, vetoes, false, false);
     }
 
     private static boolean hasUnfakeableLiveVote(FusionResult fusion) {
@@ -76,7 +88,7 @@ public final class ZoneDecider {
     }
 
     private Decision decide(FusionResult fusion, OperatingPoint point, WorkflowProfile profile, Set<Veto> vetoes,
-            boolean auditEligible) {
+            boolean auditEligible, boolean accessibilityAdjusted) {
         long delay = MIN_DELAY_MS + (long) Math.floor(uniform.getAsDouble() * (MAX_DELAY_MS - MIN_DELAY_MS + 1));
         if (!vetoes.isEmpty()) {
             return new Decision(Zone.REJECT_PAD, Tier.RED, EnumSet.of(Decision.Reason.VETO), vetoes, null, point.name(), delay);
@@ -93,7 +105,7 @@ public final class ZoneDecider {
             zone = Zone.CHALLENGE;
             reasons.add(Decision.Reason.DISAGREEMENT);
         }
-        if (zone == Zone.ACCEPT_CANDIDATE && auditEligible && profile.requireUnfakeableVote()
+        if (zone == Zone.ACCEPT_CANDIDATE && auditEligible && profile.requireUnfakeableVote() && !accessibilityAdjusted
                 && !hasUnfakeableLiveVote(fusion)) {
             // Red-team R-03: scene and moire, both shown by the attacker, can add up to an accept. Ask for a challenge.
             // Not applied after a challenge: passing it is the live vote.

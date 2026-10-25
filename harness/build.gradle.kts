@@ -24,6 +24,9 @@ tasks.register<JavaExec>("onnxSmoke") {
 // Shared test helpers such as TestClock (Build Map #8).
 dependencies {
     testImplementation(testFixtures(project(":core")))
+    // the Registration Client hook adapter (integration/registration-client), tested against the reference device
+    testImplementation(project(":regclient-adapter"))
+    testImplementation(project(":regclient-stub"))
 }
 
 // The replay mock builds signed capture payloads (Build Map #15).

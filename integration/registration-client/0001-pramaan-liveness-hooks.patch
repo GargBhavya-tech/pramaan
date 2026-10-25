@@ -1,13 +1,13 @@
 diff --git a/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java b/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java
-index ede0259..97d7df9 100644
+index ede0259..a0a5005 100644
 --- a/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java
 +++ b/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java
 @@ -226,6 +226,9 @@ public class GenericBiometricsController extends BaseController {
  
  	private Service<List<BiometricsDto>> rCaptureTaskService;
  
-+	/** PRAMAAN: the SBI transactionId the liveness hook chose for this face scan, or null (the client's own is used). */
-+	private volatile String livenessTransactionId;
++	/** PRAMAAN: the transactionId and previousHash the liveness hook chose for this face scan, or null (the client's own). */
++	private volatile io.mosip.registration.liveness.CaptureTicket livenessTicket;
 +
  	private Service<MdmBioDevice> deviceSearchTask;
  
@@ -16,9 +16,9 @@ index ede0259..97d7df9 100644
  						generateAlert(RegistrationConstants.ERROR, RegistrationUIConstants.getMessageLanguageSpecific(RegistrationUIConstants.STREAMING_ERROR));
  						return;
  					}
-+					livenessTransactionId = isFace(currentModality)
-+							? io.mosip.registration.liveness.LivenessHooks.get().beginFaceScan(RegistrationConstants.FACE_FULLFACE)
-+							: null;
++					if (isFace(currentModality)) {
++						io.mosip.registration.liveness.LivenessHooks.get().beginFaceScan(RegistrationConstants.FACE_FULLFACE);
++					}
  					rCaptureTaskService();
  					streamer.startStream(urlStream, biometricImage, biometricImage);
  
@@ -27,13 +27,14 @@ index ede0259..97d7df9 100644
  					LOGGER.error("Error while streaming : " + currentModality,  exception);
  					generateAlert(RegistrationConstants.ERROR, RegistrationUIConstants.getMessageLanguageSpecific(RegistrationUIConstants.STREAMING_ERROR));
  
-@@ -587,6 +593,14 @@ public class GenericBiometricsController extends BaseController {
+@@ -587,6 +593,15 @@ public class GenericBiometricsController extends BaseController {
  					@Override
  					protected List<BiometricsDto> call() throws RegBaseCheckedException, IOException {
  
++						livenessTicket = null;
 +						if (isFace(currentModality)) {
 +							try {
-+								io.mosip.registration.liveness.LivenessHooks.get().awaitCaptureClearance();
++								livenessTicket = io.mosip.registration.liveness.LivenessHooks.get().awaitCaptureClearance();
 +							} catch (io.mosip.registration.liveness.LivenessRefusedException | InterruptedException e) {
 +								LOGGER.error("Liveness did not clear the capture", e);
 +								throw new RegBaseCheckedException("REG-PRAMAAN-001", "Liveness verification did not complete");
@@ -42,7 +43,7 @@ index ede0259..97d7df9 100644
  						LOGGER.info("Capture request started {}", System.currentTimeMillis());
  						return rCapture(fxControl.getUiSchemaDTO().getId(), currentModality);
  
-@@ -628,6 +642,19 @@ public class GenericBiometricsController extends BaseController {
+@@ -628,6 +643,19 @@ public class GenericBiometricsController extends BaseController {
  						return;
  					}
  
@@ -62,11 +63,13 @@ index ede0259..97d7df9 100644
  					LOGGER.debug("Started local de-dup validation");// validate local de-dup check
  					if(identifyInLocalGallery(mdsCapturedBiometricsList,
  							Biometric.getSingleTypeByModality(isFace(currentModality) || isExceptionPhoto(currentModality) ?
-@@ -778,6 +805,7 @@ public class GenericBiometricsController extends BaseController {
+@@ -778,6 +806,9 @@ public class GenericBiometricsController extends BaseController {
  				io.mosip.registration.context.ApplicationContext.getStringValueFromApplicationMap(
  						RegistrationConstants.SERVER_ACTIVE_PROFILE),
  				Integer.valueOf(getCaptureTimeOut()), count, (int) bioService.getMDMQualityThreshold(modality));
-+		mdmRequestDto.setTransactionId(isFace(modality) ? livenessTransactionId : null);
++		io.mosip.registration.liveness.CaptureTicket ticket = isFace(modality) ? livenessTicket : null;
++		mdmRequestDto.setTransactionId(ticket == null ? null : ticket.transactionId());
++		mdmRequestDto.setPreviousHash(ticket == null ? null : ticket.previousHash());
  		return bioService.captureModality(mdmRequestDto);
  
  	}
@@ -83,24 +86,65 @@ index 105567a..aa21cc3 100644
  						Image img = new Image(imageStream);
  						streamImage.setImage(img);
 diff --git a/registration/registration-services/src/main/java/io/mosip/registration/dto/packetmanager/BiometricsDto.java b/registration/registration-services/src/main/java/io/mosip/registration/dto/packetmanager/BiometricsDto.java
-index c05b52f..79bfec7 100644
+index c05b52f..50d452e 100644
 --- a/registration/registration-services/src/main/java/io/mosip/registration/dto/packetmanager/BiometricsDto.java
 +++ b/registration/registration-services/src/main/java/io/mosip/registration/dto/packetmanager/BiometricsDto.java
-@@ -23,6 +23,8 @@ public class BiometricsDto {
+@@ -23,6 +23,10 @@ public class BiometricsDto {
  	private String payLoad;
  	private String signature;
  	private String specVersion;
 +	/** Signed liveness evidence (a JWS) for a face capture, stored in the BIR others map; null when no hook ran. */
 +	private String livenessEvidence;
++	/** The device's raw rCapture response element (JSON: data, hash, specVersion, ...), kept so a liveness hook can verify it. */
++	private String sbiResponse;
  	
  
  		
+diff --git a/registration/registration-services/src/main/java/io/mosip/registration/liveness/CaptureTicket.java b/registration/registration-services/src/main/java/io/mosip/registration/liveness/CaptureTicket.java
+new file mode 100644
+index 0000000..5559cbe
+--- /dev/null
++++ b/registration/registration-services/src/main/java/io/mosip/registration/liveness/CaptureTicket.java
+@@ -0,0 +1,33 @@
++/*
++ * This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
++ */
++
++package io.mosip.registration.liveness;
++
++/**
++ * What a liveness hook hands the client when it clears a capture: the two values the client must put in its rCapture
++ * request so the device signs them into the capture (SBI 1.0: {@code transactionId} and the bio element's
++ * {@code previousHash}). Either may be {@code null}, which keeps the client's own behaviour for that value.
++ */
++public final class CaptureTicket {
++
++	private final String transactionId;
++	private final String previousHash;
++
++	public CaptureTicket(String transactionId, String previousHash) {
++		this.transactionId = transactionId;
++		this.previousHash = previousHash;
++	}
++
++	/** 4 to 50 characters of letters, digits and hyphens (SBI), or null. */
++	public String transactionId() {
++		return transactionId;
++	}
++
++	/** The hash the capture chains to, or null. */
++	public String previousHash() {
++		return previousHash;
++	}
++}
 diff --git a/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHook.java b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHook.java
 new file mode 100644
-index 0000000..285a8e2
+index 0000000..7a3be79
 --- /dev/null
 +++ b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHook.java
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,48 @@
 +/*
 + * This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -121,12 +165,8 @@ index 0000000..285a8e2
 + */
 +public interface LivenessHook {
 +
-+	/**
-+	 * A face scan is starting (before the stream is read). Returns the SBI {@code transactionId} the client must send in
-+	 * the rCapture request (P3), so the device signs it inside the capture, or {@code null} to keep the client's own.
-+	 * SBI allows 4 to 50 characters of letters, digits and hyphens.
-+	 */
-+	String beginFaceScan(String modality);
++	/** A face scan is starting (before the stream is read): start a liveness session. */
++	void beginFaceScan(String modality);
 +
 +	/**
 +	 * Every decoded preview frame (P2): the JPEG bytes and when they arrived. Called on the streamer thread, so it must
@@ -137,20 +177,25 @@ index 0000000..285a8e2
 +	/**
 +	 * Called on the capture thread (P1) before the client asks the device for the signed capture. Blocks until the engine
 +	 * has reached its capture step, or throws to stop the scan. The client no longer requests the capture the moment the
-+	 * stream opens.
++	 * stream opens. Returns the {@link CaptureTicket}: the SBI {@code transactionId} and {@code previousHash} the client
++	 * must send in the rCapture request (P3), so the device signs them inside the capture, or {@code null} to keep the
++	 * client's own. (The engine's nonce and hash chain exist only once it reaches its capture step, so they are returned
++	 * here and not from {@link #beginFaceScan}.)
 +	 */
-+	void awaitCaptureClearance() throws InterruptedException, LivenessRefusedException;
++	CaptureTicket awaitCaptureClearance() throws InterruptedException, LivenessRefusedException;
 +
 +	/**
-+	 * Called with the device's signed capture before the client stores it (P4). Returns the signed liveness evidence (a
-+	 * JWS) to put in the face BIR {@code others} map, or throws {@link LivenessRefusedException} if the capture is not
-+	 * the face that passed liveness, in which case nothing is stored.
++	 * Called with the device's signed capture before the client stores it (P4). Each {@code BiometricsDto} carries the
++	 * device's raw response element in {@code getSbiResponse()}: the client keeps only the decoded payload and the
++	 * signature, and drops the JWS header (with the certificate chain) that a verifier needs. Returns the signed liveness
++	 * evidence (a JWS) to put in the face BIR {@code others} map, or throws {@link LivenessRefusedException} if the
++	 * capture is not the face that passed liveness, in which case nothing is stored.
 +	 */
 +	String afterCapture(List<BiometricsDto> captured) throws LivenessRefusedException;
 +}
 diff --git a/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHooks.java b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHooks.java
 new file mode 100644
-index 0000000..7ae44e9
+index 0000000..472a942
 --- /dev/null
 +++ b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHooks.java
 @@ -0,0 +1,86 @@
@@ -175,11 +220,11 @@ index 0000000..7ae44e9
 + */
 +public final class LivenessHooks {
 +
-+	/** Does nothing: no transaction id of its own, no frames kept, no wait, no evidence. */
++	/** Does nothing: no session, no frames kept, no wait, no transaction id of its own, no evidence. */
 +	public static final LivenessHook NONE = new LivenessHook() {
 +		@Override
-+		public String beginFaceScan(String modality) {
-+			return null;
++		public void beginFaceScan(String modality) {
++			// nothing
 +		}
 +
 +		@Override
@@ -188,8 +233,8 @@ index 0000000..7ae44e9
 +		}
 +
 +		@Override
-+		public void awaitCaptureClearance() {
-+			// nothing
++		public CaptureTicket awaitCaptureClearance() {
++			return null;
 +		}
 +
 +		@Override
@@ -268,23 +313,40 @@ index 0000000..720d2e2
 +	}
 +}
 diff --git a/registration/registration-services/src/main/java/io/mosip/registration/mdm/dto/MDMRequestDto.java b/registration/registration-services/src/main/java/io/mosip/registration/mdm/dto/MDMRequestDto.java
-index a23da8d..0f8ae59 100644
+index a23da8d..26bc1f2 100644
 --- a/registration/registration-services/src/main/java/io/mosip/registration/mdm/dto/MDMRequestDto.java
 +++ b/registration/registration-services/src/main/java/io/mosip/registration/mdm/dto/MDMRequestDto.java
-@@ -16,6 +16,8 @@ public class MDMRequestDto {
+@@ -16,6 +16,10 @@ public class MDMRequestDto {
  	private int timeout;
  	private int count;
  	private int requestedScore;
 +	/** Optional SBI transactionId to send instead of a random one (liveness binding); null keeps the client's own. */
 +	private String transactionId;
++	/** Optional SBI previousHash for the bio element (liveness binding); null keeps the client's own (null). */
++	private String previousHash;
  
  	public MDMRequestDto(String modality, String[] exceptions, String mosipProcess, String environment, int timeout,
  			int count, int requestedScore) {
 diff --git a/registration/registration-services/src/main/java/io/mosip/registration/mdm/sbi/spec_1_0/service/impl/MosipDeviceSpecification_SBI_1_0_ProviderImpl.java b/registration/registration-services/src/main/java/io/mosip/registration/mdm/sbi/spec_1_0/service/impl/MosipDeviceSpecification_SBI_1_0_ProviderImpl.java
-index 76ee4bf..c646075 100644
+index 76ee4bf..e1a2339 100644
 --- a/registration/registration-services/src/main/java/io/mosip/registration/mdm/sbi/spec_1_0/service/impl/MosipDeviceSpecification_SBI_1_0_ProviderImpl.java
 +++ b/registration/registration-services/src/main/java/io/mosip/registration/mdm/sbi/spec_1_0/service/impl/MosipDeviceSpecification_SBI_1_0_ProviderImpl.java
-@@ -308,7 +308,9 @@ public class MosipDeviceSpecification_SBI_1_0_ProviderImpl implements MosipDevic
+@@ -267,6 +267,7 @@ public class MosipDeviceSpecification_SBI_1_0_ProviderImpl implements MosipDevic
+ 				biometricDTO.setPayLoad(decodedPayLoad);
+ 				biometricDTO.setSignature(signature);
+ 				biometricDTO.setSpecVersion(sbiRCaptureResponseBiometricsDTO.getSpecVersion());
++				biometricDTO.setSbiResponse(mapper.writeValueAsString(sbiRCaptureResponseBiometricsDTO));
+ 				biometricDTO.setCaptured(true);
+ 				biometricDTO.setModalityName(mdmRequestDto.getModality());
+ 				biometricDTOs.add(biometricDTO);
+@@ -303,12 +304,15 @@ public class MosipDeviceSpecification_SBI_1_0_ProviderImpl implements MosipDevic
+ 			List<SbiRCaptureRequestBioDTO> captureRequestBioDTOs = new LinkedList<>();
+ 			captureRequestBioDTOs.add(new SbiRCaptureRequestBioDTO(getDeviceType(bioDevice.getDeviceType()), "1",
+ 					mdmRequestDto.getExceptions(), String.valueOf(mdmRequestDto.getRequestedScore()), bioDevice.getSerialNumber(),
+-					bioDevice.getDeviceId(),bioDevice.getDeviceSubType(), getDeviceSubId(mdmRequestDto.getModality()), null));
++					bioDevice.getDeviceId(),bioDevice.getDeviceSubType(), getDeviceSubId(mdmRequestDto.getModality()),
++					mdmRequestDto.getPreviousHash()));
+ 
  			sbiRCaptureRequestDTO = new SbiRCaptureRequestDTO(mdmRequestDto.getEnvironment(), bioDevice.getPurpose(), bioDevice.getSpecVersion(),
  					String.valueOf(mdmRequestDto.getTimeout()),
  					LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),

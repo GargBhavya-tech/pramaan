@@ -97,7 +97,7 @@ requirement stands:
 | Error handling and retry | Error taxonomy; quality problems never use an attempt | Built |
 | UI/UX | Station screens, Hindi, accessibility modes, generic message on PAD failure | Built as a scaffold; **no user has tried it** |
 | L0/L1 device integration | SBI client, reference device that speaks the Liveness Profile | Built against the protocol; **not run on a certified device or a live camera** |
-| Changes in the Desktop and Android Registration Clients | A patch against MOSIP's `registration-client` 1.2.0.2 (`integration/registration-client/`: four hooks, a no-op by default), a scaffold, and an AAR | **Partly done**: the services module compiles with the patch, but it has not run inside the real client, the PRAMAAN adapter is not written, and the Android client is not patched |
+| Changes in the Desktop and Android Registration Clients | A patch against MOSIP's `registration-client` 1.2.0.2 (`integration/registration-client/`: four hooks, a no-op by default), a scaffold, and an AAR | **Partly done**: the services module compiles with the patch and the PRAMAAN adapter (`regclient-adapter/`) is written and tested against the reference device, but nothing has run inside the real client, its UI has no screen for challenge prompts, and the Android client is not patched |
 | Evaluate against ISO/IEC 30107 | Harness with per-PAIS APCER and BPCER and intervals | Method built; **no data** |
 | Bonus: mock device, attack tests, interoperability, model versions, offline updates, low-resource Android | Reference device, red team, signed bundles; Android tuning and acceleration code | Built; **Android not run on a phone** |
 | Good-to-have: metrics, diagnostic mode, capability discovery | Metrics module (`docs/metrics.md`), audited diagnostic mode, device discovery | Built |
@@ -136,6 +136,8 @@ The same, as text. The sequence diagrams for each flow are in [`docs/architectur
           conformal calibrator, evidence verifier / re-scorer
  desktop  registration scaffold: capture screen, operator login, supervisor approval, diagnostics
  android  the same engine as an AAR for deployment Mode D (inside the SBI app)
+ integration/registration-client  a patch for MOSIP's registration-client (four hooks, a no-op by default); regclient-adapter is
+          the PRAMAAN side that implements them, regclient-stub the compile-time stand-ins (never shipped)
 ```
 
 Every fusion number lives in `config/operating-points.json`, bound to the SHA-256 of each loaded model. If you
@@ -151,7 +153,7 @@ What *is* measured and reproducible:
 
 | | Number | Reproduce |
 |---|---|---|
-| Test suite | **694 JVM tests, 0 failures**, green on GitHub Actions (Ubuntu and Windows). 14 skipped after `python tools/setup.py` has fetched the models; 20 on a bare clone without them. The rest need the MockMDS fixtures, a corpus or a device. A clean clone built with `tools/setup.py` in 3 min 57 s (2026-10-25) | `python tools/setup.py`, or `./gradlew build` |
+| Test suite | **703 JVM tests, 0 failures**, green on GitHub Actions (Ubuntu and Windows). 14 skipped after `python tools/setup.py` has fetched the models; 20 on a bare clone without them. The rest need the MockMDS fixtures, a corpus or a device. A clean clone built with `tools/setup.py` in 3 min 57 s (2026-10-25) | `python tools/setup.py`, or `./gradlew build` |
 | Flash-challenge unpredictability | 6 colours × 8 steps = 1,679,616 sequences = **20.7 bits** | `./gradlew :core:test --tests '*ChallengeGeneratorTest'` |
 | Challenge uniformity | χ² over 100,000 draws, every parameter, p = 0.001 critical value | same |
 | Photosensitivity | ≤ 3 colour changes/s, steps ≥ 333 ms, checked on 900 sequences | `./gradlew :core:test --tests '*FlashScheduleTest'` |
@@ -162,8 +164,9 @@ What *is* measured and reproducible:
 
 The repo also records its own red-team findings honestly. For example, R-03 in `docs/red-team-log.md` shows that
 without a flash cue, attacker-controlled cues can sum to an accept on a synthetic screen replay. It is fixed for operators and
-supervisors (an accept needs a live flash or stereo vote, else a challenge) and still open for residents, where the same rule would
-raise false rejections that cannot be priced without real data.
+supervisors (an accept needs a live flash or stereo vote, else a challenge). For residents the same rule is built, tested and safe for
+accessibility profiles (it stands down for them) but **off by default**, because it would send every resident at a station without a
+flash light through a challenge, a friction that cannot be priced without real data.
 
 ## Status
 
@@ -217,7 +220,7 @@ the script takes them from there, checks every file's SHA-256, and says which ar
 development use only): the script gets it from OpenCV's zoo. With a model missing it still
 builds, the tests that need one skip themselves, and the showcase and the reference device need none.
 
-Expect `BUILD SUCCESSFUL`. On a bare clone that is **694 tests, 0 failures, 20 skipped**; after `python tools/setup.py` has placed
+Expect `BUILD SUCCESSFUL`. On a bare clone that is **703 tests, 0 failures, 20 skipped**; after `python tools/setup.py` has placed
 the models it is **14 skipped**. The skipped ones need the face models, MockMDS fixtures, a corpus or a device (see section 4).
 Details: `docs/test-report.md`.
 

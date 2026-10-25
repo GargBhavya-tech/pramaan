@@ -24,9 +24,9 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '24'
@@ -43,11 +43,11 @@ jobs:
 
       - name: Build and test (Linux, under a virtual display for the JavaFX tests)
         if: runner.os == 'Linux'
-        run: xvfb-run -a ./gradlew checkModelLicences :core:build :sbi:build :harness:build :desktop:build --no-daemon
+        run: xvfb-run -a ./gradlew checkModelLicences :core:build :sbi:build :harness:build :desktop:build :regclient-stub:build :regclient-adapter:build --no-daemon
 
       - name: Build and test (Windows)
         if: runner.os == 'Windows'
-        run: ./gradlew checkModelLicences :core:build :sbi:build :harness:build :desktop:build --no-daemon
+        run: ./gradlew checkModelLicences :core:build :sbi:build :harness:build :desktop:build :regclient-stub:build :regclient-adapter:build --no-daemon
 
       - name: Keep the test reports
         if: failure()

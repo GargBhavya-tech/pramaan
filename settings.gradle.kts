@@ -11,4 +11,4 @@ rootProject.name = "pramaan"
 // desktop — Registration Client integration, deployment Mode C (Phase 11)
 // harness — evaluation: corpus replay, APCER/BPCER, reports (Phase 10)
 // The Android module (Mode D, Phase 12) is added when that phase starts.
-include("core", "sbi", "desktop", "harness")
+include("core", "sbi", "desktop", "harness", "regclient-stub", "regclient-adapter")

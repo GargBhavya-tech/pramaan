@@ -661,7 +661,8 @@ public final class LivenessEngine implements FrameSink {
         List<CueResult> results = withAbstentions(cues.results());
         results.forEach(session::recordCue);
         Set<Veto> vetoes = vetoes();
-        Decision d = decider.decide(fusion.fuse(results, session.workflow(), level), point, profile, vetoes);
+        Decision d = decider.decide(fusion.fuse(results, session.workflow(), level), point, profile, vetoes,
+                !session.accessibilityProfiles().isEmpty());
         lastDecision = d;
         session.auditDecision("passive", results, d);
         diagnostics.decision("passive", results, d);

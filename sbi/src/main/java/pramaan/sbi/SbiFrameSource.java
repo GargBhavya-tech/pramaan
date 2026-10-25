@@ -337,7 +337,25 @@ public final class SbiFrameSource implements FaceFrameSource {
         byte[] body = SbiRequests.rcaptureFace(request, device.deviceId(), sub, config.env(), spec, config.clock());
         byte[] response = http.call(device.port(), "RCAPTURE", "/capture", body,
                 request.timeout().plusSeconds(5));
+        return verifyCaptureResponse(response, request.previousHash());
+    }
 
+    /**
+     * Parses and verifies an rCapture response body that someone else obtained: the response is checked exactly as
+     * {@link #capture} checks its own (the signature against the pinned trust, the signed payload read as JSON). This is
+     * how the Registration Client integration (docs, integration/registration-client) verifies the capture the client
+     * itself requested from the device. {@link #discover()} must have run, so the device's metadata is known.
+     *
+     * @param previousHash the hash the capture chains to, as in {@link CaptureRequest#previousHash()}
+     */
+    public SignedCapture verifyCaptureResponse(byte[] response, String previousHash) throws DeviceException {
+        DiscoveredDevice device;
+        String sub;
+        synchronized (this) {
+            requireDiscovered();
+            device = face;
+            sub = subId;
+        }
         RCaptureResponse parsed;
         try {
             parsed = RCaptureResponse.parse(response);
@@ -348,7 +366,7 @@ public final class SbiFrameSource implements FaceFrameSource {
             // as an unchecked exception and the engine reported its own failure instead of the device's.
             throw new DeviceException(DeviceException.Reason.PROTOCOL, "rcapture data is not a JWS: " + e.getMessage(), e);
         }
-        return verified(parsed.entries().get(0), request.previousHash(), device, sub);
+        return verified(parsed.entries().get(0), previousHash, device, sub);
     }
 
     private SignedCapture verified(RCaptureResponse.Entry entry, String previousHash, DiscoveredDevice device, String sub)

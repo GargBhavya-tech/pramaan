@@ -16,3 +16,6 @@ gradlew text eol=lf
 *.jpg binary
 *.jpeg binary
 *.mjpeg binary
+
+# A patch against files with their own line endings must be stored byte for byte (MOSIP's sources use CRLF).
+*.patch -text

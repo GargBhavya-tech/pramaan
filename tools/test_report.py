@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 from collections import OrderedDict, defaultdict
 from pathlib import Path
 
-MODULES = ["core", "sbi", "desktop", "harness"]
+MODULES = ["core", "sbi", "desktop", "harness", "regclient-stub", "regclient-adapter"]
 NEGATIVE = re.compile(
     r"reject|refus|fail|never|cannot|cant|break|broken|drop|delay|forg|swap|stale|missing|unknown|invalid|malformed|"
     r"tamper|replay|reuse|mismatch|abstain|veto|blocked|denied|bad|empty|corrupt|truncat|overflow|bound",

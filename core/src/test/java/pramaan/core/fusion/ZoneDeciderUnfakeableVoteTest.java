@@ -141,4 +141,43 @@ class ZoneDeciderUnfakeableVoteTest {
         assertEquals(Zone.ACCEPT_CANDIDATE, afterChallenge(Workflow.OPERATOR, f).zone(),
                 "after a completed challenge the rule must not demand another one, forever");
     }
+
+    // ---------------------------------------------------------------- residents: off by default, safe to switch on
+
+    /** The shipped policy with the rule switched on for residents as well: a one-line change an operator could make. */
+    private static LivenessPolicy residentsCovered() throws Exception {
+        String yaml = new String(Files.readAllBytes(Path.of("..", "config", "pramaan-policy.yaml")),
+                java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals(1, yaml.split("onLockout: EXCEPTION_FLOW", -1).length - 1, "the RESIDENT profile's lockout line");
+        return YamlPolicySource.of(yaml.replace("onLockout: EXCEPTION_FLOW", "onLockout: EXCEPTION_FLOW" + System.lineSeparator() + "      requireUnfakeableVote: true")
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8), "residents-covered").load();
+    }
+
+    private static Decision residentFirst(LivenessPolicy p, FusionResult f, boolean accessibilityAdjusted) {
+        return NO_AUDIT.decide(f, table.operatingPoint(p.profile(Workflow.RESIDENT).operatingPoint(), "default"),
+                p.profile(Workflow.RESIDENT), EnumSet.noneOf(Veto.class), accessibilityAdjusted);
+    }
+
+    @Test
+    void switchedOnForResidentsTheRuleSendsAttackerControlledCuesToTheChallenge() throws Exception {
+        LivenessPolicy p = residentsCovered();
+        assertTrue(p.profile(Workflow.RESIDENT).requireUnfakeableVote());
+        Decision d = residentFirst(p, fuse(Workflow.RESIDENT, ATTACKER_CONTROLLED), false);
+        assertEquals(Zone.CHALLENGE, d.zone());
+        assertTrue(d.reasons().contains(Decision.Reason.NO_DISPLAY_PROOF));
+    }
+
+    @Test
+    void aResidentWithAnAccessibilityProfileIsNeverForcedIntoAChallengeByTheRule() throws Exception {
+        // Infant, cannot see the screen, limited movement: asked fewer or gentler checks by design. The rule stands down.
+        Decision d = residentFirst(residentsCovered(), fuse(Workflow.RESIDENT, ATTACKER_CONTROLLED), true);
+        assertEquals(Zone.ACCEPT_CANDIDATE, d.zone());
+        assertFalse(d.reasons().contains(Decision.Reason.NO_DISPLAY_PROOF));
+    }
+
+    @Test
+    void switchedOnForResidentsALiveFlashVoteStillAccepts() throws Exception {
+        FusionResult f = fuse(Workflow.RESIDENT, v("passive", 0.995), v("moire", 0.995), v("scene", 0.995), v("flash", 0.99));
+        assertEquals(Zone.ACCEPT_CANDIDATE, residentFirst(residentsCovered(), f, false).zone());
+    }
 }

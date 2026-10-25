@@ -107,7 +107,7 @@ that's intentional, not a bug.
 ```
 
 **Expected output:** `BUILD SUCCESSFUL`, with a test summary somewhere above it. As of this guide, the full suite
-is **694 tests, 0 failures**, with about 3 skipped on a machine that has the models and about 14 on a clean clone after
+is **703 tests, 0 failures**, with about 3 skipped on a machine that has the models and about 14 on a clean clone after
 `python tools/setup.py` (the skips are real-corpus, MockMDS-fixture and device tests that need files you may not have: see 1.2). If you see failures, stop here and fix them before going further; nothing past this point will
 work reliably on a broken build.
 
