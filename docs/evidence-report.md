@@ -25,12 +25,19 @@ profile (CPU path, at most 2 threads), one still face image (model costs, not a 
 |---|---:|---:|
 | Face detection (YuNet) | 190 ms | 269 ms |
 | Passive liveness (MiniFASNet, both models) | 21 ms | 36 ms |
-| Java heap in use | 16 MB | |
+| Java heap in use (not the whole process: see below) | 16 MB | |
 
 About 210 ms per frame, 4.8 frames a second, against the 3 fps the SBI stream guarantees. Accelerator parity: XNNPACK and NNAPI both really
 ran and agree with the CPU to 5.4e-7 and 1.4e-6 on the passive model's output. A second run reported by the author gave about 198 ms,
 23 ms and 16 MB: the same order of magnitude, one device, and the run-to-run spread is real. Not measured: a full session on a phone, a
 camera in the loop, battery, other phones. Detail: `docs/android-low-resource.md`.
+
+**The whole pipeline on that phone (same day).** `FullPipelineOnDeviceTest` times every stage the engine runs on one frame, forced on each detected
+face of the 63-frame clip (the clip's faces are small, so the quality gate would reject them and skip the heavy stages): decode 4 ms, detection 207 ms,
+passive 27 ms, landmarks 63 ms, SFace embedding 91 ms, **409 ms in total at the median (95th percentile 1,255 ms)**. Moire was not timed (the faces are under its
+128 px window). That is more than the 333 ms an SBI stream at 3 fps allows, so **the phone does not keep up with the whole pipeline at 3 fps on the
+default 2-thread CPU profile**; the 4.8 fps above is for detection and passive scoring only. Process memory was about 170 MB (total PSS 167 to 178 MB, native
+heap 178 to 186 MB), not the 16 MB Java heap. All four on-device tests passed (0 failures, 0 skipped).
 
 ### 1.2 A real virtual-camera veto (2026-10-25)
 

@@ -94,12 +94,20 @@ val copyPramaanTestAssets by tasks.registering {
         if (stream.exists()) {
             val b = stream.readBytes()
             var start = -1
+            var n = 0
             for (i in 0 until b.size - 2) {
                 if (start < 0 && b[i] == 0xFF.toByte() && b[i + 1] == 0xD8.toByte() && b[i + 2] == 0xFF.toByte()) {
                     start = i
                 } else if (start >= 0 && b[i] == 0xFF.toByte() && b[i + 1] == 0xD9.toByte()) {
-                    out.resolve("face.jpg").writeBytes(b.copyOfRange(start, i + 2))
-                    break
+                    val frame = b.copyOfRange(start, i + 2)
+                    if (n == 0) {
+                        out.resolve("face.jpg").writeBytes(frame)
+                    }
+                    // Every frame of the clip, for the on-device full-pipeline test (the test APK only; never committed).
+                    out.resolve("frames").mkdirs()
+                    out.resolve("frames/" + String.format("%03d", n) + ".jpg").writeBytes(frame)
+                    n++
+                    start = -1
                 }
             }
         }
