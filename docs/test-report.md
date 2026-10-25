@@ -12,17 +12,17 @@ python tools/test_report.py
 
 | | Tests | Passed | Skipped | Failed | Time (s) |
 |---|---:|---:|---:|---:|---:|
-| `core` | 9 | 9 | 0 | 0 | 0 |
+| `core` | 388 | 387 | 1 | 0 | 44 |
 | `sbi` | 37 | 35 | 2 | 0 | 15 |
 | `desktop` | 61 | 61 | 0 | 0 | 15 |
-| `harness` | 208 | 208 | 0 | 0 | 429 |
-| **all** | **315** | **313** | **2** | **0** | **459** |
+| `harness` | 208 | 208 | 0 | 0 | 140 |
+| **all** | **694** | **691** | **3** | **0** | **215** |
 
 **What "skipped" means here.** A test that needs a file that is not in the repository (the face models in `models/`, the
 MockMDS stream sample, a Windows camera, a graphics toolkit) skips itself instead of failing. The author's machine has
 those files, so few tests skip there; a fresh clone has none of them, so more skip. A skip is never counted as a pass.
 
-The same 694 tests, three ways, so the numbers in the README are not a contradiction: **2 skipped** on the author's machine
+The same 694 tests, three ways, so the numbers in the README are not a contradiction: **3 skipped** on the author's machine
 (this report, with the models and the MockMDS fixtures present); **14 skipped** on a clean clone after `python tools/setup.py`
 has fetched the models (measured 2026-10-25); **20 skipped** on a bare clone with no models (measured 2026-10-24). The 14 that
 remain on a clean clone need the MockMDS fixtures, a corpus or a device, none of which is in the repository. These three figures
@@ -32,7 +32,25 @@ are measured on those runs and typed here, unlike the table above, which is coun
 
 | Package | Tests | Skipped | Failed |
 |---|---:|---:|---:|
-| `core.engine` | 9 | 0 | 0 |
+| `core` | 3 | 0 | 0 |
+| `core.audit` | 15 | 0 | 0 |
+| `core.binding` | 39 | 0 | 0 |
+| `core.challenge` | 49 | 0 | 0 |
+| `core.crypto` | 4 | 0 | 0 |
+| `core.detect` | 2 | 0 | 0 |
+| `core.engine` | 24 | 0 | 0 |
+| `core.evidence` | 8 | 1 | 0 |
+| `core.fusion` | 28 | 0 | 0 |
+| `core.gate` | 4 | 0 | 0 |
+| `core.inference` | 10 | 0 | 0 |
+| `core.pad` | 72 | 0 | 0 |
+| `core.passive` | 3 | 0 | 0 |
+| `core.policy` | 19 | 0 | 0 |
+| `core.quality` | 4 | 0 | 0 |
+| `core.session` | 54 | 0 | 0 |
+| `core.source` | 40 | 0 | 0 |
+| `core.testing` | 3 | 0 | 0 |
+| `core.transparency` | 7 | 0 | 0 |
 | `desktop` | 1 | 0 | 0 |
 | `desktop.capture` | 32 | 0 | 0 |
 | `desktop.experiment` | 7 | 0 | 0 |
@@ -54,14 +72,407 @@ are measured on those runs and typed here, unlike the table above, which is coun
 ## Edge cases and attacks the tests cover
 
 A test whose name says it rejects, refuses, breaks, drops, delays, forges, swaps or finds something stale, missing,
-malformed or out of bounds is a **negative case**: it proves the system says no. 117 of the 315 tests are named like that.
+malformed or out of bounds is a **negative case**: it proves the system says no. 270 of the 694 tests are named like that.
 The full list is below, grouped by class.
+
+<details><summary><code>core.audit.AuditLogTest</code> (core): 3 negative cases</summary>
+
+- alteringOneValueBreaksTheChainAtThatLine()
+- reopeningContinuesTheChainAndABrokenLogIsRefused()
+- biometricAndPersonalDataAreRefusedAtConstruction()
+
+</details>
+
+<details><summary><code>core.audit.FraudAnalyticsTest</code> (core): 1 negative cases</summary>
+
+- anOperatorFailingFarMoreThanTheirCentreIsFlaggedAndTheOthersAreNot()
+
+</details>
+
+<details><summary><code>core.audit.LivenessMetricsTest</code> (core): 3 negative cases</summary>
+
+- usesTheInjectedClockWhenUsedAsAnAuditConsumerAndForgetsSessionIds()
+- countsRetriesAndFailuresPerWorkflowSeparately()
+- eventsWithoutASessionOrAnUnknownWorkflowAreIgnored()
+
+</details>
+
+<details><summary><code>core.binding.CaptureBinderTest</code> (core): 11 negative cases</summary>
+
+- theOperatorLockNeverBlocksACaptureWithNoFaceItAlreadyFailsLock3()
+- aRemovedOrReorderedCaptureBreaksTheSbiChain()
+- anUntrustedOrTamperedSignatureIsRejectedBeforeAnyFieldIsRead()
+- aHashThatDoesNotRecomputeFromTheSignedRecordIsRejected()
+- aResidentCaptureMatchingTheLoggedInOperatorsFaceFailsTheOperatorLockOnly()
+- aDifferentFaceInTheCaptureIsRejected()
+- aCaptureRequestedTooLongAfterTheLastVerifiedFrameIsRejected()
+- medianEmbeddingIgnoresAMinorityOfBadFrames()
+- anOldCaptureWithAValidSignatureButAnotherNonceIsRejected()
+- aStaleSignedTimestampIsRejected()
+- aTrackChangeOrAMissingFaceIsRejected()
+
+</details>
+
+<details><summary><code>core.binding.SignedStreamLockTest</code> (core): 9 negative cases</summary>
+
+- aRetimedFrameBreaksTheChain()
+- onceBrokenTheStreamStaysBroken()
+- aCaptureWithNoStreamHeadIsRefusedAndStaysHeuristic()
+- aCaptureNamingAnEarlierHeadIsRefused()
+- aCheckpointFromAnUntrustedKeyOrWithAWrongTagIsRejected()
+- aReplacedFrameKeepingTheOriginalTagBreaksTheChain()
+- aDroppedFrameBreaksTheChainAtTheNextFrame()
+- aStreamFromAnotherTransactionFailsAtTheFirstFrame()
+- reorderedFramesBreakTheChain()
+
+</details>
+
+<details><summary><code>core.binding.StreamKeyAgreementTest</code> (core): 4 negative cases</summary>
+
+- theTranscriptDependsOnEveryField()
+- aManInTheMiddleWhoSwappedTheClientKeyIsDetected()
+- anAnswerSignedByAnUntrustedKeyIsRefused()
+- anAnswerForAnotherTransactionIsRefused()
+
+</details>
+
+<details><summary><code>core.challenge.ActionDetectorsTest</code> (core): 3 negative cases</summary>
+
+- aReplayedClipWithTheRightActionStillFailsOnTiming()
+- theBlendshapeVoteStandsInForMouthWidthButNeverForDeformation()
+- blinkBlendshapesAreASecondVoteRelativeToThePersonsOwnBaseline()
+
+</details>
+
+<details><summary><code>core.challenge.ChallengeGeneratorTest</code> (core): 1 negative cases</summary>
+
+- anInfantWithoutAResidentFacingLightFallsThroughInsteadOfFailing()
+
+</details>
+
+<details><summary><code>core.challenge.EmissionLogTest</code> (core): 3 negative cases</summary>
+
+- overlappingLateStartingUnknownColouredOrNumericEmissionsAreRefused()
+- aTamperedLogIsRefused()
+- aLogSignedByAStrangerOrForAnotherTransactionIsRefused()
+
+</details>
+
+<details><summary><code>core.challenge.FlashRunLogTest</code> (core): 1 negative cases</summary>
+
+- stepsOutOfOrderAndFilesThatAreNotLogsAreRefused()
+
+</details>
+
+<details><summary><code>core.challenge.FlashScheduleTest</code> (core): 2 negative cases</summary>
+
+- tooManyChangesInASecondIsRefused()
+- aStepShorterThanThePhotosensitivityFloorIsRefused()
+
+</details>
+
+<details><summary><code>core.crypto.JwsTest</code> (core): 4 negative cases</summary>
+
+- aStrangersSignatureUnderATrustedKidIsRejected()
+- aSignedPayloadVerifiesAndCanThenBeRead()
+- aTamperedPayloadIsRejected()
+- algNoneAndUnknownSignersAreRejected()
+
+</details>
 
 <details><summary><code>core.engine.AttemptPhasesTest</code> (core): 3 negative cases</summary>
 
 - aLiveReflexVotesForLifeAndAnAbsentOneOnlyAbstains()
 - anIrisCameraWithNoDataAbstainsForWantOfACapability()
 - theBudgetCoversTheLeadInEveryColourTheTailAndASecondOfSlack()
+
+</details>
+
+<details><summary><code>core.engine.EngineUnitsTest</code> (core): 2 negative cases</summary>
+
+- aThreeFpsStreamKeepsItsTrackButADroppedFrameStillEndsIt()
+- aProbabilityOfExactlyOneFromAModelDoesNotBreakTheVote()
+
+</details>
+
+<details><summary><code>core.engine.SceneContextTest</code> (core): 3 negative cases</summary>
+
+- allThreeCuesAreReportedEvenWhenTheyAbstain()
+- bytesThatAreNotAFingerprintAreRefused()
+- aFaceTooCloseToTheEdgeLeavesNoBackdropToJudgeTheLight()
+
+</details>
+
+<details><summary><code>core.evidence.EvidenceTest</code> (core): 3 negative cases</summary>
+
+- flippingOneByteOfThePayloadFailsVerification()
+- aCbeffWithADoctypeIsRefusedSoNoExternalEntityIsEverRead()
+- aValidSignatureOverNonCanonicalJsonIsStillRefused()
+
+</details>
+
+<details><summary><code>core.fusion.ConformalThresholdTest</code> (core): 3 negative cases</summary>
+
+- alphaOutsideZeroOneIsRefused()
+- tooFewSamplesMeansNoScoreRuleCanBeGuaranteedSoNobodyIsRejectedOnScore()
+- theFalseRejectionRateOfFreshGenuineResidentsIsAtMostAlphaWhateverTheDistribution()
+
+</details>
+
+<details><summary><code>core.fusion.RiskFusionTest</code> (core): 9 negative cases</summary>
+
+- aHardVetoRejectsWhateverTheScore()
+- aVotingCueWithoutAWeightFailsClosed()
+- swappingAModelWithoutRegeneratingTheTableFailsClosed()
+- anAbstainingCueChangesNothing()
+- anL0DeviceNeedsMoreEvidenceAtTheBoundary()
+- aClearAttackIsRejectedWithoutBeingOfferedAChallenge()
+- tooFewCuesTurnsBothAcceptAndRejectIntoAChallenge()
+- auditRateMatchesPolicyAndDelaysDoNotRevealThePath()
+- aMissingReflexCanNeverCountAgainstAResident()
+
+</details>
+
+<details><summary><code>core.fusion.ZoneDeciderUnfakeableVoteTest</code> (core): 2 negative cases</summary>
+
+- aPassedChallengeIsTheLiveVoteSoTheReDecisionIsNotBlockedAgain()
+- anAbstainingFlashCueIsNotALiveVoteEither()
+
+</details>
+
+<details><summary><code>core.gate.GateAndTrackerTest</code> (core): 1 negative cases</summary>
+
+- aFaceSwapAfterA500msGapStartsANewTrackAndReportsTheLoss()
+
+</details>
+
+<details><summary><code>core.inference.InferenceOptionsTest</code> (core): 1 negative cases</summary>
+
+- negativeThreadCountsAreRefused()
+
+</details>
+
+<details><summary><code>core.inference.OnnxModelTest</code> (core): 1 negative cases</summary>
+
+- rejectsAShapeThatDoesNotMatchTheData()
+
+</details>
+
+<details><summary><code>core.NoInsecureRandomTest</code> (core): 1 negative cases</summary>
+
+- coreNeverUsesAPredictableRandomSource()
+
+</details>
+
+<details><summary><code>core.pad.CueBankTest</code> (core): 2 negative cases</summary>
+
+- anUntrainedColorTextureCueAbstainsInsteadOfGuessing()
+- cuesWithoutTheirCapabilityOrFrameRateAbstainAndNeverVote()
+
+</details>
+
+<details><summary><code>core.pad.FlashReflectionCueTest</code> (core): 5 negative cases</summary>
+
+- aPhoneReplayCarriesItsOwnColoursNotOurs()
+- noResidentFacingLightMeansAbstain()
+- aLightThatNeverChangedAbstains()
+- aTooShortTraceAbstains()
+- sunlitAmbientAbstainsRatherThanFailingAnyone()
+
+</details>
+
+<details><summary><code>core.pad.LightDirectionConsistencyCueTest</code> (core): 3 negative cases</summary>
+
+- aReplayLitFromTheOppositeSideDisagrees()
+- evenDiffuseLightHasNoDirectionAndAbstains()
+- noBackdropOrATinyCropAbstains()
+
+</details>
+
+<details><summary><code>core.pad.OnnxPersonSegmenterTest</code> (core): 1 negative cases</summary>
+
+- aNetworkThatFailsFallsBackToTheFaceAndTheColumnUnderIt()
+
+</details>
+
+<details><summary><code>core.pad.PersonMaskTest</code> (core): 3 negative cases</summary>
+
+- iouIsOneForTheSameAndZeroForDisjointAndOneForTwoEmpty()
+- aMaskOfTheWrongSizeIsRefused()
+- withoutSpecksKeepsLargeRegionsAndDropsSmallOnes()
+
+</details>
+
+<details><summary><code>core.pad.PupilLightReflexCueTest</code> (core): 4 negative cases</summary>
+
+- aPrintedIrisHasNoAmplitudeAndNeverVotesAgainstAnyone()
+- aWeakReflexBelowSixPercentAbstains()
+- tooFewValidTrialsAbstains()
+- noIrisCameraMeansAbstain()
+
+</details>
+
+<details><summary><code>core.pad.SceneConsistencyCueTest</code> (core): 3 negative cases</summary>
+
+- noFingerprintMeansAbstain()
+- theEmptyRoomYieldsPlentyOfKeypoints()
+- aBumpedCameraIsReportedForReFingerprintingNotRejected()
+
+</details>
+
+<details><summary><code>core.pad.StereoDepthCueTest</code> (core): 2 negative cases</summary>
+
+- noSecondCameraMeansAbstain()
+- tooFewLandmarksAbstains()
+
+</details>
+
+<details><summary><code>core.pad.WhitePointConsistencyCueTest</code> (core): 4 negative cases</summary>
+
+- backdropChromaticityMatchesTheWorkedExample()
+- aPhoneReplaysBluishHighlightDisagreesWithTheRoomAndIsSuspicious()
+- aTooSmallFaceCropAbstains()
+- noBackdropMeansAbstain()
+
+</details>
+
+<details><summary><code>core.passive.LogitsAndCalibrationTest</code> (core): 1 negative cases</summary>
+
+- aCalibrationForAnotherModelIsRefused()
+
+</details>
+
+<details><summary><code>core.policy.BundleManifestTest</code> (core): 7 negative cases</summary>
+
+- anAlteredModelIsRejected()
+- wrongSchemaVersionOrUnparseableIssueTimeIsRejected()
+- theFileGuardNeverLowersItsRecordedVersion(Path)
+- anUntrustedSignerIsRejected()
+- anExtraModelNotInTheSignedBundleIsRejected()
+- aModelMissingFromTheBundleBeingLoadedIsRejected()
+- anAlteredPolicyOrTableIsRejected()
+
+</details>
+
+<details><summary><code>core.policy.PolicyLoaderTest</code> (core): 8 negative cases</summary>
+
+- unknownEnumValuesListTheAllowedOnes()
+- aMissingWorkflowProfileIsRejected()
+- supervisorsCanNeverBeLessStrictThanOperators()
+- numbersWrittenAsTextAreRejected()
+- outOfRangeValuesAreRejected()
+- theExceptionPathCannotBeMadeSingleControl()
+- duplicateKeysAreRejectedRatherThanLastOneWins()
+- anExtraUnknownFieldIsRejected()
+
+</details>
+
+<details><summary><code>core.quality.QualityAndGuidanceTest</code> (core): 2 negative cases</summary>
+
+- eachDefectFailsItsOwnComponent()
+- guidanceIsActionableAndNeverAVerdict()
+
+</details>
+
+<details><summary><code>core.session.AccessibilityAndAttemptTest</code> (core): 3 negative cases</summary>
+
+- aResidentCaptureMatchingTheOperatorsOwnFaceIsRefusedAtBinding()
+- aDifferentResidentFaceIsNotBlockedByTheOperatorGuard()
+- aProfileThePolicyDoesNotListIsRejected()
+
+</details>
+
+<details><summary><code>core.session.EngineBundleSignedTest</code> (core): 1 negative cases</summary>
+
+- anOlderSignedVersionThanTheGuardHasAlreadySeenIsRefusedBeforeAnyModelLoads(Path)
+
+</details>
+
+<details><summary><code>core.session.ErrorTaxonomyTest</code> (core): 7 negative cases</summary>
+
+- everyFailureHasARowAndTheRowAgreesOnWhoPays()
+- injectionIsAHardRejectWithAHighSeverityAudit()
+- aClockThatRunsBackwardsFailsClosed()
+- aSecondFaceVetoIsAuditedAsWhatItIsNotAsAnInjection()
+- deviceAndEngineErrorsFailWithoutCostingAnAttemptAndShowTheRightMessage()
+- aBindingFailureIsAHighSeverityReject()
+- aCorruptOrMismatchedModelPreventsAnySessionFromStarting()
+
+</details>
+
+<details><summary><code>core.session.EvidenceResetTest</code> (core): 3 negative cases</summary>
+
+- droppingReorderingOrSubstitutingAFrameChangesTheHead()
+- evidenceIsBoundToTheAttemptsNonce()
+- theSwapClipCannotReachAcceptWithPreGapEvidence()
+
+</details>
+
+<details><summary><code>core.session.ExceptionFlowTest</code> (core): 3 negative cases</summary>
+
+- anExceptionCannotCompleteWithoutAPassingSupervisorVerdict()
+- dualControlFreshnessAndOneVerdictPerResident()
+- aPhotoOfAPhotoBlocksThePathForGood()
+
+</details>
+
+<details><summary><code>core.session.LivenessSessionMachineTest</code> (core): 6 negative cases</summary>
+
+- aChallengeStepTimesOutAfterItsOnsetDelayPlusTheStepTimeout()
+- aChallengeRunsEveryStepThenReFusesBeforeCapture()
+- anEarlyOnsetIsRepromptedOnceThenFails()
+- threeFailedChallengesReachLockoutWithTheExpectedWaits()
+- missingReFusionCaptureAndBindingEachTimeOut()
+- aMissingPassiveDecisionIsAnEngineTimeout()
+
+</details>
+
+<details><summary><code>core.session.PacketApprovalTest</code> (core): 1 negative cases</summary>
+
+- reusingAnOldSupervisorSessionForANewApprovalIsRejected()
+
+</details>
+
+<details><summary><code>core.source.DeviceIdentityTest</code> (core): 3 negative cases</summary>
+
+- aTamperedPayloadFails()
+- anUnregisteredDeviceWithPlainBase64IsUnsignedNotFailed()
+- aDigitalIdSignedByAStrangerFails()
+
+</details>
+
+<details><summary><code>core.source.FrameRateAndGatingTest</code> (core): 1 negative cases</summary>
+
+- theQueueDropsTheOldestAndCountsIt()
+
+</details>
+
+<details><summary><code>core.source.InjectionGuardTest</code> (core): 1 negative cases</summary>
+
+- anOrdinaryCameraListFindsNothingAndAnEmptyListFindsNothing()
+
+</details>
+
+<details><summary><code>core.source.JpegSignatureTest</code> (core): 5 negative cases</summary>
+
+- enrolmentRefusesFramesThatAreNotJpegAndCamerasWithNoStableHeaders()
+- aTruncatedJpegIsRefusedNotCrashedOn()
+- aProfileFileThatIsNotOneIsRefused()
+- framesFromTheEnrolledEncoderAreNeverMismatches()
+- aReEncodingPipelineIsSeenAfterThreeFramesAndNotBeforeAndAOneOffIsForgiven()
+
+</details>
+
+<details><summary><code>core.testing.TestClockTest</code> (core): 1 negative cases</summary>
+
+- refusesToGoBackwards()
+
+</details>
+
+<details><summary><code>core.transparency.MerkleLogTest</code> (core): 2 negative cases</summary>
+
+- aMachinesFirstTreeHeadAfterAnEmptyOneIsConsistent()
+- alteringOrDeletingAPastAttemptBreaksConsistency()
 
 </details>
 
@@ -398,6 +809,7 @@ The full list is below, grouped by class.
 
 | Class | Test | Reason |
 |---|---|---|
+| `core.evidence.EvidenceTest` | theResultStillValidatesAgainstMosipsOwnCbeffSchema() | Assumption failed: MOSIP cbeff.xsd absent (unzip it from kernel-cbeffutil-api 1.2.0.3) |
 | `sbi.LiveMockMdsTest` | realCaptureVerifiesAgainstTheMockCaAndEchoesOurNonce() | (no reason recorded) |
 | `sbi.LiveMockMdsTest` | realStreamRunsAtOrAboveTheSpecFloor() | (no reason recorded) |
 
@@ -407,7 +819,63 @@ The full list is below, grouped by class.
 
 | Class | Tests | Skipped | Failed | Time (s) |
 |---|---:|---:|---:|---:|
-| `core.engine.AttemptPhasesTest` | 9 | 0 | 0 | 0.2 |
+| `core.audit.AuditLogTest` | 5 | 0 | 0 | 12.5 |
+| `core.audit.FraudAnalyticsTest` | 4 | 0 | 0 | 0.1 |
+| `core.audit.LivenessMetricsTest` | 6 | 0 | 0 | 0.1 |
+| `core.binding.CaptureBinderTest` | 18 | 0 | 0 | 0.4 |
+| `core.binding.IsoFaceRecordTest` | 2 | 0 | 0 | 0.0 |
+| `core.binding.SignedStreamLockTest` | 11 | 0 | 0 | 1.1 |
+| `core.binding.StreamKeyAgreementTest` | 8 | 0 | 0 | 0.5 |
+| `core.challenge.ActionDetectorsTest` | 17 | 0 | 0 | 0.4 |
+| `core.challenge.ChallengeGeneratorTest` | 12 | 0 | 0 | 3.8 |
+| `core.challenge.ChallengePromptTest` | 2 | 0 | 0 | 0.0 |
+| `core.challenge.EmissionLogTest` | 7 | 0 | 0 | 0.1 |
+| `core.challenge.FlashRunLogTest` | 5 | 0 | 0 | 0.0 |
+| `core.challenge.FlashScheduleTest` | 6 | 0 | 0 | 0.1 |
+| `core.CoreIsolationTest` | 1 | 0 | 0 | 1.8 |
+| `core.crypto.JwsTest` | 4 | 0 | 0 | 0.1 |
+| `core.detect.DetectionLogicTest` | 2 | 0 | 0 | 0.0 |
+| `core.engine.AttemptPhasesTest` | 9 | 0 | 0 | 0.3 |
+| `core.engine.EngineUnitsTest` | 5 | 0 | 0 | 0.0 |
+| `core.engine.SceneContextTest` | 10 | 0 | 0 | 2.1 |
+| `core.evidence.EvidenceTest` | 8 | 1 | 0 | 0.7 |
+| `core.fusion.ConformalThresholdTest` | 6 | 0 | 0 | 0.2 |
+| `core.fusion.RiskFusionTest` | 14 | 0 | 0 | 0.3 |
+| `core.fusion.ZoneDeciderUnfakeableVoteTest` | 8 | 0 | 0 | 0.0 |
+| `core.gate.GateAndTrackerTest` | 4 | 0 | 0 | 0.0 |
+| `core.inference.InferenceOptionsTest` | 7 | 0 | 0 | 1.4 |
+| `core.inference.OnnxModelTest` | 3 | 0 | 0 | 0.1 |
+| `core.NoInsecureRandomTest` | 1 | 0 | 0 | 0.5 |
+| `core.NoWallClockInCoreTest` | 1 | 0 | 0 | 0.5 |
+| `core.pad.CueBankTest` | 8 | 0 | 0 | 0.4 |
+| `core.pad.FlashReflectionCueTest` | 10 | 0 | 0 | 0.1 |
+| `core.pad.LightDirectionConsistencyCueTest` | 6 | 0 | 0 | 0.1 |
+| `core.pad.OnnxPersonSegmenterTest` | 6 | 0 | 0 | 0.5 |
+| `core.pad.PersonMaskTest` | 8 | 0 | 0 | 0.3 |
+| `core.pad.PupilLightReflexCueTest` | 9 | 0 | 0 | 0.5 |
+| `core.pad.SceneConsistencyCueTest` | 8 | 0 | 0 | 1.1 |
+| `core.pad.StereoDepthCueTest` | 10 | 0 | 0 | 0.0 |
+| `core.pad.WhitePointConsistencyCueTest` | 7 | 0 | 0 | 0.0 |
+| `core.passive.LogitsAndCalibrationTest` | 3 | 0 | 0 | 10.1 |
+| `core.policy.BundleManifestTest` | 9 | 0 | 0 | 0.2 |
+| `core.policy.PolicyLoaderTest` | 10 | 0 | 0 | 0.1 |
+| `core.quality.QualityAndGuidanceTest` | 4 | 0 | 0 | 0.1 |
+| `core.session.AccessibilityAndAttemptTest` | 9 | 0 | 0 | 1.0 |
+| `core.session.EngineBundleSignedTest` | 3 | 0 | 0 | 0.1 |
+| `core.session.ErrorTaxonomyTest` | 9 | 0 | 0 | 0.2 |
+| `core.session.EvidenceResetTest` | 6 | 0 | 0 | 0.1 |
+| `core.session.ExceptionFlowTest` | 5 | 0 | 0 | 0.3 |
+| `core.session.LivenessSessionMachineTest` | 17 | 0 | 0 | 0.4 |
+| `core.session.PacketApprovalTest` | 3 | 0 | 0 | 0.1 |
+| `core.session.SessionNonceTest` | 2 | 0 | 0 | 0.1 |
+| `core.source.DeviceIdentityTest` | 5 | 0 | 0 | 0.0 |
+| `core.source.FaceFrameSourceContractTest` | 1 | 0 | 0 | 0.0 |
+| `core.source.FrameRateAndGatingTest` | 6 | 0 | 0 | 0.0 |
+| `core.source.InjectionGuardTest` | 9 | 0 | 0 | 0.0 |
+| `core.source.JpegSignatureTest` | 15 | 0 | 0 | 1.1 |
+| `core.source.TimingWatchTest` | 4 | 0 | 0 | 0.0 |
+| `core.testing.TestClockTest` | 3 | 0 | 0 | 0.0 |
+| `core.transparency.MerkleLogTest` | 7 | 0 | 0 | 0.7 |
 
 ### sbi
 
@@ -444,42 +912,42 @@ The full list is below, grouped by class.
 
 | Class | Tests | Skipped | Failed | Time (s) |
 |---|---:|---:|---:|---:|
-| `harness.corpus.CorpusManifestTest` | 3 | 0 | 0 | 1.8 |
-| `harness.engine.CaptureScreenEndToEndTest` | 3 | 0 | 0 | 2.3 |
-| `harness.engine.DiagnosticModeTest` | 3 | 0 | 0 | 2.9 |
-| `harness.engine.EvidencePackagerTest` | 3 | 0 | 0 | 1.6 |
-| `harness.engine.InjectionFindingsEngineTest` | 10 | 0 | 0 | 18.8 |
-| `harness.engine.InjectionGuardEngineTest` | 2 | 0 | 0 | 2.7 |
-| `harness.engine.LivenessEngineTest` | 12 | 0 | 0 | 15.1 |
-| `harness.engine.OperatorAuthenticationTest` | 4 | 0 | 0 | 2.3 |
-| `harness.engine.StationWiringEngineTest` | 21 | 0 | 0 | 13.8 |
-| `harness.eval.CalibrateFromRowsTest` | 10 | 0 | 0 | 13.8 |
-| `harness.eval.EvaluationTest` | 9 | 0 | 0 | 4.8 |
-| `harness.eval.FraudReportTest` | 2 | 0 | 0 | 4.4 |
-| `harness.eval.FusionLearnerTest` | 7 | 0 | 0 | 5.1 |
+| `harness.corpus.CorpusManifestTest` | 3 | 0 | 0 | 1.0 |
+| `harness.engine.CaptureScreenEndToEndTest` | 3 | 0 | 0 | 0.9 |
+| `harness.engine.DiagnosticModeTest` | 3 | 0 | 0 | 1.3 |
+| `harness.engine.EvidencePackagerTest` | 3 | 0 | 0 | 2.1 |
+| `harness.engine.InjectionFindingsEngineTest` | 10 | 0 | 0 | 5.4 |
+| `harness.engine.InjectionGuardEngineTest` | 2 | 0 | 0 | 0.8 |
+| `harness.engine.LivenessEngineTest` | 12 | 0 | 0 | 22.8 |
+| `harness.engine.OperatorAuthenticationTest` | 4 | 0 | 0 | 1.8 |
+| `harness.engine.StationWiringEngineTest` | 21 | 0 | 0 | 10.9 |
+| `harness.eval.CalibrateFromRowsTest` | 10 | 0 | 0 | 4.9 |
+| `harness.eval.EvaluationTest` | 9 | 0 | 0 | 3.1 |
+| `harness.eval.FraudReportTest` | 2 | 0 | 0 | 2.3 |
+| `harness.eval.FusionLearnerTest` | 7 | 0 | 0 | 2.9 |
 | `harness.eval.PseudoLabelerTest` | 5 | 0 | 0 | 0.1 |
-| `harness.experiment.FlashExperimentAnalysisTest` | 10 | 0 | 0 | 23.4 |
-| `harness.factory.FusedRedTeamTest` | 6 | 0 | 0 | 5.1 |
-| `harness.factory.PersonSegmentationTest` | 8 | 0 | 0 | 4.4 |
-| `harness.factory.RedTeamFuzzTest` | 7 | 0 | 0 | 4.4 |
+| `harness.experiment.FlashExperimentAnalysisTest` | 10 | 0 | 0 | 13.1 |
+| `harness.factory.FusedRedTeamTest` | 6 | 0 | 0 | 0.8 |
+| `harness.factory.PersonSegmentationTest` | 8 | 0 | 0 | 1.4 |
+| `harness.factory.RedTeamFuzzTest` | 7 | 0 | 0 | 1.1 |
 | `harness.factory.StationSelfTestTest` | 4 | 0 | 0 | 0.0 |
-| `harness.factory.SyntheticAttackFactoryTest` | 13 | 0 | 0 | 1.0 |
-| `harness.HarnessWiringTest` | 1 | 0 | 0 | 0.0 |
-| `harness.mock.BindingAttacksTest` | 8 | 0 | 0 | 9.5 |
-| `harness.mock.FaultOutcomesTest` | 7 | 0 | 0 | 5.9 |
+| `harness.factory.SyntheticAttackFactoryTest` | 13 | 0 | 0 | 0.3 |
+| `harness.HarnessWiringTest` | 1 | 0 | 0 | 0.1 |
+| `harness.mock.BindingAttacksTest` | 8 | 0 | 0 | 2.3 |
+| `harness.mock.FaultOutcomesTest` | 7 | 0 | 0 | 2.2 |
 | `harness.mock.MockDeviceProfileConformanceTest` | 7 | 0 | 0 | 0.1 |
-| `harness.mock.MockFrameSourceTest` | 6 | 0 | 0 | 2.5 |
-| `harness.mock.ProfileStubDeviceTest` | 9 | 0 | 0 | 14.8 |
-| `harness.RealLandmarksTest` | 2 | 0 | 0 | 12.2 |
-| `harness.RealModelsTest` | 3 | 0 | 0 | 6.8 |
-| `harness.RealSFaceTest` | 1 | 0 | 0 | 16.7 |
-| `harness.run.CorpusRunnerTest` | 2 | 0 | 0 | 163.5 |
-| `harness.run.DegradeToolTest` | 1 | 0 | 0 | 25.0 |
-| `harness.SignBundleTest` | 3 | 0 | 0 | 7.3 |
-| `harness.verify.DeviceCaTrustTest` | 3 | 0 | 0 | 23.8 |
+| `harness.mock.MockFrameSourceTest` | 6 | 0 | 0 | 4.5 |
+| `harness.mock.ProfileStubDeviceTest` | 9 | 0 | 0 | 11.2 |
+| `harness.RealLandmarksTest` | 2 | 0 | 0 | 2.6 |
+| `harness.RealModelsTest` | 3 | 0 | 0 | 1.1 |
+| `harness.RealSFaceTest` | 1 | 0 | 0 | 2.9 |
+| `harness.run.CorpusRunnerTest` | 2 | 0 | 0 | 14.0 |
+| `harness.run.DegradeToolTest` | 1 | 0 | 0 | 3.3 |
+| `harness.SignBundleTest` | 3 | 0 | 0 | 2.2 |
+| `harness.verify.DeviceCaTrustTest` | 3 | 0 | 0 | 13.9 |
 | `harness.verify.PlanRegenerationTest` | 4 | 0 | 0 | 0.0 |
-| `harness.verify.RecheckVerifierTest` | 8 | 0 | 0 | 12.2 |
-| `harness.verify.RetroactiveRescanTest` | 1 | 0 | 0 | 0.5 |
+| `harness.verify.RecheckVerifierTest` | 8 | 0 | 0 | 2.0 |
+| `harness.verify.RetroactiveRescanTest` | 1 | 0 | 0 | 0.3 |
 
 ## What these results are not
 
