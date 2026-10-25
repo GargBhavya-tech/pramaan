@@ -23,7 +23,7 @@ script for a live demo is `docs/demo-script.md`; this one is the recorded submis
 
 ## Before you record
 
-- [ ] `./gradlew build` is green (it was on 2026-10-24: 694 tests, 0 failures; 2 skipped here; the 20 skipped on a fresh clone were last counted before 21 tests were added without the model files).
+- [ ] `./gradlew build` is green (on 2026-10-25: 694 tests, 0 failures; 3 skipped on the author's machine, 14 on a clean clone after `python tools/setup.py`, 20 on a bare clone).
 - [ ] The commands in scenes 4 and 5 were run once, today, so you know how long each takes (`fusedRedTeam` about 10 seconds,
       the binding tests about 6 seconds once Gradle is warm).
 - [ ] For the station scene with MockMDS: start MockMDS (`docs/hardware-testing-guide.md` section 2.2), models in `models/`,
