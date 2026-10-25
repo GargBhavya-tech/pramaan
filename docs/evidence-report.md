@@ -66,8 +66,27 @@ detection and passive scoring; it does not cover the whole pipeline.
 Fusion asked for a challenge each time; the challenges timed out and three timeouts triggered the 15-minute operator lockout, which is
 the designed behaviour. So on this webcam the moire cue reads a live face as a screen. That is a false-reject risk for genuine users, not a
 security hole, and it is exactly the case the project says it must report: moire thresholds are marked PROVISIONAL and were calibrated on
-simulated recaptures only. The weights were **not** changed to make a demo pass. Next step: score the moire cue on raw and re-encoded
-camera frames to find whether the webcam's noise or this device's JPEG re-encoding causes it.
+simulated recaptures only. The weights were **not** changed to make a demo pass.
+
+**Cause found (same day).** Eight instants of the live author were captured from the webcam three ways at once (lossless PNG, JPEG q:3 as
+the device sends, JPEG q:1) and the moire cue's peakiness was computed on each, face crops 135 to 168 px wide, threshold 10.0:
+
+| Version | Peakiness per frame | Mean |
+|---|---|---:|
+| Lossless PNG, straight from the camera | 19.1, 16.1, 12.5, 10.5, 11.4, 11.3, 13.1, 11.2 | 13.1 |
+| JPEG q:3 (the device's encoding) | 19.1, 16.2, 14.9, 12.0, 11.6, 10.9, 13.0, 11.4 | 13.6 |
+| JPEG q:1 (near lossless) | 20.1, 16.3, 13.1, 11.3, 12.0, 11.0, 13.5, 11.6 | 13.6 |
+
+So the re-encoding is **not** the cause: every lossless frame is already above the threshold, and re-encoding barely moves it. The webcam's
+own spectrum (sensor noise, sharpening, hair and beard texture) gives a live face a peakiness of about 10.5 to 20, against the 3 to 6 the
+Bible assumed. (The live sign-in implied 17 to 24; the live session's frames differ a little from these.) The threshold of 10.0 is
+PROVISIONAL and `MoireCue` says it is device-specific; this is the device-specific case. One person, one camera, one sitting: it is a
+diagnosis, not a distribution.
+
+**What would fix it properly.** A per-camera calibration that measures peakiness on live faces *and* on screen replays from the same
+camera, then sets the threshold between them (`docs/research-plan-real-data.md`). Without replay data from this camera, moving the
+threshold would only make the cue blind. Until then the cue should not carry a strong vote on an uncalibrated camera: its calibrated
+probability here is not calibrated.
 
 ### 1.4 Flash cue against a real replay (E1)
 
