@@ -12,27 +12,10 @@ The author ran the experiment on a second laptop and phone, at different screen 
 design predicts: the live face followed the code and the replay did not. The numbers were not fixed: they moved by **about 0.1 to 0.15**
 with brightness and distance, so read the 0.8 and 0.3 above as a range of that width, not as exact values.
 
-### Numerical per-run correlation values (numbers only, no faces)
-
-| Run # | Condition | Lighting / Dist | Live Correlation $r$ | Replay Correlation $r$ | $\Delta r$ Separation |
-|---|---|---|---:|---:|---:|
-| 1 | Normal 500 lx, 50 cm | 0.84 | 0.18 | +0.66 |
-| 2 | Normal 500 lx, 60 cm | 0.81 | 0.21 | +0.60 |
-| 3 | Normal 500 lx, 40 cm | 0.86 | 0.19 | +0.67 |
-| 4 | Dim 200 lx, 50 cm | 0.82 | 0.14 | +0.68 |
-| 5 | Dim 200 lx, 60 cm | 0.79 | 0.16 | +0.63 |
-| 6 | Bright 800 lx, 50 cm | 0.78 | 0.24 | +0.54 |
-| 7 | Bright 800 lx, 60 cm | 0.75 | 0.27 | +0.48 |
-| 8 | High screen brightness | 0.83 | 0.29 | +0.54 |
-| 9 | Low screen brightness | 0.76 | 0.12 | +0.64 |
-| 10 | Medium brightness, 55 cm | 0.82 | 0.17 | +0.65 |
-| **Mean ± SD** | | **0.806 ± 0.035** | **0.197 ± 0.055** | **+0.609** |
-
-*Two-sample t-test: $t = 29.8, p < 10^{-15}$. The empirical threshold $r_{thresh} = 0.50$ cleanly separates every genuine run from every replay.*
-
 What this does and does not show:
 
-- The numerical per-run values are published above so the distribution can be verified and audited without publishing personal biometric face images.
+- The recordings show faces, so they are **not in this repository**. This is the author's reported result; a reviewer cannot re-check it
+  from the repository alone, and the per-run values are not listed here.
 - It is a small number of runs on one pair of devices. It is not an error rate, and it says nothing about other phones, screens or rooms.
 - The cue needs a light facing the resident. It is one of six cues, and none of the others depends on it.
 

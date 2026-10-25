@@ -1,24 +1,18 @@
 # PRAMAAN claim discipline sheet (Build Map #98)
 
-
-
 One page. Every claim the pitch may make, the number behind it, its interval, how to reproduce it, and the
 
 matching limitation. **Limits come first**, because a judge who finds one overstated claim discounts everything
 
 else. A claim that has no number here is not made.
 
-
-
 ## 1. What we do not claim (read aloud before the numbers)
-
-
 
 | # | We do **not** claim | Why | Where it is recorded |
 
 |---|---|---|---|
 
-| L1 | Any measured APCER, BPCER or ACER on real presentations | Formally evaluated on a 1,600-session multi-species benchmark corpus via conformal prediction (`docs/reports/evaluation-report.html`). Held-out BPCER is 0.00% [0.00%, 7.4%] at L0 and 4.10% [1.5%, 8.6%] at L1; APCER on screen replay is 0.00% [0.00%, 7.4%]. Calibrated operating points proposal generated (`build/calibration/`). | `docs/reports/evaluation-report.md`, Build Map #65 |
+| L1 | Any measured APCER, BPCER or ACER on real presentations | **No real-person corpus exists yet.** `config/operating-points.json` says `"provisional": true` and "NOT MEASURED". The 1,600-session benchmark (`docs/reports/evaluation-report.html`) validates the evaluation pipeline, conformal calibration, and Clopper-Pearson intervals on a generated corpus; real physical error rates remain to be measured on consented human subjects. | `docs/corpus-plan.md`, Build Map #65 |
 
 | L2 | That headline numbers come from synthetic attacks | They never do. The synthetic factory (`harness/factory`) is for training and stress tests; reports label its rows SYNTHETIC. | Bible Part 45 |
 
@@ -50,12 +44,12 @@ else. A claim that has no number here is not made.
 
 | L22 | That the screens are usable or accessible in practice | The station UI is checked by offscreen renders (English, Hindi, large text, high contrast) and tests that its words carry no score or cause, and the real app was started once without errors. **No operator or resident has used it**, no screen reader was tried, Hindi bold falls back to regular weight with this machine's font, and there is no reduced-motion setting. Contrast was checked on the palette, not on a monitor. | `StationViewRenderTest`; Bible Part 19 |
 
-| L23 | That PRAMAAN is integrated into MOSIP's Registration Client | The patch against `registration-client` 1.2.0.2 (four hooks) compiles, and the PRAMAAN adapter (`regclient-adapter/`) has full unit tests. Prompt UI overlay is driven via `AdapterSettings.Listener`. On Android, MOSIP uses SBI Android Service IPC (deployment Mode D), so the registration client requires no code changes. | `integration/registration-client/README.md` |
+| L23 | That PRAMAAN is integrated into MOSIP's Registration Client | There is a patch against `registration-client` 1.2.0.2 (four hooks, a no-op by default): the services module compiles with it, and the PRAMAAN adapter that implements the hooks (`regclient-adapter/`) is written and tested against the reference device, but it has **not run inside the real client**, the client has no screen for challenge prompts, and the Android client is not patched. The scaffold in `desktop/` is not the Registration Client. | `integration/registration-client/README.md` |
 
-| L24 | That the flash cue separates a live face from a replay | Real laptop and phone experiment (E1) confirmed clear statistical separation ($t = 29.8, p < 10^{-15}$). Numerical per-run correlation table (20 runs, live $r = 0.81$, replay $r = 0.20$) is published in `docs/e1-results.md`. | `docs/e1-results.md` |
+| L24 | That the flash cue separates a live face from a replay | The author tested it on a second laptop and phone at several brightnesses and distances and found the separation the design predicts; the values shifted by about 0.1 to 0.15 with brightness and distance. The recordings are not published (they show a face), so this is the author's reported result, not something a reviewer can re-check from the repository. See `docs/e1-results.md` | `docs/e1-results.md` |
 | L12 | That this is the MOSIP Registration Client | The desktop app is a **scaffold** (ADR 0003). Integration depth into the real client is a decision record, not a done thing. | `docs/adr/0003-integration-depth.md` |
 
-| L13 | Anything on Android | The AAR builds, and on-device tests passed on a physical Xiaomi phone (22071219AI, Android 14): models load, face detection is 198 ms, passive liveness is 23.7 ms, heap is 16 MB, and both XNNPACK/NNAPI accelerators match CPU. The optimized mobile pipeline (stride-2 tracking + amortized SFace) runs in **164 ms per frame (~6.1 FPS)**, well within the 333 ms budget (`docs/android-low-resource.md`). Mode D deploys inside the SBI app. | `README.md`, `docs/android-low-resource.md` |
+| L13 | Anything on Android | The AAR builds, and on-device tests passed on a physical Xiaomi phone (22071219AI, Android 14): models load, face detection takes 190 ms median, passive liveness takes 21 ms, heap is 16 MB, and both XNNPACK/NNAPI accelerators run and match CPU. The full synchronous pipeline takes a median 409 ms on that phone, exceeding the 333 ms budget at 3 fps; an architectural optimization roadmap (stride-2 tracking, amortized embedding) is projected in `docs/android-low-resource.md`. Mode D deploys inside the SBI app. | `README.md`, `docs/android-low-resource.md` |
 
 | L14 | Hindi quality | The Hindi catalogue is complete. It was drafted by machine, checked by the author, and **independently verified by a native Hindi speaker (2026-10-25)**. L14 is resolved: no outstanding Hindi review gap. | Build Map #91 |
 | L15 | Model licences are settled | FLIP and PSCF licences are open (Part 30 Q16). The models in use are listed in `docs/licences.md`. | Part 30 |
@@ -64,15 +58,9 @@ else. A claim that has no number here is not made.
 
 | L16 | That MOSIP will accept the SBI Liveness Profile | How MOSIP takes spec proposals is unknown (Part 30 Q12). We ask the mentors before posting. | `docs/sbi-liveness-profile.md` |
 
-
-
 ## 2. What we do claim, with the number that backs it
 
-
-
 Each of these is a property of the code, reproducible with one command, not a claim about real-world error rates.
-
-
 
 | # | Claim | Number | Interval / precision | Reproduce | Matching limitation |
 
@@ -102,11 +90,7 @@ Each of these is a property of the code, reproducible with one command, not a cl
 
 | C12 | No English text on the operator or resident screens carries a score or a cause of rejection | Every English `pramaan.ui.*` string (except the audited diagnostics text) is checked against the same forbidden-word pattern as the resident screen (score, probability, zone, cue, threshold, moiré, spoof, attack, replay, a percentage or a decimal); every outcome the station can report has a message in English and in Hindi. **The pattern is English; the Hindi is only checked for completeness, not for forbidden meaning** | exact (a string check) | `./gradlew :desktop:test --tests '*StationViewRenderTest'` | A word list catches words, not meaning; the Hindi is machine-drafted and unreviewed (L14, L22). The diagnostics window shows scores by design, behind an audited, policy-gated grant. |
 
-
-
 ## 3. How to answer "how do you know?"
-
-
 
 | If asked | Answer | Do **not** say |
 
@@ -122,11 +106,7 @@ Each of these is a property of the code, reproducible with one command, not a cl
 
 | "Can a mask pass?" | "A projected-face mask is a known, unquantified gap for flash; texture and scene cues are the mitigation. It is on the red-team list." | "No." |
 
-
-
 ## 4. Before every talk
-
-
 
 - [ ] Every number on a slide appears in section 2, with its interval or "exact".
 
@@ -137,4 +117,5 @@ Each of these is a property of the code, reproducible with one command, not a cl
 - [ ] `config/operating-points.json` still says `provisional`, and the deck says so.
 
 - [ ] If a real corpus now exists, L1, L8, L9 and L11 are rewritten from the report, not from memory.
+
 

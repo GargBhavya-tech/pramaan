@@ -22,12 +22,12 @@ PS04 asks for changes in the Desktop Registration Client. This folder holds a **
   proves the nonce the device signed is the engine's own, that a capture made under another transaction id is refused, and that every
   failure ends in a refusal, not a capture without liveness. The engine's analysers in that test are the scripted resident, so it proves
   the plumbing and the binding, **not the detectors**.
-- **Production Hook Architecture**: The patch and adapter are architected so the client's UI seamlessly renders challenge prompts
-  ("please turn your head", "please blink") directly via the `AdapterSettings.Listener` callback registered during startup. The desktop
-  scaffold demonstrates this full overlay. Binding enforces the full `HEURISTIC` and cryptographic lock chain.
-- **Android Registration Model (Mode D)**: Under MOSIP's Android architecture, the registration client communicates with biometrics via
-  Android Service IPC (the SBI Android App). PRAMAAN ships as `pramaan-android.aar` directly integrated into the SBI service layer, meaning
-  the Android Registration Client requires **zero code changes**—it receives fully bound, verified biometric captures transparently.
+- **Not done:** the patch and the adapter have **not run inside the real Registration Client**, not against a certified device and not with a
+  person (the client's UI needs its full MOSIP stack). The client has **no screen for challenge prompts** ("please turn your head"): the
+  host must show them from the listener passed to `AdapterSettings` (the scaffold's capture screen does), and that screen is not
+  patched in. Binding is at the `HEURISTIC` level: the client's rCapture call does not use the SBI Liveness Profile. The Android
+  Registration Client is a different repository and is not patched: on Android the engine runs inside the SBI device app (deployment
+  Mode D, `docs/android-low-resource.md`).
 
 ## What the patch changes (ADR 0003, patches P1 to P4)
 

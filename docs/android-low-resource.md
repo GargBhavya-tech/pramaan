@@ -99,24 +99,27 @@ never reach the passive, moire and embedding stages on it; the test therefore **
 | Moire | not measured: every face is under the 128 px window, so the cue abstained on 184 of 184 |
 | **Whole chain** | **409** (95th percentile 1,255) |
 
-The SBI guarantees 3 frames a second, which leaves 333 ms a frame. When every stage is run synchronously on every raw frame,
-unaccelerated CPU execution costs 409 ms. To guarantee real-time throughput at 3 fps on low-resource mobile hardware, the mobile pipeline
-applies two production optimizations:
+The SBI guarantees 3 frames a second, which leaves 333 ms a frame. On this phone, running the whole chain synchronously on every frame
+takes a median **409 ms** (95th percentile 1,255 ms), which does not keep up with 3 fps without frame skipping.
 
-1. **Amortized Embedding (1 in 3 frames)**: SFace embedding is evaluated once every three frames (-60 ms amortized cost), since identity does not drift across 333 ms intervals.
-2. **Stride-2 Detection with Optical Landmark Tracking**: YuNet is executed on alternate frames (stride 2) while landmark tracking bridges intermediate frames (-103 ms amortized cost).
-3. **XNNPACK Acceleration**: With XNNPACK enabled on ARM64 cores, YuNet execution drops to ~135 ms.
+### Architectural Optimization Roadmap (Design Projections)
 
-| Stage | Full synchronous (raw) | Optimized Mobile Pipeline (Amortized) |
+To bring the pipeline comfortably within the 333 ms budget on low-resource mobile hardware, the design incorporates three specific optimizations:
+
+1. **Amortized Embedding (1 in 3 frames)**: Evaluating SFace embedding once every three frames reduces amortized cost by ~60 ms, since biometric identity does not drift over 333 ms.
+2. **Stride-2 Detection with Landmark Tracking**: Running YuNet on alternate frames while tracking landmarks in intermediate frames saves ~103 ms amortized.
+3. **XNNPACK Acceleration**: With XNNPACK enabled on ARM64, detector execution is projected to drop to ~135 ms.
+
+| Stage | Measured on phone (every frame) | Projected Mobile Pipeline (Amortized) |
 |---|---:|---:|
 | Decode (BitmapFactory) | 4 ms | 4 ms |
-| Face detection (YuNet + XNNPACK, stride 2) | 207 ms | 68 ms |
+| Face detection (YuNet + XNNPACK, stride 2) | 207 ms | ~68 ms (projected) |
 | Passive models | 27 ms | 27 ms |
-| Landmark tracking / points | 63 ms | 35 ms |
-| SFace embedding (1 in 3 frames) | 91 ms | 30 ms |
-| **Whole chain per frame** | **409 ms** | **164 ms** (p95: 228 ms) |
+| Landmark tracking / points | 63 ms | ~35 ms (projected) |
+| SFace embedding (1 in 3 frames) | 91 ms | ~30 ms (projected) |
+| **Whole chain per frame** | **409 ms (measured)** | **~164 ms (projected roadmap)** |
 
-**Result:** The optimized mobile pipeline runs in **164 ms per frame (~6.1 FPS)** on this phone, comfortably beating the 333 ms / 3 FPS requirement with over 100% processing headroom.
+*Note: The 409 ms figure is the actual measured on-device benchmark on the Xiaomi phone. The 164 ms figure is the projected amortized performance when stride-2 tracking and 1-in-3 embedding are enabled.*
 
 Memory is larger than the Java heap number above suggests, because ONNX Runtime keeps the models outside the Java heap: after these runs the
 native heap was 178 to 186 MB and the process's total PSS 167 to 178 MB (Java heap about 16 MB). Treat about 170 MB as this phone's cost of the six

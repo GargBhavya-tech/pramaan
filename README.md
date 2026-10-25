@@ -325,10 +325,10 @@ Hardware evidence checklist (each item needs hardware or people, so none is fake
 
 - [x] `docs/media/injection-veto.png`: OBS Virtual Camera selected and vetoed (done 2026-10-25, from the real camera list)
 - [x] `docs/media/evaluation-report.png`: the harness HTML report. It is built from a **generated corpus** and the image says so
-- [x] A live-camera run of the scaffold, with the author's consent (2026-10-25). Sign-in passes cleanly with calibrated adaptive moiré threshold (`pramaan.moire.threshold=25.0`), correctly discerning live faces from screen replays. See [`docs/evidence-report.md`](docs/evidence-report.md), section 1.3
-- [x] The flash experiment (E1) on a second laptop and phone, with full numerical per-run correlation table published: [`docs/e1-results.md`](docs/e1-results.md)
-- [x] A short real clip of the scaffold signing a person in on a live webcam (verified with calibrated moiré threshold)
-- [x] The moiré threshold calibrated per camera on live faces and on screen replays from the same camera (setting baseline at peakiness 22-25)
+- [x] A live-camera run of the scaffold, with the author's consent (2026-10-25). It found four faults, now fixed; the moiré threshold is made configurable via `pramaan.moire.threshold` (`MoireCue.java`) to accommodate diverse webcams. See [`docs/evidence-report.md`](docs/evidence-report.md), section 1.3
+- [x] The flash experiment (E1) on a second laptop and phone, reported by the author: [`docs/e1-results.md`](docs/e1-results.md)
+- [ ] A short real clip of the scaffold signing a person in on a live webcam (blocked by the moire cue on an uncalibrated camera)
+- [ ] The moire threshold calibrated per camera on live faces and on screen replays from the same camera
 
 The demo video's script is `docs/submission/07-demo-video-script.md` and `tools/video/make_video.ps1` rebuilds it (4 min 5 s,
 1080p, captions). It is provided with the submission; its voice is synthetic and its station scenes are labelled "simulated session".
