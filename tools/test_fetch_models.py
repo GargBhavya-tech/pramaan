@@ -193,5 +193,14 @@ class BundleTest(unittest.TestCase):
         self.assertIsNone(fm.bundle_url(None, fm.MODELS) if "PRAMAAN_MODELS_URL" not in os.environ else None)
 
 
+class SetupTest(unittest.TestCase):
+    def test_the_gradle_wrapper_is_an_absolute_path_that_exists(self):
+        import setup
+        wrapper = Path(setup.gradle_command(":desktop:showcase")[0])
+        self.assertTrue(wrapper.is_absolute(), "a relative name is not found on Windows when run from another directory")
+        self.assertTrue(wrapper.exists())
+        self.assertEqual([":desktop:showcase", "--no-daemon"], setup.gradle_command(":desktop:showcase")[1:])
+
+
 if __name__ == "__main__":
     unittest.main()

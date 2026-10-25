@@ -29,7 +29,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def gradle_command(task):
-    wrapper = "gradlew.bat" if os.name == "nt" else "./gradlew"
+    # An absolute path: on Windows CreateProcess resolves a bare "gradlew.bat" against the parent's directory, not the cwd given
+    # to subprocess, so a relative name is "file not found" when setup.py is run from anywhere but the repository root.
+    wrapper = str(ROOT / ("gradlew.bat" if os.name == "nt" else "gradlew"))
     return [wrapper] + task.split() + ["--no-daemon"]
 
 
