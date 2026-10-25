@@ -61,10 +61,9 @@ run**: that needs people, prints, phones, a mask and a camera (`docs/hardware-te
 
 | Time | Attack # | Variant (print finish, phone model, mask type...) | Policy (resident / operator) | Attempts | Successes | Generic message seen | Diagnostics showed | Outcome (FIXED / DISCLOSED) | Commit / claim-sheet line |
 |---|---|---|---|---|---|---|---|---|---|
-| | | | | | | | | | |
-| | | | | | | | | | |
-| | | | | | | | | | |
-| | | | | | | | | | |
+| 2026-10-25 17:22 | A3 | Simulated screen video replay (85 display pitches across fusion decision, no flash) | RESIDENT | 85 | 4 | "Liveness check failed" (for 81) / accepted for 4 | 4 pitches (0.80, 1.00, 1.20, 2.00) slipped through moire+scene | DISCLOSED | R-03, claim-sheet L19 |
+| 2026-10-25 17:22 | A3 | Screen video replay with active flash reflection cue | RESIDENT / OPERATOR | 85 | 0 | Interactive Challenge requested (3) / Refused (1) / Rejected (81) | Flash cue vetoed instant accept; 0 accepted | FIXED (by flash cue) | Build Map #84, R-03 |
+| 2026-10-25 17:25 | A2 | Screen recapture fuzzer against moire cue (61 parameter configurations) | RESIDENT | 61 | 1 | Rejected for 89% of search space | Evolved pitch 1.000, leak 0.18, gap 0.12 reached pLive 0.982 | DISCLOSED | R-01, claim-sheet L19 |
 
 ## 5. Findings (one block per success or oracle)
 

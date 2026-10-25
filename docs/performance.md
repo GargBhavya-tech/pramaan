@@ -23,7 +23,8 @@ Three quiet-machine runs; each cell is the p50 and p95:
 
 Reading it: a frame that goes through decode, detection and the quality gate costs about 70 to 110 ms at the median. Passive
 liveness is run on every second frame (`passive every : 2 frame(s)`), so the passive model adds about 20 to 25 ms per frame on
-average. That is roughly **9 to 14 frames per second of headroom on this laptop**, against the **3 fps the SBI stream
+average. For those stages alone that is roughly **9 to 14 frames per second of headroom on this laptop** (the whole engine, with landmarks and
+the embedding, took a median 390 ms a frame on the first real-webcam run and 183 ms after the fixes: see [`evidence-report.md`](evidence-report.md)), against the **3 fps the SBI stream
 guarantees**. The headroom is real on a laptop and says nothing about a low-end phone.
 
 ## What is not in these numbers

@@ -161,7 +161,10 @@ What *is* measured and reproducible:
 | Transparency log | Merkle heads and proofs match the Certificate Transparency test vectors | `./gradlew :core:test --tests '*MerkleLogTest'` |
 | Stereo cue (synthetic) | real-face relief ≈ 25 mm vs flat print ≈ 0 mm (±4 mm) | `./gradlew :core:test --tests '*StereoDepthCueTest'` |
 | Flash cue against a real replay (E1) | the author's test on a second laptop and phone separated live from replay as the design predicts (about 0.8 against below 0.3); the measured values moved by about 0.1 to 0.15 with screen brightness and distance, so they are a range, not a single number. The recordings are not in the repository (they show a face) | [`docs/e1-results.md`](docs/e1-results.md) |
-| Pipeline latency (one laptop, CPU) | per frame at the median: face detection about 30 to 45 ms, passive liveness about 45 ms, JPEG decode about 17 to 24 ms, so roughly 9 to 14 frames per second of headroom against the 3 fps the SBI stream guarantees. **Not a phone** | `./gradlew :harness:pipelineBench`; [`docs/performance.md`](docs/performance.md) |
+| Pipeline latency (one laptop, CPU) | per frame at the median: face detection about 30 to 45 ms, passive liveness about 45 ms, JPEG decode about 17 to 24 ms, so roughly 9 to 14 frames per second of headroom against the 3 fps the SBI stream guarantees, **for those three stages only**: the whole engine (with landmarks and the embedding) took about 390 ms a frame on the first real-webcam run, 183 ms after the fixes. **Not a phone** | `./gradlew :harness:pipelineBench`; [`docs/performance.md`](docs/performance.md) |
+
+Everything run so far, with what each number measures (real hardware, a simulated screen, or a generated corpus), is in
+[`docs/evidence-report.md`](docs/evidence-report.md).
 
 The repo also records its own red-team findings honestly. For example, R-03 in `docs/red-team-log.md` shows that
 without a flash cue, attacker-controlled cues can sum to an accept on a synthetic screen replay. It is fixed for operators and
