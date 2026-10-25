@@ -177,13 +177,14 @@ class BundleTest(unittest.TestCase):
 
     def test_bundle_url_order_is_argument_then_environment_then_file_and_skips_comments(self):
         with tempfile.TemporaryDirectory() as d:
-            (Path(d) / "bundle-url.txt").write_text("# a comment" + chr(10) + chr(10) + "https://example.test/from-file.zip" + chr(10), encoding="utf-8")
+            f = Path(d) / "bundle-url.txt"
+            f.write_text("# a comment" + chr(10) + chr(10) + "https://example.test/from-file.zip" + chr(10), encoding="utf-8")
             old = os.environ.pop("PRAMAAN_MODELS_URL", None)
             try:
-                self.assertEqual("https://example.test/from-file.zip", fm.bundle_url(None, d))
+                self.assertEqual("https://example.test/from-file.zip", fm.bundle_url(None, f))
                 os.environ["PRAMAAN_MODELS_URL"] = "https://example.test/from-env.zip"
-                self.assertEqual("https://example.test/from-env.zip", fm.bundle_url(None, d))
-                self.assertEqual("https://example.test/arg.zip", fm.bundle_url("https://example.test/arg.zip", d))
+                self.assertEqual("https://example.test/from-env.zip", fm.bundle_url(None, f))
+                self.assertEqual("https://example.test/arg.zip", fm.bundle_url("https://example.test/arg.zip", f))
             finally:
                 os.environ.pop("PRAMAAN_MODELS_URL", None)
                 if old is not None:
@@ -192,11 +193,11 @@ class BundleTest(unittest.TestCase):
     def test_the_shipped_bundle_url_file_holds_one_https_zip_link(self):
         old = os.environ.pop("PRAMAAN_MODELS_URL", None)
         try:
-            url = fm.bundle_url(None, fm.MODELS)
+            url = fm.bundle_url(None)
         finally:
             if old is not None:
                 os.environ["PRAMAAN_MODELS_URL"] = old
-        self.assertIsNotNone(url, "models/bundle-url.txt should name the release that holds the converted models")
+        self.assertIsNotNone(url, "config/models-bundle-url.txt should name the release that holds the converted models")
         self.assertTrue(url.startswith("https://") and url.endswith(".zip"), url)
 
 

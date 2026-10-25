@@ -13,7 +13,7 @@ them (models/README.md, "Regenerating the two we converted") or where to copy th
 
 SFace is development use only until its training-data terms are answered (docs/licences.md, Bible Part 30).
 A bundle URL (a zip with the four converted models, hosted on Google Drive, a GitHub Release or anywhere HTTPS) can be given with
---bundle-url, the PRAMAAN_MODELS_URL environment variable, or the first non-comment line of models/bundle-url.txt. Only files whose
+--bundle-url, the PRAMAAN_MODELS_URL environment variable, or the first non-comment line of config/models-bundle-url.txt. Only files whose
 name is in the table and whose SHA-256 matches are taken from it; every other entry in the zip is ignored, and no path inside the
 zip is ever used to decide where a file goes.
 
@@ -32,6 +32,8 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[1]
 TABLE = ROOT / "config" / "operating-points.json"
 MODELS = ROOT / "models"
+# Not in models/: the licence check treats every file there as a model that needs a row in docs/licences.md.
+URL_FILE = ROOT / "config" / "models-bundle-url.txt"
 
 ZOO = "https://github.com/opencv/opencv_zoo/raw/main/models/"
 SOURCES = {
@@ -81,13 +83,13 @@ def fetch(url, dest, sha256, opener=urllib.request.urlopen):
             tmp.unlink()
 
 
-def bundle_url(explicit=None, models_dir=MODELS):
-    """The bundle URL from the argument, the environment, or models/bundle-url.txt; None if none is set."""
+def bundle_url(explicit=None, url_file=URL_FILE):
+    """The bundle URL from the argument, the environment, or config/models-bundle-url.txt; None if none is set."""
     if explicit:
         return explicit
     if os.environ.get("PRAMAAN_MODELS_URL"):
         return os.environ["PRAMAAN_MODELS_URL"].strip()
-    f = Path(models_dir) / "bundle-url.txt"
+    f = Path(url_file)
     if f.exists():
         for line in f.read_text(encoding="utf-8").splitlines():
             line = line.strip()
@@ -161,7 +163,7 @@ def run(models_dir, table, check_only, opener=urllib.request.urlopen, bundle=Non
             got = set()
         pending = [n for n in pending if n not in got]
     for name in pending:
-        print("missing  %s: %s; there is no public download. Put the bundle URL in models/bundle-url.txt (or pass "
+        print("missing  %s: %s; there is no public download. Put the bundle URL in config/models-bundle-url.txt (or pass "
               "--bundle-url), regenerate it (models/README.md), or copy it in by hand." % (name, OURS.get(name, "not a model this script knows")))
         missing += 1
     print("%d of %d model files verified" % (len(table) - missing, len(table)))
@@ -174,7 +176,7 @@ def main(argv=None):
     ap.add_argument("--models-dir", type=Path, default=MODELS)
     ap.add_argument("--bundle-url", help="a zip with the models we converted ourselves (see the module docstring)")
     args = ap.parse_args(argv)
-    return run(args.models_dir, expected_hashes(), args.check, bundle=bundle_url(args.bundle_url, args.models_dir))
+    return run(args.models_dir, expected_hashes(), args.check, bundle=bundle_url(args.bundle_url))
 
 
 if __name__ == "__main__":

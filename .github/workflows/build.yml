@@ -43,11 +43,11 @@ jobs:
 
       - name: Build and test (Linux, under a virtual display for the JavaFX tests)
         if: runner.os == 'Linux'
-        run: xvfb-run -a ./gradlew :core:build :sbi:build :harness:build :desktop:build --no-daemon
+        run: xvfb-run -a ./gradlew checkModelLicences :core:build :sbi:build :harness:build :desktop:build --no-daemon
 
       - name: Build and test (Windows)
         if: runner.os == 'Windows'
-        run: ./gradlew :core:build :sbi:build :harness:build :desktop:build --no-daemon
+        run: ./gradlew checkModelLicences :core:build :sbi:build :harness:build :desktop:build --no-daemon
 
       - name: Keep the test reports
         if: failure()

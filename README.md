@@ -148,7 +148,7 @@ python tools/setup.py --task :desktop:showcase         # models, then the statio
 YuNet and SFace come from OpenCV's public zoo and are checked against the SHA-256 in `config/operating-points.json`. The other four
 models are our own conversions and are **not in this repository** (a model binary is never committed here: see
 `docs/licences.md`). They are published as one zip on the repository's
-[`models-v1` release](https://github.com/GargBhavya-tech/pramaan/releases/tag/models-v1), whose link is in `models/bundle-url.txt`;
+[`models-v1` release](https://github.com/GargBhavya-tech/pramaan/releases/tag/models-v1), whose link is in `config/models-bundle-url.txt`;
 the script takes them from there, checks every file's SHA-256, and says which are missing. SFace is not in that zip (it is
 development use only): the script gets it from OpenCV's zoo. With a model missing it still
 builds, the tests that need one skip themselves, and the showcase and the reference device need none.

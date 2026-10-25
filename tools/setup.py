@@ -8,7 +8,7 @@
 What it does, in order:
   1. checks models/ against the hashes in config/operating-points.json;
   2. downloads what has a public source (YuNet and SFace from the OpenCV Zoo), hash-checked;
-  3. for the four models we converted ourselves, takes them from the bundle named in models/bundle-url.txt, --bundle-url or the
+  3. for the four models we converted ourselves, takes them from the bundle named in config/models-bundle-url.txt, --bundle-url or the
      PRAMAAN_MODELS_URL environment variable (see tools/fetch_models.py), hash-checked again;
   4. starts Gradle. If a model is still missing it says which, and still builds: the tests that need a model skip themselves, and
      the showcase and the reference device need none. The real liveness engine will not start until all six are present.
@@ -43,7 +43,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     code = fetch_models.run(fetch_models.MODELS, fetch_models.expected_hashes(), False,
-                            bundle=fetch_models.bundle_url(args.bundle_url, fetch_models.MODELS))
+                            bundle=fetch_models.bundle_url(args.bundle_url))
     if code != 0:
         print("\nNot every model is in place, so the real liveness engine will not start. Tests that need a model will skip,"
               " and the showcase and the reference device still work.\n")

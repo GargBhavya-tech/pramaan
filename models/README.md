@@ -19,7 +19,7 @@ python tools/fetch_models.py             # download YuNet and SFace from the Ope
 
 The script refuses any file whose SHA-256 differs from the table and never overwrites a file that is already there. The other four
 files are our own conversions and have no public URL. Three ways to get them: put a direct-download link to a zip of them in
-`models/bundle-url.txt` (or pass `--bundle-url`, or set `PRAMAAN_MODELS_URL`) and the script takes only the files whose name is in the
+`config/models-bundle-url.txt` (or pass `--bundle-url`, or set `PRAMAAN_MODELS_URL`) and the script takes only the files whose name is in the
 table and whose SHA-256 matches, ignoring everything else in the zip; regenerate them (below); or copy them in by hand. What goes in
 that zip, and where it is hosted, is the owner's decision under `docs/licences.md`; it does not need SFace, which the script fetches
 itself. The script says which files are missing. Its tests (`python -m unittest tools/test_fetch_models.py`) run against a local server and download nothing.
