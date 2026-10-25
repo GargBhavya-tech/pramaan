@@ -567,7 +567,7 @@ def slide_a1(deck, n):
           "Rendered from the real code, offscreen. One plain sentence, an icon, no score. No live camera in these images.")
     shots = [("capture-screen.png", "Resident capture mid-challenge", "A head-turn prompt with an arrow, an icon and one sentence."),
              ("hindi-accessibility.png", "Hindi, one click",
-              "Larger text and high contrast are also one click each. Machine-drafted Hindi."),
+              "Larger text and high contrast are also one click each. Hindi drafted by machine, checked by the author."),
              ("fails-closed.png", "Fails closed", "If anything does not verify, nothing can be registered and the screen says "
                                                   "what to check.")]
     alts = ["The resident capture screen mid-challenge with a step rail, a face oval, an arrow for a head turn and one plain "

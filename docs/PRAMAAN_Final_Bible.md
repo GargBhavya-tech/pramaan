@@ -1350,9 +1350,9 @@ an analytics signal, so it blocks on its own regardless of the dashboard.
 
 *As built (#75, `desktop/…/capture`):* `CaptureScreenModel` turns engine events into screens and has no JavaFX in it; `FaceCaptureView` (JavaFX 11.0.2) only renders them, so neither can show what the engine never sends. The words live in `messages.properties` (one file per language), keyed by the engine's message ids; a test resolves every id the engine can emit and fails on any score-like word or decimal. The preview is mirrored, so "turn to your left" points to the screen's left; the oval's colour follows the stage, never a score. Two engine events were added for this Part: *step completed* ("Action detected", and the tone an eyes-closed prompt promises — without it a resident cannot know when to open their eyes) and *attempt n of m*.
 
-*As built (#91-#94):* a second catalogue, `messages_hi.properties` (Hindi, flagged for native-speaker review — the
-Devanagari text is machine-translated, and `HindiCatalogueTest` only checks it is complete and non-empty, not
-idiomatic), completes principle 5 for language; `PromptIcon` gives every animation hint a vector icon for a
+*As built (#91-#94):* a second catalogue, `messages_hi.properties` (Hindi: the
+Devanagari text was machine-translated and has since been checked by the author, with no independent native-speaker review;
+`HindiCatalogueTest` only checks it is complete and non-empty, not idiomatic), completes principle 5 for language; `PromptIcon` gives every animation hint a vector icon for a
 resident who cannot read either language, and `Speech.forPlatform()` speaks each new headline (Windows' own
 `System.Speech`, via PowerShell) except while the device is still connecting. Every `Severity.HIGH` `LivenessError`
 in one message-id group renders the identical string in every language (`HindiCatalogueTest` checks this directly,

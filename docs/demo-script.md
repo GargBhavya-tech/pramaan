@@ -161,7 +161,7 @@ aloud; each is one row of the Bible's binding table.
 **Say:** "A resident who cannot see a dot on the screen still gets through, and over-use of the profile is itself visible."
 
 **Fallback:** text-to-speech needs Windows `System.Speech`; without it the text prompts still appear. The Hindi
-strings are flagged for native-speaker review — say so.
+strings were drafted by machine and checked by the author — say so.
 
 ## Scene 9 — Close on the report  `HARNESS`
 

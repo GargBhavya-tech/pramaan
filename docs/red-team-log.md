@@ -105,7 +105,11 @@ Decision:      FIXED for operators and supervisors, DISCLOSED for residents (cla
                Original text of the suggestion follows. Conditional on the passive CNN being fooled (not modelled:
                it is likely not) and on no flash light. Suggested rule, to be set on the corpus: an ACCEPT needs at least one live
                vote from a cue the display cannot fake (flash, stereo, a passed challenge), else the session goes to the
-               challenge. Not applied to residents: it would change BPCER at every station without a light, which cannot be priced without #65.
+               challenge. Not applied to residents, for two reasons. It would change BPCER at every station without a light, which cannot be priced without #65.
+               And it turns an accept into a challenge: a resident who ticked an accessibility profile (infant, cannot see the screen,
+               limited movement) is asked fewer or gentler checks by design, so a rule that forces a challenge on them could lock out
+               exactly the people the inclusion rules protect. Enabling it for residents needs the session to pass the profiles to the
+               decider so the rule can stand down for them; that is designed, not built.
 Re-run result: pending real phones and the passive scorer on real replays.
 ```
 

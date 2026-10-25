@@ -2,8 +2,8 @@
 
 Every screen below is **rendered offscreen from the real JavaFX code** (`StationViewRenderTest`, `UiShowcase`), so these are
 the implemented screens, not mock-ups of intended ones. There is no live camera behind them: the camera area shows its
-placeholder. Limits first: **no operator or resident has used these screens**, no screen reader was tried, and the Hindi is
-machine-drafted and not yet reviewed by a native speaker (`docs/claim-sheet.md`, L14, L22).
+placeholder. Limits first: **no operator or resident has used these screens**, no screen reader was tried, and the Hindi was
+drafted by machine and checked by the author, with no independent native-speaker review (`docs/claim-sheet.md`, L14, L22).
 
 ## Direction
 
@@ -101,6 +101,6 @@ The palette was checked, not a monitor: real displays, glare and colour-vision d
 ## Not done
 
 - Trying the screens with real operators and residents, and with a screen reader.
-- A native-speaker review of the Hindi; bold Hindi falls back to regular weight with the font on the author's machine, so
+- An independent native-speaker review of the Hindi (the author has checked it); bold Hindi falls back to regular weight with the font on the author's machine, so
   headings in Hindi rely on size.
 - A reduced-motion setting; Android screens (the Android screens belong to the SBI device app, not to this repository).

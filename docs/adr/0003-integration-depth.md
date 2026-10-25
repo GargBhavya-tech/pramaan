@@ -56,6 +56,8 @@ Three facts decide the patch:
 | P6 | Operator login (face authentication path) | Strict liveness **before** the match (#76) |
 | P7 | Global parameters (`ApplicationContext` map, synced from the server) | Two keys holding the policy YAML and the operating-point table, read through a `ConfigurationSource`, so a centre's policy changes with a configuration push, never a rebuild (#78) |
 
+The patch itself is in `integration/registration-client/` (against `registration-client` 1.2.0.2).
+
 In the scaffold these seams are the same objects: `CaptureSession` is P1 + P2 (it owns the stream and hands
 frames to both the preview and the engine), `SbiFrameSource.capture` already sends the nonce (P3), and the
 capture screen is P5. **P4 is built:** `EvidencePackager.pack` refuses anything but an ACCEPTED session,

@@ -29,8 +29,8 @@ script for a live demo is `docs/demo-script.md`; this one is the recorded submis
 - [ ] For the station scene with MockMDS: start MockMDS (`docs/hardware-testing-guide.md` section 2.2), models in `models/`,
       then `./gradlew :desktop:runScaffold`. If the camera step stalls, "Camera not connected. Please check the device." is
       correct behaviour; show it rather than hiding it.
-- [ ] Captions: add English subtitles (the on-screen text is small). Add Hindi subtitles only if a native speaker has
-      checked them.
+- [ ] Captions: add English subtitles (the on-screen text is small). Hindi subtitles are fine: the author has checked the
+      Hindi text.
 - [ ] Length: under 3:00 unless the form asks for 2-5 minutes.
 
 ## What not to show or say

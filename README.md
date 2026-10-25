@@ -97,7 +97,7 @@ requirement stands:
 | Error handling and retry | Error taxonomy; quality problems never use an attempt | Built |
 | UI/UX | Station screens, Hindi, accessibility modes, generic message on PAD failure | Built as a scaffold; **no user has tried it** |
 | L0/L1 device integration | SBI client, reference device that speaks the Liveness Profile | Built against the protocol; **not run on a certified device or a live camera** |
-| Changes in the Desktop and Android Registration Clients | A scaffold and an AAR | **Not done**: the MOSIP clients themselves are not patched |
+| Changes in the Desktop and Android Registration Clients | A patch against MOSIP's `registration-client` 1.2.0.2 (`integration/registration-client/`: four hooks, a no-op by default), a scaffold, and an AAR | **Partly done**: the services module compiles with the patch, but it has not run inside the real client, the PRAMAAN adapter is not written, and the Android client is not patched |
 | Evaluate against ISO/IEC 30107 | Harness with per-PAIS APCER and BPCER and intervals | Method built; **no data** |
 | Bonus: mock device, attack tests, interoperability, model versions, offline updates, low-resource Android | Reference device, red team, signed bundles; Android tuning and acceleration code | Built; **Android not run on a phone** |
 | Good-to-have: metrics, diagnostic mode, capability discovery | Metrics module (`docs/metrics.md`), audited diagnostic mode, device discovery | Built |
@@ -300,7 +300,7 @@ words and states exactly, but **no live camera or device** is behind them: the c
 | | |
 |---|---|
 | ![Resident capture, a head-turn prompt](docs/media/capture-screen.png) | ![The same screen in Hindi](docs/media/hindi-accessibility.png) |
-| Resident capture: step rail, one instruction, the scaffold labelled as a scaffold | Hindi (machine-drafted, not yet reviewed) |
+| Resident capture: step rail, one instruction, the scaffold labelled as a scaffold | Hindi (drafted by machine, checked by the author) |
 | ![Operator sign-in](docs/media/operator-sign-in.png) | ![Fails closed](docs/media/fails-closed.png) |
 | Operator sign-in | Fails closed: nothing can be registered, and it says what to check |
 | ![Exception flow](docs/media/exception-flow.png) | ![Audited dialog](docs/media/audited-dialog.png) |
@@ -309,12 +309,20 @@ words and states exactly, but **no live camera or device** is behind them: the c
 More: `docs/media/hindi-large-text.png`, `docs/media/hindi-high-contrast.png`, `docs/media/supervisor-approval.png`,
 `docs/media/resident-done.png`.
 
-Still to capture (each needs hardware or a real run, so they are not faked):
+The flash challenge, as the station plays it. This is **rendered from the real run log** (`run.json`) of the station's flash window
+playing its 8-step random code, not a screen capture, and there is no face or camera in it:
 
-- [ ] `docs/media/flash-challenge.gif`: the flash colour challenge playing on the resident's screen (`--flash-screen primary`)
-- [ ] `docs/media/injection-veto.png`: OBS Virtual Camera selected and vetoed
+![The flash colour challenge, from a real run log](docs/media/flash-challenge.gif)
+
+Still to capture (each needs hardware or people, so they are not faked):
+
+- [ ] `docs/media/injection-veto.png`: OBS Virtual Camera selected and vetoed (needs OBS installed on the station)
 - [ ] `docs/media/evaluation-report.png`: the harness HTML report (needs a corpus; synthetic rows would be labelled)
-- [ ] A demo video: `docs/submission/07-demo-video-script.md` (3 min) or the live script `docs/demo-script.md`
+- [ ] A live-camera run of the scaffold, with someone's consent: `docs/hardware-testing-guide.md`
+- [ ] The flash experiment (E1) on a laptop with a consenting person: `docs/research-plan-real-data.md`
+
+The demo video's script is `docs/submission/07-demo-video-script.md` and `tools/video/make_video.ps1` rebuilds it (4 min 5 s,
+1080p, captions). It is provided with the submission; its voice is synthetic and its station scenes are labelled "simulated session".
 
 ## Submission (MOSIP Decode 2026, problem statement 04)
 

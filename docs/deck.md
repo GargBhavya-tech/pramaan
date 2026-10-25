@@ -130,7 +130,7 @@ Optional, with a device that supports the proposal: a **cryptographic** lock on 
 - We red-teamed ourselves: the moiré cue has blind pitches, and **without a flash light, two cues the attacker controls can sum to an accept** (disclosed, not fixed)
 - Not tested on a real device, a real second camera, or an iris camera
 - Not the MOSIP Registration Client; Android never run on a phone
-- Model licences are open questions; Hindi not yet reviewed by a native speaker
+- Model licences are open questions; Hindi checked by the author, not independently reviewed
 
 <!-- "No real corpus yet. Here is what we do not claim." L1-L21, condensed. Say this BEFORE the numbers slide. -->
 

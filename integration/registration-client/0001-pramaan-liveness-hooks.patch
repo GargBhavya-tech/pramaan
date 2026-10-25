@@ -1,0 +1,325 @@
+diff --git a/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java b/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java
+index ede0259..97d7df9 100644
+--- a/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java
++++ b/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java
+@@ -226,6 +226,9 @@ public class GenericBiometricsController extends BaseController {
+ 
+ 	private Service<List<BiometricsDto>> rCaptureTaskService;
+ 
++	/** PRAMAAN: the SBI transactionId the liveness hook chose for this face scan, or null (the client's own is used). */
++	private volatile String livenessTransactionId;
++
+ 	private Service<MdmBioDevice> deviceSearchTask;
+ 
+ 	public Modality getCurrentModality() {
+@@ -514,10 +517,13 @@ public class GenericBiometricsController extends BaseController {
+ 						generateAlert(RegistrationConstants.ERROR, RegistrationUIConstants.getMessageLanguageSpecific(RegistrationUIConstants.STREAMING_ERROR));
+ 						return;
+ 					}
++					livenessTransactionId = isFace(currentModality)
++							? io.mosip.registration.liveness.LivenessHooks.get().beginFaceScan(RegistrationConstants.FACE_FULLFACE)
++							: null;
+ 					rCaptureTaskService();
+ 					streamer.startStream(urlStream, biometricImage, biometricImage);
+ 
+-				} catch (RegBaseCheckedException | IOException exception) {
++				} catch (RegBaseCheckedException | IOException | io.mosip.registration.liveness.LivenessRefusedException exception) {
+ 					LOGGER.error("Error while streaming : " + currentModality,  exception);
+ 					generateAlert(RegistrationConstants.ERROR, RegistrationUIConstants.getMessageLanguageSpecific(RegistrationUIConstants.STREAMING_ERROR));
+ 
+@@ -587,6 +593,14 @@ public class GenericBiometricsController extends BaseController {
+ 					@Override
+ 					protected List<BiometricsDto> call() throws RegBaseCheckedException, IOException {
+ 
++						if (isFace(currentModality)) {
++							try {
++								io.mosip.registration.liveness.LivenessHooks.get().awaitCaptureClearance();
++							} catch (io.mosip.registration.liveness.LivenessRefusedException | InterruptedException e) {
++								LOGGER.error("Liveness did not clear the capture", e);
++								throw new RegBaseCheckedException("REG-PRAMAAN-001", "Liveness verification did not complete");
++							}
++						}
+ 						LOGGER.info("Capture request started {}", System.currentTimeMillis());
+ 						return rCapture(fxControl.getUiSchemaDTO().getId(), currentModality);
+ 
+@@ -628,6 +642,19 @@ public class GenericBiometricsController extends BaseController {
+ 						return;
+ 					}
+ 
++					if (isFace(currentModality)) {
++						try {
++							String evidence = io.mosip.registration.liveness.LivenessHooks.get().afterCapture(mdsCapturedBiometricsList);
++							for (BiometricsDto face : mdsCapturedBiometricsList) {
++								face.setLivenessEvidence(evidence);
++							}
++						} catch (io.mosip.registration.liveness.LivenessRefusedException refused) {
++							LOGGER.error("The signed capture was refused by the liveness hook", refused);
++							generateAlert(RegistrationConstants.ALERT_INFORMATION, RegistrationUIConstants.getMessageLanguageSpecific(RegistrationUIConstants.BIOMETRIC_CAPTURE_FAILURE));
++							return;
++						}
++					}
++
+ 					LOGGER.debug("Started local de-dup validation");// validate local de-dup check
+ 					if(identifyInLocalGallery(mdsCapturedBiometricsList,
+ 							Biometric.getSingleTypeByModality(isFace(currentModality) || isExceptionPhoto(currentModality) ?
+@@ -778,6 +805,7 @@ public class GenericBiometricsController extends BaseController {
+ 				io.mosip.registration.context.ApplicationContext.getStringValueFromApplicationMap(
+ 						RegistrationConstants.SERVER_ACTIVE_PROFILE),
+ 				Integer.valueOf(getCaptureTimeOut()), count, (int) bioService.getMDMQualityThreshold(modality));
++		mdmRequestDto.setTransactionId(isFace(modality) ? livenessTransactionId : null);
+ 		return bioService.captureModality(mdmRequestDto);
+ 
+ 	}
+diff --git a/registration/registration-client/src/main/java/io/mosip/registration/controller/device/Streamer.java b/registration/registration-client/src/main/java/io/mosip/registration/controller/device/Streamer.java
+index 105567a..aa21cc3 100644
+--- a/registration/registration-client/src/main/java/io/mosip/registration/controller/device/Streamer.java
++++ b/registration/registration-client/src/main/java/io/mosip/registration/controller/device/Streamer.java
+@@ -98,6 +98,7 @@ public class Streamer {
+ 				while (null != urlStream) {
+ 					try {
+ 						imageBytes = retrieveNextImage(urlStream);
++						io.mosip.registration.liveness.LivenessHooks.frame(imageBytes, System.currentTimeMillis());
+ 						ByteArrayInputStream imageStream = new ByteArrayInputStream(imageBytes);
+ 						Image img = new Image(imageStream);
+ 						streamImage.setImage(img);
+diff --git a/registration/registration-services/src/main/java/io/mosip/registration/dto/packetmanager/BiometricsDto.java b/registration/registration-services/src/main/java/io/mosip/registration/dto/packetmanager/BiometricsDto.java
+index c05b52f..79bfec7 100644
+--- a/registration/registration-services/src/main/java/io/mosip/registration/dto/packetmanager/BiometricsDto.java
++++ b/registration/registration-services/src/main/java/io/mosip/registration/dto/packetmanager/BiometricsDto.java
+@@ -23,6 +23,8 @@ public class BiometricsDto {
+ 	private String payLoad;
+ 	private String signature;
+ 	private String specVersion;
++	/** Signed liveness evidence (a JWS) for a face capture, stored in the BIR others map; null when no hook ran. */
++	private String livenessEvidence;
+ 	
+ 
+ 		
+diff --git a/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHook.java b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHook.java
+new file mode 100644
+index 0000000..285a8e2
+--- /dev/null
++++ b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHook.java
+@@ -0,0 +1,47 @@
++/*
++ * This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
++ */
++
++package io.mosip.registration.liveness;
++
++import java.util.List;
++
++import io.mosip.registration.dto.packetmanager.BiometricsDto;
++
++/**
++ * The four seams a face liveness engine needs in the Registration Client (PRAMAAN, ADR 0003, patches P1 to P4).
++ *
++ * <p>The client calls these only for the FACE modality. With no implementation on the classpath the client behaves exactly
++ * as it did before: see {@link LivenessHooks#NONE}. An implementation is found with {@link java.util.ServiceLoader}.
++ */
++public interface LivenessHook {
++
++	/**
++	 * A face scan is starting (before the stream is read). Returns the SBI {@code transactionId} the client must send in
++	 * the rCapture request (P3), so the device signs it inside the capture, or {@code null} to keep the client's own.
++	 * SBI allows 4 to 50 characters of letters, digits and hyphens.
++	 */
++	String beginFaceScan(String modality);
++
++	/**
++	 * Every decoded preview frame (P2): the JPEG bytes and when they arrived. Called on the streamer thread, so it must
++	 * return quickly and must not throw; the preview never stops because of the hook.
++	 */
++	void onPreviewFrame(byte[] jpeg, long arrivedAtEpochMillis);
++
++	/**
++	 * Called on the capture thread (P1) before the client asks the device for the signed capture. Blocks until the engine
++	 * has reached its capture step, or throws to stop the scan. The client no longer requests the capture the moment the
++	 * stream opens.
++	 */
++	void awaitCaptureClearance() throws InterruptedException, LivenessRefusedException;
++
++	/**
++	 * Called with the device's signed capture before the client stores it (P4). Returns the signed liveness evidence (a
++	 * JWS) to put in the face BIR {@code others} map, or throws {@link LivenessRefusedException} if the capture is not
++	 * the face that passed liveness, in which case nothing is stored.
++	 */
++	String afterCapture(List<BiometricsDto> captured) throws LivenessRefusedException;
++}
+diff --git a/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHooks.java b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHooks.java
+new file mode 100644
+index 0000000..7ae44e9
+--- /dev/null
++++ b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHooks.java
+@@ -0,0 +1,86 @@
++/*
++ * This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
++ */
++
++package io.mosip.registration.liveness;
++
++import java.util.Iterator;
++import java.util.List;
++import java.util.ServiceLoader;
++
++import io.mosip.registration.dto.packetmanager.BiometricsDto;
++
++/**
++ * Finds the {@link LivenessHook} implementation, if any, once. With none, {@link #NONE} does nothing, so the client is
++ * unchanged. If an implementation is present but cannot be loaded, the face scan is refused rather than run without
++ * liveness: a station that was meant to check liveness must not silently stop checking.
++ */
++public final class LivenessHooks {
++
++	/** Does nothing: no transaction id of its own, no frames kept, no wait, no evidence. */
++	public static final LivenessHook NONE = new LivenessHook() {
++		@Override
++		public String beginFaceScan(String modality) {
++			return null;
++		}
++
++		@Override
++		public void onPreviewFrame(byte[] jpeg, long arrivedAtEpochMillis) {
++			// nothing
++		}
++
++		@Override
++		public void awaitCaptureClearance() {
++			// nothing
++		}
++
++		@Override
++		public String afterCapture(List<BiometricsDto> captured) {
++			return null;
++		}
++	};
++
++	private static volatile LivenessHook hook;
++	private static volatile LivenessRefusedException loadFailure;
++
++	private LivenessHooks() {
++	}
++
++	/** The implementation, or {@link #NONE}. Throws if one is installed but failed to load (fail closed). */
++	public static LivenessHook get() throws LivenessRefusedException {
++		if (loadFailure != null) {
++			throw loadFailure;
++		}
++		LivenessHook h = hook;
++		if (h == null) {
++			synchronized (LivenessHooks.class) {
++				h = hook;
++				if (h == null) {
++					try {
++						Iterator<LivenessHook> it = ServiceLoader.load(LivenessHook.class).iterator();
++						h = it.hasNext() ? it.next() : NONE;
++					} catch (Throwable t) {
++						loadFailure = new LivenessRefusedException("a liveness hook is installed but did not load: " + t);
++						throw loadFailure;
++					}
++					hook = h;
++				}
++			}
++		}
++		return h;
++	}
++
++	/** For the preview thread: never throws, and never slows the preview when there is no hook. */
++	public static void frame(byte[] jpeg, long arrivedAtEpochMillis) {
++		try {
++			LivenessHook h = get();
++			if (h != NONE) {
++				h.onPreviewFrame(jpeg, arrivedAtEpochMillis);
++			}
++		} catch (Throwable t) {
++			// the preview must keep running; a hook that fails here fails the capture at the next seam
++		}
++	}
++}
+diff --git a/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessRefusedException.java b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessRefusedException.java
+new file mode 100644
+index 0000000..720d2e2
+--- /dev/null
++++ b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessRefusedException.java
+@@ -0,0 +1,21 @@
++/*
++ * This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
++ */
++
++package io.mosip.registration.liveness;
++
++/**
++ * Thrown by a {@link LivenessHook} to stop a face capture: liveness could not be established, or the signed capture is
++ * not the face that was checked. The client shows its generic capture-failure message and stores nothing; the reason
++ * belongs in the hook's own audit log, not on the screen.
++ */
++public class LivenessRefusedException extends Exception {
++
++	private static final long serialVersionUID = 1L;
++
++	public LivenessRefusedException(String message) {
++		super(message);
++	}
++}
+diff --git a/registration/registration-services/src/main/java/io/mosip/registration/mdm/dto/MDMRequestDto.java b/registration/registration-services/src/main/java/io/mosip/registration/mdm/dto/MDMRequestDto.java
+index a23da8d..0f8ae59 100644
+--- a/registration/registration-services/src/main/java/io/mosip/registration/mdm/dto/MDMRequestDto.java
++++ b/registration/registration-services/src/main/java/io/mosip/registration/mdm/dto/MDMRequestDto.java
+@@ -16,6 +16,8 @@ public class MDMRequestDto {
+ 	private int timeout;
+ 	private int count;
+ 	private int requestedScore;
++	/** Optional SBI transactionId to send instead of a random one (liveness binding); null keeps the client's own. */
++	private String transactionId;
+ 
+ 	public MDMRequestDto(String modality, String[] exceptions, String mosipProcess, String environment, int timeout,
+ 			int count, int requestedScore) {
+diff --git a/registration/registration-services/src/main/java/io/mosip/registration/mdm/sbi/spec_1_0/service/impl/MosipDeviceSpecification_SBI_1_0_ProviderImpl.java b/registration/registration-services/src/main/java/io/mosip/registration/mdm/sbi/spec_1_0/service/impl/MosipDeviceSpecification_SBI_1_0_ProviderImpl.java
+index 76ee4bf..c646075 100644
+--- a/registration/registration-services/src/main/java/io/mosip/registration/mdm/sbi/spec_1_0/service/impl/MosipDeviceSpecification_SBI_1_0_ProviderImpl.java
++++ b/registration/registration-services/src/main/java/io/mosip/registration/mdm/sbi/spec_1_0/service/impl/MosipDeviceSpecification_SBI_1_0_ProviderImpl.java
+@@ -308,7 +308,9 @@ public class MosipDeviceSpecification_SBI_1_0_ProviderImpl implements MosipDevic
+ 			sbiRCaptureRequestDTO = new SbiRCaptureRequestDTO(mdmRequestDto.getEnvironment(), bioDevice.getPurpose(), bioDevice.getSpecVersion(),
+ 					String.valueOf(mdmRequestDto.getTimeout()),
+ 					LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+-					mosipDeviceSpecificationHelper.generateMDMTransactionId(), captureRequestBioDTOs, null);
++					mdmRequestDto.getTransactionId() != null ? mdmRequestDto.getTransactionId()
++							: mosipDeviceSpecificationHelper.generateMDMTransactionId(),
++					captureRequestBioDTOs, null);
+ 		}
+ 
+ 		return sbiRCaptureRequestDTO;
+diff --git a/registration/registration-services/src/main/java/io/mosip/registration/util/common/BIRBuilder.java b/registration/registration-services/src/main/java/io/mosip/registration/util/common/BIRBuilder.java
+index f82d27e..bbe0dd5 100644
+--- a/registration/registration-services/src/main/java/io/mosip/registration/util/common/BIRBuilder.java
++++ b/registration/registration-services/src/main/java/io/mosip/registration/util/common/BIRBuilder.java
+@@ -68,7 +68,7 @@ public class BIRBuilder {
+ 		otherEntries.add(new Entry(OtherKey.PAYLOAD, payLoad == null ? RegistrationConstants.EMPTY : payLoad));
+ 		otherEntries.add(new Entry(OtherKey.SPEC_VERSION, bioDto.getSpecVersion() == null ? RegistrationConstants.EMPTY : bioDto.getSpecVersion()));*/
+ 
+-		return new BIR.BIRBuilder().withBdb(bioDto.getAttributeISO() == null ? new byte[0] : bioDto.getAttributeISO())
++		BIR.BIRBuilder birBuilder = new BIR.BIRBuilder().withBdb(bioDto.getAttributeISO() == null ? new byte[0] : bioDto.getAttributeISO())
+ 				.withVersion(versionType)
+ 				.withCbeffversion(versionType)
+ 				.withBirInfo(new BIRInfo.BIRInfoBuilder().withIntegrity(false).build())
+@@ -83,8 +83,12 @@ public class BIRBuilder {
+ 				.withOthers(OtherKey.SDK_SCORE, bioDto.getSdkScore()+RegistrationConstants.EMPTY)
+ 				.withOthers(OtherKey.FORCE_CAPTURED, bioDto.isForceCaptured()+RegistrationConstants.EMPTY)
+ 				.withOthers(OtherKey.PAYLOAD, payLoad == null ? RegistrationConstants.EMPTY : payLoad)
+-				.withOthers(OtherKey.SPEC_VERSION, bioDto.getSpecVersion() == null ? RegistrationConstants.EMPTY : bioDto.getSpecVersion())
+-				.build();
++				.withOthers(OtherKey.SPEC_VERSION, bioDto.getSpecVersion() == null ? RegistrationConstants.EMPTY : bioDto.getSpecVersion());
++		if (bioDto.getLivenessEvidence() != null) {
++			// PRAMAAN: the signed liveness evidence travels with the face record; the bdb is untouched
++			birBuilder.withOthers("PRAMAAN_LIVENESS", bioDto.getLivenessEvidence());
++		}
++		return birBuilder.build();
+ 	}
+ 
+ 	@SuppressWarnings("incomplete-switch")
