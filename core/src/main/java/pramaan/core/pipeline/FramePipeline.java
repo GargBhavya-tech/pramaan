@@ -88,9 +88,12 @@ public final class FramePipeline {
         latency.record("decode", t1 - t0);
         latency.record("detect", t2 - t1);
 
-        if (g.status() != FaceGate.Status.ONE_FACE) {
+        // The gate keeps reporting ONE_FACE for a short debounce after the face is lost, with no box: that frame has no face to
+        // assess, so it is a no-face frame (a live camera produces these whenever the face drops out for an instant).
+        if (g.status() != FaceGate.Status.ONE_FACE || g.primary() == null) {
             frames++;
-            return new Result(g.status(), track.trackId(), track.previousTrackLost(), null, Guidance.forGate(g.status()), Double.NaN,
+            FaceGate.Status shown = g.primary() == null && g.status() == FaceGate.Status.ONE_FACE ? FaceGate.Status.NO_FACE : g.status();
+            return new Result(shown, track.trackId(), track.previousTrackLost(), null, Guidance.forGate(shown), Double.NaN,
                     image, null);
         }
         QualityReport q = quality.assess(image, g.primary(), false);

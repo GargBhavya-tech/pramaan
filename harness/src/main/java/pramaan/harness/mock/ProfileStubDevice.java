@@ -48,7 +48,9 @@ public final class ProfileStubDevice implements AutoCloseable {
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final int CHECKPOINT_EVERY = 30;
-    private static final long FRAME_INTERVAL_MS = 100;
+    private static final long DEFAULT_FRAME_INTERVAL_MS = 100;
+    /** Milliseconds between streamed frames; a live camera on a slow machine is run slower than the engine's processing time. */
+    private volatile long frameIntervalMs = DEFAULT_FRAME_INTERVAL_MS;
     private static final long MAX_SCHEDULE_MS = 8_000;
 
     private final HttpServer server;
@@ -86,6 +88,13 @@ public final class ProfileStubDevice implements AutoCloseable {
         }
     }
 
+    /** True once the live camera has delivered a frame; until then the device must not pass off its still photograph as live. */
+    public boolean cameraDelivering() {
+        return cameraFrames;
+    }
+
+    private volatile boolean cameraFrames;
+
     /**
      * Replaces the still photograph with a live Windows camera, read by ffmpeg (DirectShow) and decoded into M-JPEG: the stream
      * and every capture then carry what the camera sees now. This records whoever is in front of it, so the caller must have
@@ -94,7 +103,7 @@ public final class ProfileStubDevice implements AutoCloseable {
     public void useCamera(String directShowName, int width, int height, int fps) throws IOException {
         Process p = new ProcessBuilder("ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "dshow", "-framerate",
                 Integer.toString(fps), "-video_size", width + "x" + height, "-i", "video=" + directShowName, "-f", "image2pipe",
-                "-c:v", "mjpeg", "-pix_fmt", "yuvj420p", "-q:v", "3", "-").redirectError(ProcessBuilder.Redirect.DISCARD).start();
+                "-c:v", "mjpeg", "-pix_fmt", "yuvj420p", "-q:v", "3", "-").redirectError(ProcessBuilder.Redirect.INHERIT).start();
         camera = p;
         Thread reader = new Thread(() -> {
             try {
@@ -103,6 +112,7 @@ public final class ProfileStubDevice implements AutoCloseable {
                 byte[] jpeg;
                 while ((jpeg = split.next()) != null) {
                     frame = jpeg;
+                    cameraFrames = true;
                 }
             } catch (IOException e) {
                 // the camera went away: the last frame stays, and the engine's own timeouts end the session
@@ -214,7 +224,7 @@ public final class ProfileStubDevice implements AutoCloseable {
                 out.write(part.toByteArray());
                 out.flush();
                 try {
-                    Thread.sleep(FRAME_INTERVAL_MS);
+                    Thread.sleep(frameIntervalMs);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     return;
@@ -337,6 +347,7 @@ public final class ProfileStubDevice implements AutoCloseable {
                 "0.jpeg");
         Path work = Path.of("build", "profile-device");
         String cameraName = null;
+        int streamFps = 10;
         for (int i = 0; i + 1 < args.length; i += 2) {
             switch (args[i]) {
                 case "--port":
@@ -351,14 +362,27 @@ public final class ProfileStubDevice implements AutoCloseable {
                 case "--camera":
                     cameraName = args[i + 1];
                     break;
+                case "--stream-fps":
+                    streamFps = Integer.parseInt(args[i + 1]);
+                    break;
                 default:
                     throw new IllegalArgumentException("unknown option " + args[i]);
             }
         }
         DevelopmentCa ca = DevelopmentCa.create(work);
         ProfileStubDevice device = new ProfileStubDevice(port, Files.readAllBytes(frame), ca, Clock.systemUTC());
+        device.frameIntervalMs = Math.max(1, 1000L / Math.max(1, streamFps));
         if (cameraName != null) {
-            device.useCamera(cameraName, 640, 480, 15);
+            device.useCamera(cameraName, 640, 480, 30);
+            long until = System.nanoTime() + 8_000_000_000L;
+            while (!device.cameraDelivering() && System.nanoTime() < until) {
+                Thread.sleep(100);
+            }
+            if (!device.cameraDelivering()) {
+                device.close();
+                throw new IllegalStateException("the camera '" + cameraName + "' gave no frame (is another program using it?); "
+                        + "not falling back to the still photograph");
+            }
         }
         System.out.println("PRAMAAN profile device on 127.0.0.1:" + device.port());
         System.out.println(cameraName == null ? "  camera : " + frame + " (one still photograph, repeated)"

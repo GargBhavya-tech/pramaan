@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
+import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.EnumSet;
 import java.util.List;
@@ -25,6 +26,7 @@ import pramaan.core.crypto.Jws;
 import pramaan.core.crypto.JwsVerificationException;
 import pramaan.core.crypto.VerifiedJws;
 import pramaan.core.session.SessionContext;
+import pramaan.core.session.SessionNonce;
 import pramaan.core.binding.EmissionLog;
 import pramaan.core.challenge.FlashSequence;
 import pramaan.core.source.DeviceIlluminator;
@@ -223,7 +225,9 @@ public final class SbiFrameSource implements FaceFrameSource {
         // A source restarted after stop() must report a real disconnect again.
         stopping = false;
         KeyPair clientKey = null;
-        String transactionId = session.nonce().value();
+        // CaptureSession starts the stream before the engine (and so the session) exists: the stream then gets its own fresh
+        // 32-hex id, which the device binds its flash and burst calls to.
+        String transactionId = session != null ? session.nonce().value() : SessionNonce.generate(new SecureRandom()).value();
         this.transactionId = transactionId;
         byte[] request = SbiRequests.stream(face.deviceId(), subId, config.streamTimeout().toMillis());
         if (face.signedStream()) {

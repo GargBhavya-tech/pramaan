@@ -58,6 +58,11 @@ public final class PipelineFrameAnalyser implements FrameAnalyser {
         this.colorTexture = Objects.requireNonNull(colorTexture, "colorTexture");
     }
 
+    /** Run the embedding model on one scored frame in this many. */
+    static final int EMBED_EVERY = 3;
+
+    private long scored;
+
     @Override
     public FrameObservation analyse(Frame frame) throws Exception {
         FramePipeline.Result r;
@@ -77,11 +82,14 @@ public final class PipelineFrameAnalyser implements FrameAnalyser {
         b.regions(regions[0], regions[1], regions[2]);
         if (r.quality.passes() && !Double.isNaN(r.passive)) {
             RgbImage face = nativeCrop(r.image, r.face);
-            b.passive(r.passive)
-                    .moire(moire.evaluate(face))
-                    .cue(colorTexture.evaluate(face))
-                    .embedding(sface.embed(r.image, r.face.fivePoints()))
-                    .sample(SampleSelector.contextCrop(r.image, r.face), r.quality.q());
+            b.passive(r.passive).moire(moire.evaluate(face));
+            b.cue(colorTexture.evaluate(face));
+            // SFace is the costliest model (about a third of a frame on a laptop CPU) and the engine only collects embeddings
+            // for the same-face lock, so it runs on the first scored frame and then on every EMBED_EVERY-th one.
+            if (scored++ % EMBED_EVERY == 0) {
+                b.embedding(sface.embed(r.image, r.face.fivePoints()));
+            }
+            b.sample(SampleSelector.contextCrop(r.image, r.face), r.quality.q());
             if (scene != null) {
                 scene.evaluate(r.image, r.face, face).forEach(b::cue);
             }

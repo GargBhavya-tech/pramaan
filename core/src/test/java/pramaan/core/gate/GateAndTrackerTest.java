@@ -46,6 +46,16 @@ class GateAndTrackerTest {
     }
 
     @Test
+    void whileTheGateDebouncesALostFaceItStillReportsOneFaceButHasNoBoxForTheFramePipelineToUse() {
+        FaceGate gate = new FaceGate();
+        assertEquals(FaceGate.Status.ONE_FACE, gate.update(List.of(face(100, 60)), at(0)).status());
+        FaceGate.Result dropout = gate.update(List.of(), at(33));
+        // FramePipeline treats this as a no-face frame; it must not hand the missing box to the quality assessor.
+        assertEquals(FaceGate.Status.ONE_FACE, dropout.status());
+        assertEquals(null, dropout.primary());
+    }
+
+    @Test
     void anOperatorSmallInTheBackgroundDoesNotCount() {
         FaceGate gate = new FaceGate();
         for (long t = 0; t <= 2000; t += 100) {

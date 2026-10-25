@@ -335,7 +335,10 @@ public final class LivenessEngine implements FrameSink {
         try {
             step(frame);
         } catch (Exception e) {
-            // A bug or a model failure mid-decision: fail the attempt closed, never skip liveness.
+            // A bug or a model failure mid-decision: fail the attempt closed, never skip liveness. The cause goes to stderr so
+            // the operator's support team can see why the attempt ended in ENGINE_ERROR.
+            System.err.println("PRAMAAN: engine error mid-decision: " + e);
+            e.printStackTrace();
             router.onEngineError(e);
         }
         syncAttempt();
