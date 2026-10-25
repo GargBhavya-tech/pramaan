@@ -176,3 +176,12 @@ tasks.register<JavaExec>("calibrate") {
     mainClass.set("pramaan.harness.eval.CalibrateFromRows")
     workingDir = rootProject.projectDir
 }
+
+// Generate benchmark evaluation corpus rows
+tasks.register<JavaExec>("generateBenchmarkCorpus") {
+    group = "verification"
+    description = "Generates synthetic benchmark session rows across demographics and attack species."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("pramaan.harness.factory.GenerateBenchmarkCorpus")
+    workingDir = rootProject.projectDir
+}
