@@ -452,7 +452,7 @@ def slide_cues(deck, n=6):
     text(s, 1.05, 1.4, 4.7, 0.36, ["Cues that fail differently"], size=18, color=BLUE, bold=True, anchor=MSO_ANCHOR.MIDDLE)
     cues = [("Passive model", "print, screen", "what it was not trained on"),
             ("Moiré", "screen recapture", "some display pitches (we found them)"),
-            ("Flash reflection", "replay, injection", "a projected mask; needs a light"),
+            ("Flash reflection", "replay, injection (by design)", "needs a light; not yet shown on real replays"),
             ("Scene + light", "the wrong room", "a replay of the right room"),
             ("Stereo depth", "flat things", "needs a second camera"),
             ("Stream fingerprint", "a re-encoding virtual camera", "one that copies the encoder")]
@@ -486,8 +486,9 @@ def slide_cues(deck, n=6):
     text(s, 6.2, 4.95, 3.6, 1.9,
          [[("Random onset", {"bold": True}), (" for the prompt, and a random action.", {})],
           [("At most 3 colour changes a second", {"bold": True}), (", no saturated red: checked on 900 sequences.", {})],
-          [("Honest limit: ", {"bold": True, "color": WARN}), ("built and tested on synthetic data; it needs a light facing the "
-                                                              "resident.", {})]], size=12, color=INK, space_after=5)
+          [("Honest limit: ", {"bold": True, "color": WARN}), ("a live face followed the code on a real camera; a first replay "
+                                                              "test was inconclusive. It needs a light facing the resident.", {})]],
+         size=12, color=INK, space_after=5)
     # right: evidence
     badge(s, 10.15, 1.4, 2)
     text(s, 10.6, 1.4, 2.2, 0.36, ["Lasting evidence"], size=18, color=BLUE, bold=True, anchor=MSO_ANCHOR.MIDDLE)
@@ -541,7 +542,7 @@ def slide_status(deck, n=7):
         paras=[[("Impact and next", {"bold": True, "size": 17, "color": BLUE})],
                [("For MOSIP: ", {"bold": True}), ("closes the capture-swap gap on unmodified SBI; leaves proof a server can "
                                                    "re-check.", {})],
-               [("Next: ", {"bold": True}), ("one real experiment (does the flash cue separate a live face from a replay?), a "
+               [("Next: ", {"bold": True}), ("redo the one real experiment properly (the first replay run was set up badly), a "
                                              "consented corpus, a real device and phone, real users.", {})],
                [("Ask: ", {"bold": True}), ("how should an SBI extension be proposed?", {})]])
     box(s, 0.6, 5.9, 12.1, 0.95, fill=GREY_BG, line=LINE, name="Stack and audience", anchor=MSO_ANCHOR.MIDDLE, size=13, color=INK,

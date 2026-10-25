@@ -37,7 +37,7 @@ turns the recording back into per-frame face regions for `FlashReflectionCue`. B
 experiment still needs a person in front of the camera, who must agree to be recorded (`docs/consent-form.md`): the
 assistant will not record anyone's camera unasked.
 
-### How to run E1 (built; not yet run on a person)
+### How to run E1 (built; first run on 2026-10-25 was inconclusive: see `docs/e1-results.md`)
 
 The recorder and analyser exist and were rehearsed end to end on a test pattern (no camera, no window): 160 frames, 8
 colours, paired and thinned, the cue abstaining correctly because there is no face, the run flagged DRY.

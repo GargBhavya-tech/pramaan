@@ -94,7 +94,7 @@ public final class ProfileStubDevice implements AutoCloseable {
     public void useCamera(String directShowName, int width, int height, int fps) throws IOException {
         Process p = new ProcessBuilder("ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "dshow", "-framerate",
                 Integer.toString(fps), "-video_size", width + "x" + height, "-i", "video=" + directShowName, "-f", "image2pipe",
-                "-c:v", "mjpeg", "-q:v", "3", "-").redirectError(ProcessBuilder.Redirect.DISCARD).start();
+                "-c:v", "mjpeg", "-pix_fmt", "yuvj420p", "-q:v", "3", "-").redirectError(ProcessBuilder.Redirect.DISCARD).start();
         camera = p;
         Thread reader = new Thread(() -> {
             try {

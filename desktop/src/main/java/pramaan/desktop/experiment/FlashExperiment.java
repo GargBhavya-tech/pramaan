@@ -163,7 +163,8 @@ public final class FlashExperiment {
         } else {
             command.addAll(Arrays.asList(sourceArgs.trim().split("\\s+")));
         }
-        command.addAll(List.of("-f", "image2pipe", "-c:v", "mjpeg", "-q:v", "3", "-"));
+        // yuvj420p: a webcam gives limited-range video, which ffmpeg's JPEG encoder refuses without a full-range format
+        command.addAll(List.of("-f", "image2pipe", "-c:v", "mjpeg", "-pix_fmt", "yuvj420p", "-q:v", "3", "-"));
         out.println("recording " + (realCamera ? "camera '" + camera + "'" : "dry-run source") + " to " + folder
                 + (noWindow ? " (no window: a dry run, nothing is shown on any screen)" : ""));
         if (!noWindow) {
