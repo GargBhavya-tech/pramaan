@@ -278,7 +278,7 @@ A separate build that needs the Android SDK (`android/local.properties` with `sd
 ./gradlew -p android :pramaan-android:connectedDebugAndroidTest            # on a phone or emulator
 ```
 
-The `check` passes, and on 2026-10-25 `connectedDebugAndroidTest` passed on a real phone (3 tests, with per-frame latency and accelerator parity: `docs/performance.md`); it has **not** run a full liveness session on a phone.
+The `check` passes, and on 2026-10-25 `connectedDebugAndroidTest` passed on a real phone (4 tests: per-frame latency, accelerator parity and the whole per-frame pipeline, which took a median 409 ms and does not keep up with 3 fps: `docs/performance.md`); it has **not** run a full liveness session on a phone.
 
 ### 7. If something goes wrong
 

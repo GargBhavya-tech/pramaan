@@ -52,5 +52,6 @@ running MockMDS). Without them the benchmark cannot run.
 
 Measured on one real phone on 2026-10-25 (a Xiaomi 22071219AI, Android 14, 8 cores): detection about 190 ms and passive liveness about
 21 ms per frame at the median, about 4.8 frames a second, against the 3 fps the SBI stream guarantees, with accelerator parity of about
-10^-6 for both XNNPACK and NNAPI. The table, the profile used and what is not measured are in
+10^-6 for both XNNPACK and NNAPI. **That is detection and passive scoring only.** Timed stage by stage, the whole chain (with landmarks and the embedding) took a
+median 409 ms on the same phone, which does not keep up with 3 fps, and the process used about 170 MB, not the 16 MB Java heap. The table, the profile used and what is not measured are in
 [`android-low-resource.md`](android-low-resource.md#measured-on-a-real-phone-2026-10-25-one-device-one-run).
