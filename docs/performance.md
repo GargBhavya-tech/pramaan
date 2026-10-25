@@ -36,7 +36,7 @@ guarantees**. The headroom is real on a laptop and says nothing about a low-end 
 - **Memory.** The benchmark prints Java heap in use (about 7 MB), but ONNX Runtime keeps the models in native memory, so that
   figure understates the process. Use Task Manager or `Get-Process` for the real working set.
 - **End to end.** There is no measurement of a whole session (passive, challenge, capture, binding) on a real device.
-- **Accelerators and Android.** Unmeasured. The code to measure them is written (`AcceleratorParity`, `InferenceOptions`).
+- **Accelerators and Android.** Measured on one phone, see "On a phone" below; the accelerated latency is not measured.
 
 ## How to reproduce
 
@@ -46,3 +46,10 @@ guarantees**. The headroom is real on a laptop and says nothing about a low-end 
 
 Needs the six model files in `models/` and the MockMDS clip (`python tools/capture_sbi_fixtures.py` regenerates it from a
 running MockMDS). Without them the benchmark cannot run.
+
+## On a phone
+
+Measured on one real phone on 2026-10-25 (a Xiaomi 22071219AI, Android 14, 8 cores): detection about 190 ms and passive liveness about
+21 ms per frame at the median, about 4.8 frames a second, against the 3 fps the SBI stream guarantees, with accelerator parity of about
+10^-6 for both XNNPACK and NNAPI. The table, the profile used and what is not measured are in
+[`android-low-resource.md`](android-low-resource.md#measured-on-a-real-phone-2026-10-25-one-device-one-run).

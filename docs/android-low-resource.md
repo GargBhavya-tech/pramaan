@@ -3,8 +3,9 @@
 PS04 bonus tasks: optimise liveness for low-resource Android devices, and support hardware acceleration where available.
 
 **Status, stated first:** the code is written, compiles in the Android build and is unit-tested on the desktop JVM (where the
-accelerators are unavailable, so the fallback path is what the tests exercise). **Nothing here has run on a phone.** The numbers
-a phone will give (latency, memory, whether NNAPI or XNNPACK is present and faster) are unmeasured.
+accelerators are unavailable, so the fallback path is what the tests exercise). It has also run **on one real phone** (see "Measured on a real
+phone" at the end): the models load and run, and XNNPACK and NNAPI both work and match the CPU. **A full liveness session has not run on a
+phone**, the accelerated latency is unmeasured, and one phone is one phone.
 
 ## What it does
 
@@ -60,3 +61,31 @@ the engine runs it only for the identity lock and the operator-face guard.
 Then add, in the on-device test or your app: the parity check above, a timing loop around one frame through the engine, and a
 record of `provider()` for every model. Report latency per frame at the camera's real frame rate: the SBI stream guarantees only
 3 fps, so cues that need more are switched off at session start.
+
+## Measured on a real phone (2026-10-25, one device, one run)
+
+`./gradlew -p android :pramaan-android:connectedDebugAndroidTest` on a **Xiaomi 22071219AI, Android 14, 8 cores, arm64**. The models are
+the same six as on the desktop, the input is one still face image (so these are model costs, not a camera pipeline), and the profile is the
+default low-resource one: the calibrated CPU path, at most 2 threads, sequential execution (`AndroidEngines.defaultOptions()`).
+
+| Stage (per frame) | median | 95th percentile |
+|---|---:|---:|
+| Face detection (YuNet) | 190 ms | 269 ms |
+| Passive liveness (MiniFASNet, both models) | 21 ms | 36 ms |
+| Java heap in use after the run | 16 MB | |
+
+A frame that goes through both costs about 210 ms at the median: about 4.8 frames a second on this phone with the 2-thread profile, against the
+**3 fps** the SBI stream guarantees. That is enough, but not generous, and it is one phone (I did not check what else was running on it), so treat it as an order of magnitude, not a spec.
+Detection dominates: it is the stage to accelerate or to run on every second frame.
+
+| Accelerator requested | Really ran on it? | Largest difference from the CPU result |
+|---|---|---:|
+| XNNPACK | yes | 5.4 x 10^-7 |
+| NNAPI | yes | 1.4 x 10^-6 |
+
+Both accelerators exist on this phone and agree with the CPU path to about 10^-6 on the passive model's output, which is far below any margin the
+thresholds need. That was checked on **one model, one random input**: it is not the re-run of the evaluation that the section above asks for before
+switching an accelerator on, and the accelerated latency was **not** measured (only parity).
+
+Not measured: a full liveness session on the phone (a challenge, a capture, the binding), a camera in the loop, battery, a low-end phone, or
+other phones.

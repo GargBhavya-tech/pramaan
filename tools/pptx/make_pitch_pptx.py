@@ -533,7 +533,7 @@ def slide_status(deck, n=7):
         space_after=5,
         paras=[[("Not done, not claimed", {"bold": True, "size": 17, "color": WARN})],
                "No error rate on real attacks; thresholds provisional",
-               "Not run on a device, a phone or a certified SBI device",
+               "No full session on a phone or a certified SBI device (models timed on one phone)",
                "A scaffold, not the Registration Client; no user has tried the screens",
                [("We attacked ourselves: ", {"bold": True}), ("4 of 85 synthetic pitches accepted without a flash cue, 0 with "
                                                                "one. Fixed for operators and supervisors, open for residents.", {})]])

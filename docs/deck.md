@@ -63,7 +63,7 @@ MOSIP Decode 2026 — problem statement 04
 - **Mode D** Android: the engine runs inside the SBI device app
 - Fails **closed**: no session without a verified policy, table and models
 
-*Honest status: the desktop is a scaffold, not the Registration Client; the Android build has not run a session on a phone.*
+*Honest status: the desktop is a scaffold, not the Registration Client; the Android build has run its models on one phone but not a full session.*
 
 <!-- L12, L13. -->
 
@@ -129,7 +129,7 @@ Optional, with a device that supports the proposal: a **cryptographic** lock on 
 - Synthetic attacks are for stress tests, never headlines
 - We red-teamed ourselves: the moiré cue has blind pitches, and **without a flash light, two cues the attacker controls can sum to an accept** (disclosed, not fixed)
 - Not tested on a real device, a real second camera, or an iris camera
-- Not the MOSIP Registration Client; Android never run on a phone
+- Not the MOSIP Registration Client; Android: models timed on one phone, no full session
 - Model licences are open questions; Hindi checked by the author, not independently reviewed
 
 <!-- "No real corpus yet. Here is what we do not claim." L1-L21, condensed. Say this BEFORE the numbers slide. -->

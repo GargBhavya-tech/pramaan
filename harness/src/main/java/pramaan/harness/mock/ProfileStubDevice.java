@@ -52,7 +52,8 @@ public final class ProfileStubDevice implements AutoCloseable {
     private static final long MAX_SCHEDULE_MS = 8_000;
 
     private final HttpServer server;
-    private final byte[] frame;
+    private volatile byte[] frame;
+    private volatile Process camera;
     private final DevelopmentCa ca;
     private final Clock clock;
     private final Map<String, MockLivenessProfile> sessions = new ConcurrentHashMap<>();
@@ -79,6 +80,36 @@ public final class ProfileStubDevice implements AutoCloseable {
     @Override
     public void close() {
         server.stop(0);
+        Process p = camera;
+        if (p != null) {
+            p.destroyForcibly();
+        }
+    }
+
+    /**
+     * Replaces the still photograph with a live Windows camera, read by ffmpeg (DirectShow) and decoded into M-JPEG: the stream
+     * and every capture then carry what the camera sees now. This records whoever is in front of it, so the caller must have
+     * their agreement; the frames stay in memory and are never written by this class.
+     */
+    public void useCamera(String directShowName, int width, int height, int fps) throws IOException {
+        Process p = new ProcessBuilder("ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "dshow", "-framerate",
+                Integer.toString(fps), "-video_size", width + "x" + height, "-i", "video=" + directShowName, "-f", "image2pipe",
+                "-c:v", "mjpeg", "-q:v", "3", "-").redirectError(ProcessBuilder.Redirect.DISCARD).start();
+        camera = p;
+        Thread reader = new Thread(() -> {
+            try {
+                pramaan.desktop.experiment.JpegStreamSplitter split =
+                        new pramaan.desktop.experiment.JpegStreamSplitter(p.getInputStream());
+                byte[] jpeg;
+                while ((jpeg = split.next()) != null) {
+                    frame = jpeg;
+                }
+            } catch (IOException e) {
+                // the camera went away: the last frame stays, and the engine's own timeouts end the session
+            }
+        }, "profile-device-camera");
+        reader.setDaemon(true);
+        reader.start();
     }
 
     private MockLivenessProfile newProfile() {
@@ -165,6 +196,7 @@ public final class ProfileStubDevice implements AutoCloseable {
         long startedAt = System.currentTimeMillis();
         try (OutputStream out = ex.getResponseBody()) {
             for (int i = 0; System.currentTimeMillis() - startedAt < timeoutMs; i++) {
+                byte[] frame = this.frame; // the latest one: a live camera replaces it between iterations
                 StringBuilder headers = new StringBuilder("--BoundaryString\r\nContent-Type:image/jpeg\r\nContent-Length:")
                         .append(frame.length).append("\r\n");
                 if (profile != null) {
@@ -230,7 +262,7 @@ public final class ProfileStubDevice implements AutoCloseable {
     /** One RCAPTURE-shaped entry: the signed data, naming the stream head if the session has one, and its chain hash. */
     private ObjectNode signedFrame(String txn, String previousHash, Map<String, String> extra)
             throws GeneralSecurityException, IOException {
-        byte[] iso = IsoFaceRecord.encode(IsoFaceRecord.ImageFormat.JPEG, frame, 0, 0);
+        byte[] iso = IsoFaceRecord.encode(IsoFaceRecord.ImageFormat.JPEG, this.frame, 0, 0);
         ObjectNode payload = JSON.createObjectNode();
         payload.put("bioType", "Face");
         payload.put("bioSubType", "");
@@ -304,6 +336,7 @@ public final class ProfileStubDevice implements AutoCloseable {
         Path frame = Path.of("third_party", "mosip-mock-services", "MockMDS", "Biometric Devices", "Face", "Stream Image",
                 "0.jpeg");
         Path work = Path.of("build", "profile-device");
+        String cameraName = null;
         for (int i = 0; i + 1 < args.length; i += 2) {
             switch (args[i]) {
                 case "--port":
@@ -315,14 +348,21 @@ public final class ProfileStubDevice implements AutoCloseable {
                 case "--work":
                     work = Path.of(args[i + 1]);
                     break;
+                case "--camera":
+                    cameraName = args[i + 1];
+                    break;
                 default:
                     throw new IllegalArgumentException("unknown option " + args[i]);
             }
         }
         DevelopmentCa ca = DevelopmentCa.create(work);
         ProfileStubDevice device = new ProfileStubDevice(port, Files.readAllBytes(frame), ca, Clock.systemUTC());
+        if (cameraName != null) {
+            device.useCamera(cameraName, 640, 480, 15);
+        }
         System.out.println("PRAMAAN profile device on 127.0.0.1:" + device.port());
-        System.out.println("  camera : " + frame + " (one still photograph, repeated)");
+        System.out.println(cameraName == null ? "  camera : " + frame + " (one still photograph, repeated)"
+                : "  camera : LIVE '" + cameraName + "' (this records whoever is in front of it; frames stay in memory)");
         System.out.println("  device CA for the client: " + ca.caCertificate().toAbsolutePath());
         System.out.println("  e.g. ./gradlew :desktop:runScaffold --args=\"--device-ca " + ca.caCertificate() + " --ports "
                 + device.port() + "\"");

@@ -48,7 +48,7 @@ It answers seven questions, in order, before it accepts a face:
 | Insider-fraud analytics | Per-operator z-scores against the centre's baseline; a capture matching the signed-in operator's own face is blocked |
 | Evaluation harness | Per-attack APCER and BPCER with confidence intervals, a synthetic attack factory, red-team fuzzers; ACER is not reported (ISO/IEC 30107-3 deprecated it) |
 | Station UI | JavaFX screens with a progress row, a liveness indicator, Hindi, larger-text and high-contrast modes |
-| Android | The same engine as an AAR (deployment Mode D), with low-resource tuning and optional hardware acceleration (code written, not yet run on a phone) |
+| Android | The same engine as an AAR (deployment Mode D), with low-resource tuning and optional hardware acceleration (the models were timed on one real phone, 2026-10-25: [`docs/performance.md`](docs/performance.md); no full liveness session on a phone yet) |
 
 ---
 
@@ -99,7 +99,7 @@ requirement stands:
 | L0/L1 device integration | SBI client, reference device that speaks the Liveness Profile | Built against the protocol; **not run on a certified device or a live camera** |
 | Changes in the Desktop and Android Registration Clients | A patch against MOSIP's `registration-client` 1.2.0.2 (`integration/registration-client/`: four hooks, a no-op by default), a scaffold, and an AAR | **Partly done**: the services module compiles with the patch and the PRAMAAN adapter (`regclient-adapter/`) is written and tested against the reference device, but nothing has run inside the real client, its UI has no screen for challenge prompts, and the Android client is not patched |
 | Evaluate against ISO/IEC 30107 | Harness with per-PAIS APCER and BPCER and intervals | Method built; **no data** |
-| Bonus: mock device, attack tests, interoperability, model versions, offline updates, low-resource Android | Reference device, red team, signed bundles; Android tuning and acceleration code | Built; **Android not run on a phone** |
+| Bonus: mock device, attack tests, interoperability, model versions, offline updates, low-resource Android | Reference device, red team, signed bundles; Android tuning and acceleration code | Built; **Android: the models ran on one phone and both accelerators worked, but no full liveness session on a phone** |
 | Good-to-have: metrics, diagnostic mode, capability discovery | Metrics module (`docs/metrics.md`), audited diagnostic mode, device discovery | Built |
 
 ## Why this is different: six ideas
@@ -171,7 +171,7 @@ flash light through a challenge, a friction that cannot be priced without real d
 ## Status
 
 Phases 0–11 are built: the liveness engine (`core`), the SBI client (`sbi`), the evaluation toolkit (`harness`)
-and the registration scaffold (`desktop`). The Android AAR (Phase 12) builds but has **not yet run on a device**.
+and the registration scaffold (`desktop`). The Android AAR (Phase 12) builds, and its on-device tests and benchmark ran on one real phone (a Xiaomi 22071219AI, Android 14); it has **not run a full liveness session on a phone**.
 The Phase 13 differentiators (flash reflection, stereo depth, scene and illumination consistency, pupil light reflex,
 the SBI Liveness Profile) are wired into the engine. Each one switches on only when the station has the hardware it
 needs. They are tested with fakes and synthetic data, because **no station with the extra hardware, and no device
@@ -274,7 +274,7 @@ A separate build that needs the Android SDK (`android/local.properties` with `sd
 ./gradlew -p android :pramaan-android:connectedDebugAndroidTest            # on a phone or emulator
 ```
 
-The `check` passes; it has **not** run a liveness session on a phone.
+The `check` passes, and on 2026-10-25 `connectedDebugAndroidTest` passed on a real phone (3 tests, with per-frame latency and accelerator parity: `docs/performance.md`); it has **not** run a full liveness session on a phone.
 
 ### 7. If something goes wrong
 
@@ -343,7 +343,7 @@ Where each deliverable the Decode submission guidelines name is:
 | API documentation | [`docs/api/README.md`](docs/api/README.md) (Java API, the device interface over HTTP with real captured exchanges, tools and files) |
 | Architecture diagram | [`docs/architecture/README.md`](docs/architecture/README.md) |
 | Sequence diagrams (resident, operator, supervisor, binding, offline and updates, errors) | [`docs/architecture/sequence-diagrams.md`](docs/architecture/sequence-diagrams.md) |
-| Android low-resource tuning and hardware acceleration (code written, not yet run on a phone) | [`docs/android-low-resource.md`](docs/android-low-resource.md) |
+| Android low-resource tuning and hardware acceleration (timed on one real phone) | [`docs/android-low-resource.md`](docs/android-low-resource.md) |
 | Anonymised operational metrics (processing time, challenge time, retry and failure rate) | [`docs/metrics.md`](docs/metrics.md) |
 | Performance, measured on one laptop (per-stage latency; Android unmeasured) | [`docs/performance.md`](docs/performance.md) |
 | Design mockups and wireframes | [`docs/design/README.md`](docs/design/README.md) (the screens, the flow, tokens, accessibility) |

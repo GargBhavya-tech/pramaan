@@ -76,6 +76,12 @@ dependencies {
 val pramaanTestAssets = layout.buildDirectory.dir("generated/pramaanTestAssets")
 val copyPramaanTestAssets by tasks.registering {
     val repo = rootDir.parentFile
+    // Declared inputs: without them Gradle saw only the output folder, decided the task was up to date, and kept putting an
+    // old policy into the test APK (found on a real phone: "requireSignedStream: required but missing").
+    inputs.file(repo.resolve("config/pramaan-policy.yaml"))
+    inputs.file(repo.resolve("config/operating-points.json"))
+    inputs.dir(repo.resolve("models")).optional()
+    inputs.file(repo.resolve("sbi/testdata/stream-sample.mjpeg")).optional()
     outputs.dir(pramaanTestAssets)
     doLast {
         val out = pramaanTestAssets.get().asFile.resolve("pramaan")
