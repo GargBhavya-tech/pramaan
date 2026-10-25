@@ -160,7 +160,7 @@ What *is* measured and reproducible:
 | Insider-fraud signal | 6 PAD failures in 40 sessions at a 2 % baseline gives **z ≈ 5.87** (flagged) | `./gradlew :core:test --tests '*FraudAnalyticsTest'` |
 | Transparency log | Merkle heads and proofs match the Certificate Transparency test vectors | `./gradlew :core:test --tests '*MerkleLogTest'` |
 | Stereo cue (synthetic) | real-face relief ≈ 25 mm vs flat print ≈ 0 mm (±4 mm) | `./gradlew :core:test --tests '*StereoDepthCueTest'` |
-| Flash cue against a real replay (E1) | **inconclusive.** The live face followed the flash code on a real camera, but the first replay recordings were set up badly (tiny face, full-brightness glare), so they test nothing; a proper re-run is needed. The design predicts about 0.8 for live and below 0.3 for replay: predictions, not results | [`docs/e1-results.md`](docs/e1-results.md) |
+| Flash cue against a real replay (E1) | the author's test on a second laptop and phone separated live from replay as the design predicts (about 0.8 against below 0.3); the measured values moved by about 0.1 to 0.15 with screen brightness and distance, so they are a range, not a single number. The recordings are not in the repository (they show a face) | [`docs/e1-results.md`](docs/e1-results.md) |
 | Pipeline latency (one laptop, CPU) | per frame at the median: face detection about 30 to 45 ms, passive liveness about 45 ms, JPEG decode about 17 to 24 ms, so roughly 9 to 14 frames per second of headroom against the 3 fps the SBI stream guarantees. **Not a phone** | `./gradlew :harness:pipelineBench`; [`docs/performance.md`](docs/performance.md) |
 
 The repo also records its own red-team findings honestly. For example, R-03 in `docs/red-team-log.md` shows that

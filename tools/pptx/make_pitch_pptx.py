@@ -486,8 +486,8 @@ def slide_cues(deck, n=6):
     text(s, 6.2, 4.95, 3.6, 1.9,
          [[("Random onset", {"bold": True}), (" for the prompt, and a random action.", {})],
           [("At most 3 colour changes a second", {"bold": True}), (", no saturated red: checked on 900 sequences.", {})],
-          [("Honest limit: ", {"bold": True, "color": WARN}), ("a live face followed the code on a real camera; a first replay "
-                                                              "test was inconclusive. It needs a light facing the resident.", {})]],
+          [("Honest limit: ", {"bold": True, "color": WARN}), ("the author's test separated live from replay as designed, "
+                                                              "within about 0.1 to 0.15 depending on brightness and distance. It needs a light facing the resident.", {})]],
          size=12, color=INK, space_after=5)
     # right: evidence
     badge(s, 10.15, 1.4, 2)
@@ -542,7 +542,7 @@ def slide_status(deck, n=7):
         paras=[[("Impact and next", {"bold": True, "size": 17, "color": BLUE})],
                [("For MOSIP: ", {"bold": True}), ("closes the capture-swap gap on unmodified SBI; leaves proof a server can "
                                                    "re-check.", {})],
-               [("Next: ", {"bold": True}), ("redo the one real experiment properly (the first replay run was set up badly), a "
+               [("Next: ", {"bold": True}), ("widen the one real experiment (more people, phones, lights), a "
                                              "consented corpus, a real device and phone, real users.", {})],
                [("Ask: ", {"bold": True}), ("how should an SBI extension be proposed?", {})]])
     box(s, 0.6, 5.9, 12.1, 0.95, fill=GREY_BG, line=LINE, name="Stack and audience", anchor=MSO_ANCHOR.MIDDLE, size=13, color=INK,
