@@ -121,6 +121,12 @@ def main() -> int:
     w("MockMDS stream sample, a Windows camera, a graphics toolkit) skips itself instead of failing. The author's machine has")
     w("those files, so few tests skip there; a fresh clone has none of them, so more skip. A skip is never counted as a pass.")
     w("")
+    w("The same 694 tests, three ways, so the numbers in the README are not a contradiction: **2 skipped** on the author's machine")
+    w("(this report, with the models and the MockMDS fixtures present); **14 skipped** on a clean clone after `python tools/setup.py`")
+    w("has fetched the models (measured 2026-10-25); **20 skipped** on a bare clone with no models (measured 2026-10-24). The 14 that")
+    w("remain on a clean clone need the MockMDS fixtures, a corpus or a device, none of which is in the repository. These three figures")
+    w("are measured on those runs and typed here, unlike the table above, which is counted from this machine's result files.")
+    w("")
     if failed:
         w("## Failures")
         w("")
