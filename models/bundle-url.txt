@@ -10,3 +10,5 @@
 #   https://drive.google.com/uc?export=download&id=<file id>
 # A GitHub Release asset URL also works:
 #   https://github.com/GargBhavya-tech/pramaan/releases/download/<tag>/<file>.zip
+
+https://github.com/GargBhavya-tech/pramaan/releases/download/models-v1/pramaan-models-converted.zip
