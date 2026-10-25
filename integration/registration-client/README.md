@@ -15,7 +15,7 @@ PS04 asks for changes in the Desktop Registration Client. This folder holds a **
   1.2.0.1 (the branch's `-SNAPSHOT` dependencies no longer exist) and Lombok 1.18.30 (1.18.16 does not run on JDK 17): environment changes, not
   code changes. `registration-client` (P1, P2) reports 3 errors, **all in document-scanning code the patch does not touch**
   (`DocScannerFacade.scanDocument` is called with one argument where the module's own source wants two), and none in `Streamer` or
-  `GenericBiometricsController`. I did not build the unpatched branch to prove those three are pre-existing.
+  `GenericBiometricsController`. **The unpatched branch has the same three errors**: a second checkout of the same commit (`7b111da`), built the same way, reports them at the identical lines (`DocumentScanController.java` 139 and 166, `ScanPopUpViewController.java` 658), so they predate the patch.
 - **The PRAMAAN side is written and tested.** `regclient-adapter/` holds `PramaanLivenessHook`, which implements the four hook methods with
   our engine; `RegistrationClientAdapterTest` drives it exactly as the client would, against the runnable reference device over real
   loopback HTTP: frames in, the client's own rCapture call with the ticket the hook returns, the device's raw response handed back. It

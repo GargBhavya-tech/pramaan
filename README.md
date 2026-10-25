@@ -228,7 +228,7 @@ Details: `docs/test-report.md`.
 
 ```bash
 ./gradlew :desktop:showcase                 # the real station screens with a SIMULATED session: SPACE pauses, arrows step
-./gradlew :harness:fusedRedTeam             # our red team against the whole decision (synthetic): 4 of 85 pitches accepted without a flash cue, 0 with
+./gradlew :harness:fusedRedTeam             # our red team against the whole decision (SYNTHETIC data, not a measured rate): 4 of 85 pitches accepted without a flash cue, 0 with
 ./gradlew :harness:test --tests '*BindingAttacksTest'      # each capture-swap attack is a test, and each is rejected
 ./gradlew :harness:runProfileDevice --args="--port 4533 --frame any.jpg"    # a device that speaks the Liveness Profile; any JPEG will do
 bash docs/api/examples/try-the-device.sh    # in a second terminal: calls every endpoint of it and decodes the signed answers

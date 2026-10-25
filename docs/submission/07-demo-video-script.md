@@ -1,5 +1,15 @@
 # Demo video: a 3-minute storyboard
 
+**Two videos come from this repository, and they are not the same length.**
+
+| | Length | Voice and scenes | Made by |
+|---|---|---|---|
+| The **built video** | **4 min 5 s**, 1080p, 18 scenes, English captions | synthetic Windows voice; the station screens are the real UI driven by a simulated session, labelled "SIMULATED SESSION" | `tools/video/make_video.ps1`, rebuilt from the code; this is the one in the submission package |
+| This **3-minute storyboard** | 3:00 | for you to record live, in your own voice, ideally with a short real webcam clip (with the person's consent) | by hand, using the table below |
+
+The submission form asks for 2 to 5 minutes (as read from a secondary source: check the form), so either fits. Record the storyboard if you
+want your own voice and a real clip in the submission; the built video stays as the reproducible version.
+
 Everything below can be shown truthfully with what exists today. It deliberately avoids anything that needs a live sensor,
 a phone or a certified device, because those were never run (`docs/claim-sheet.md` L5, L13, L17). The longer scene-by-scene
 script for a live demo is `docs/demo-script.md`; this one is the recorded submission video.
@@ -23,15 +33,15 @@ script for a live demo is `docs/demo-script.md`; this one is the recorded submis
 
 ## Before you record
 
-- [ ] `./gradlew build` is green (on 2026-10-25: 703 tests, 0 failures; 3 skipped on the author's machine, 14 on a clean clone after `python tools/setup.py`, 20 on a bare clone).
+- [x] `./gradlew build` is green (on 2026-10-25: 703 tests, 0 failures; 3 skipped on the author's machine, 14 on a clean clone after `python tools/setup.py`, 20 on a bare clone).
 - [ ] The commands in scenes 4 and 5 were run once, today, so you know how long each takes (`fusedRedTeam` about 10 seconds,
       the binding tests about 6 seconds once Gradle is warm).
 - [ ] For the station scene with MockMDS: start MockMDS (`docs/hardware-testing-guide.md` section 2.2), models in `models/`,
       then `./gradlew :desktop:runScaffold`. If the camera step stalls, "Camera not connected. Please check the device." is
       correct behaviour; show it rather than hiding it.
-- [ ] Captions: add English subtitles (the on-screen text is small). Hindi subtitles are fine: the author has checked the
-      Hindi text.
-- [ ] Length: under 3:00 unless the form asks for 2-5 minutes.
+- [x] Captions: the built video has English captions (`PRAMAAN-demo.srt`, also embedded). For a live recording, add them too. Hindi
+      subtitles are fine: the author has checked the Hindi text.
+- [x] Length: this storyboard is 3:00 and the built video is 4:05; both are inside the 2 to 5 minutes the form is believed to allow.
 
 ## What not to show or say
 
