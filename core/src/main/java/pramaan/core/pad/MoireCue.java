@@ -30,6 +30,16 @@ public final class MoireCue {
     /** PROVISIONAL: peakiness at which live and spoof are equally likely. */
     public static final double PROVISIONAL_THRESHOLD = 10.0;
     private static final double SLOPE = 0.6;
+    private final double threshold;
+
+    public MoireCue() {
+        this(Double.parseDouble(System.getProperty("pramaan.moire.threshold", Double.toString(PROVISIONAL_THRESHOLD))));
+    }
+
+    public MoireCue(double threshold) {
+        this.threshold = threshold;
+    }
+
     private static final int R1 = 12;
     private static final int R2 = 60;
     private static final int AXIS_BAND = 2;
@@ -44,7 +54,7 @@ public final class MoireCue {
         int x0 = (nativeFaceCrop.width() - N) / 2;
         int y0 = (nativeFaceCrop.height() - N) / 2;
         double peakiness = peakiness(ImageOps.luma(ImageOps.crop(nativeFaceCrop, x0, y0, x0 + N - 1, y0 + N - 1)));
-        double p = 1 / (1 + Math.exp(SLOPE * (peakiness - PROVISIONAL_THRESHOLD)));
+        double p = 1 / (1 + Math.exp(SLOPE * (peakiness - threshold)));
         return CueResult.vote(NAME, Math.max(1e-6, Math.min(1 - 1e-6, p)), peakiness);
     }
 
