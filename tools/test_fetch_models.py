@@ -189,8 +189,15 @@ class BundleTest(unittest.TestCase):
                 if old is not None:
                     os.environ["PRAMAAN_MODELS_URL"] = old
 
-    def test_the_shipped_bundle_url_file_has_no_url_until_the_owner_sets_one(self):
-        self.assertIsNone(fm.bundle_url(None, fm.MODELS) if "PRAMAAN_MODELS_URL" not in os.environ else None)
+    def test_the_shipped_bundle_url_file_holds_one_https_zip_link(self):
+        old = os.environ.pop("PRAMAAN_MODELS_URL", None)
+        try:
+            url = fm.bundle_url(None, fm.MODELS)
+        finally:
+            if old is not None:
+                os.environ["PRAMAAN_MODELS_URL"] = old
+        self.assertIsNotNone(url, "models/bundle-url.txt should name the release that holds the converted models")
+        self.assertTrue(url.startswith("https://") and url.endswith(".zip"), url)
 
 
 class SetupTest(unittest.TestCase):
