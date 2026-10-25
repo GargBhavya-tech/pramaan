@@ -12,4 +12,8 @@ dependencies {
     api(project(":sbi"))
     api(project(":desktop"))
     compileOnly(project(":regclient-stub"))
+
+    // Unit tests: no device, no ONNX models, no HTTP required.
+    testImplementation(project(":regclient-stub"))
+    testImplementation(testFixtures(project(":core")))
 }
