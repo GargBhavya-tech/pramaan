@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/GargBhavya-tech/pramaan/docs/schemas/pramaan-policy.schema.json",
+  "title": "PRAMAAN Liveness Policy",
+  "description": "Schema for config/pramaan-policy.yaml (Bible Part 17.1; Build Map #9). Unknown fields, duplicate keys and wrong types are rejected by StrictNode — this schema makes that contract machine-readable.",
+  "type": "object",
+  "required": ["pramaan"],
+  "additionalProperties": false,
+  "properties": {
+    "pramaan": {
+      "type": "object",
+      "required": ["policyVersion", "enabled", "profiles"],
+      "additionalProperties": false,
+      "properties": {
+        "policyVersion": { "type": "integer", "minimum": 1, "description": "Monotonically increasing policy format version." },
+        "enabled": { "type": "boolean", "description": "Must be true. False causes EngineBundle.load to throw — liveness is never silently skipped." },
+        "stalePolicyMaxAgeDays": { "type": "integer", "minimum": 1, "description": "Signed bundles older than this are stale; the client keeps working but marks evidence." },
+        "diagnosticMode": { "type": "boolean", "description": "Unlocks the diagnostics window for any operator. Audit-logged. Never enable without a grant." },
+        "profiles": {
+          "type": "object",
+          "required": ["RESIDENT", "OPERATOR", "SUPERVISOR"],
+          "additionalProperties": false,
+          "properties": {
+            "RESIDENT":   { "$ref": "#/$defs/workflowProfile" },
+            "OPERATOR":   { "$ref": "#/$defs/workflowProfile" },
+            "SUPERVISOR": { "$ref": "#/$defs/workflowProfile" }
+          }
+        },
+        "accessibilityProfiles": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["INFANT", "NO_VISION", "FACIAL_MOTOR", "LIMITED_MOTION", "FACE_COVERING_CONTEXT"] }
+        },
+        "exceptionFlow": {
+          "type": "object",
+          "required": ["requireSupervisor", "maxPerOperatorPerDay", "maxPerCentrePerDay", "supervisorVerdictMaxAgeMs"],
+          "additionalProperties": false,
+          "properties": {
+            "requireSupervisor":        { "type": "boolean" },
+            "maxPerOperatorPerDay":     { "type": "integer", "minimum": 0 },
+            "maxPerCentrePerDay":       { "type": "integer", "minimum": 0 },
+            "supervisorVerdictMaxAgeMs":{ "type": "integer", "minimum": 0 }
+          }
+        },
+        "session": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "acquireTimeoutMs":  { "type": "integer", "minimum": 1000 },
+            "passiveWindowMs":   { "type": "integer", "minimum": 500  },
+            "decisionGraceMs":   { "type": "integer", "minimum": 0    },
+            "captureTimeoutMs":  { "type": "integer", "minimum": 1000 },
+            "bindingTimeoutMs":  { "type": "integer", "minimum": 500  },
+            "bindingWindowMs":   { "type": "integer", "minimum": 500  },
+            "captureMaxSkewMs":  { "type": "integer", "minimum": 0    }
+          }
+        },
+        "rateLimits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "perSubjectPerHour":  { "type": "integer", "minimum": 1 },
+            "perOperatorPerHour": { "type": "integer", "minimum": 1 },
+            "perDevicePerHour":   { "type": "integer", "minimum": 1 }
+          }
+        },
+        "injection": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "virtualCameraDenylistVersion":  { "type": "integer", "minimum": 0 },
+            "vetoOnBoundVirtualCamera":      { "type": "boolean" },
+            "vetoOnHostVirtualCamera":       { "type": "boolean" },
+            "vetoOnStreamSignatureMismatch": { "type": "boolean" },
+            "requireVerifiedDeviceIdentity": { "type": "boolean" },
+            "requireSignedStream":           { "type": "boolean" }
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sampleFrames": { "type": "integer", "minimum": 1, "maximum": 10 },
+            "cropSize":     { "type": "integer", "minimum": 64, "maximum": 256 }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "workflowProfile": {
+      "type": "object",
+      "required": ["operatingPoint", "activeEnabled", "minCues", "challenge", "retries", "onLockout"],
+      "additionalProperties": false,
+      "properties": {
+        "operatingPoint": { "type": "string", "description": "Key in operating-points.json deviceClasses.default." },
+        "activeEnabled":  { "type": "boolean" },
+        "auditChallengeProbability": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "minCues": { "type": "integer", "minimum": 1 },
+        "requireUnfakeableVote": { "type": "boolean", "description": "Requires a live flash or stereo vote before accepting (red-team R-03)." },
+        "challenge": {
+          "type": "object",
+          "required": ["pool", "minSteps", "maxSteps", "stepTimeoutMs", "onsetMinMs"],
+          "additionalProperties": false,
+          "properties": {
+            "pool": { "type": "array", "minItems": 1, "items": { "type": "string", "enum": ["BLINK","EYES_CLOSED","SMILE","TURN","GAZE","FLASH"] } },
+            "minSteps":      { "type": "integer", "minimum": 1 },
+            "maxSteps":      { "type": "integer", "minimum": 1 },
+            "stepTimeoutMs": { "type": "integer", "minimum": 1000 },
+            "onsetMinMs":    { "type": "integer", "minimum": 0 }
+          }
+        },
+        "retries": {
+          "type": "object",
+          "required": ["max", "backoffBaseMs"],
+          "additionalProperties": false,
+          "properties": {
+            "max":           { "type": "integer", "minimum": 0 },
+            "backoffBaseMs": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "onLockout": { "type": "string", "enum": ["EXCEPTION_FLOW", "LOCK_15_MIN_AND_ALERT", "LOCK_AND_ALERT"] }
+      }
+    }
+  }
+}
