@@ -1,12 +1,56 @@
+<div align="center">
+
 # PRAMAAN (प्रमाण)
 
-**Face liveness and presentation-attack detection for the MOSIP Registration Client that produces signed,
-re-checkable evidence instead of a one-off pass/fail.**
+**Proof, not a verdict**
 
-Built for MOSIP Decode 2026, problem statement 04. *Pramaan* is Sanskrit for "proof".
+*Face liveness and presentation-attack detection for the MOSIP Registration Client, with signed evidence a server can re-check*
+
+**MOSIP Decode 2026 · Problem Statement 04 · Bhavya Garg**
 
 [![build](https://github.com/GargBhavya-tech/pramaan/actions/workflows/build.yml/badge.svg)](https://github.com/GargBhavya-tech/pramaan/actions/workflows/build.yml)
 ![Java](https://img.shields.io/badge/Java-24-blue) ![licence](https://img.shields.io/badge/licence-MPL--2.0-green)
+
+</div>
+
+---
+
+## Overview
+
+A liveness check today ends in a pass or a fail, made on the station, that nobody can check afterwards. *Pramaan* is Sanskrit for
+"proof": PRAMAAN is a face liveness and presentation-attack detection engine for MOSIP's Desktop and Android Registration Clients that
+leaves **proof**. It checks the live face, **binds it to the signed capture that is actually stored**, and packages the result as signed
+evidence that a server can re-verify, or re-score with a better model years later. The same Java engine runs on the desktop and, as a
+library, inside the Android SBI device app.
+
+It answers seven questions, in order, before it accepts a face:
+
+1. Is the stream from a real sensor, not a virtual camera or injected video?
+2. Is there exactly one usable face, of good enough quality?
+3. Does it look alive, without asking the person to do anything?
+4. Does it carry the marks of an attack: a print, a screen, a flat surface?
+5. What do all the cues say together: accept, challenge or reject?
+6. Did a live person answer a challenge nobody could have predicted?
+7. Is the face that is stored provably the face that passed?
+
+## Features
+
+| Capability | Description |
+|---|---|
+| Passive first, active when needed | A passive model asks nothing of the resident; a challenge is added only when confidence is not enough |
+| Random challenge | Blink, smile, turn, gaze, plus a flash-colour code: 6 colours × 8 steps = **20.7 bits**, with a random start, at most 3 colour changes a second |
+| Cues that fail differently | Passive model, moiré, flash reflection, scene and light consistency, stereo depth, stream fingerprint; each can abstain, and an abstention is never a failure |
+| Capture binding | Four locks (nonce, frame hash chain, same face, time) tie the preview that was checked to the signed capture that is stored |
+| Signed evidence | A JWS in the face BIR `others` map (the `bdb` is untouched), a one-command server re-check, re-scoring, and a Merkle transparency log |
+| Injection detection | Device identity, the OS camera registrations (so OBS is seen), and a JPEG stream fingerprint |
+| Inclusion by design | Blink, pulse and pupil cues only ever vote *for* life; Hindi, icons, speech, accessibility profiles, infant mode, a dual-control exception flow |
+| Policy per workflow | Resident, operator and supervisor profiles; thresholds in a table bound to each model's SHA-256; signed offline bundles with anti-rollback; fails closed |
+| Insider-fraud analytics | Per-operator z-scores against the centre's baseline; a capture matching the signed-in operator's own face is blocked |
+| Evaluation harness | Per-attack APCER and BPCER with confidence intervals, a synthetic attack factory, red-team fuzzers; ACER is not reported (ISO/IEC 30107-3 deprecated it) |
+| Station UI | JavaFX screens with a progress row, a liveness indicator, Hindi, larger-text and high-contrast modes |
+| Android | The same engine as an AAR (deployment Mode D), with low-resource tuning and optional hardware acceleration (code written, not yet run on a phone) |
+
+---
 
 ## A judge in three minutes
 
@@ -35,30 +79,49 @@ are expected to stop prints, screens and replays held up to the lens. Three gaps
 3. **A verdict cannot be audited.** A pass/fail made on the client today cannot be re-checked by the server
    tomorrow, or re-scored when better models exist.
 
-## What PRAMAAN does
+## Problem statement (MOSIP Decode 2026 · PS04)
 
-- **Passive checks first.** Unpredictable challenges are added only when needed, and physics checks that ask
-  nothing of the resident (flash reflection, stereo depth, scene consistency, pupil reflex) are preferred over
-  asking people to perform.
-- **Injection detection.** Virtual cameras are vetoed using the device's reported identity and the OS camera
-  registrations. On Windows that includes DirectShow, so software cameras like OBS are seen.
-- **Capture binding.** A session nonce, a frame hash chain, identity continuity and the SBI signature chain are
-  all checked before an `ACCEPT`, so a capture swap is caught.
-- **Signed evidence package.** The liveness evidence travels as a JWS in the face BIR. The server can re-verify
-  it later with one command, or re-score the stored encrypted crops with a stronger model.
-- **Inclusion by design.** Physiological cues (blink, pulse, pupil reflex) never count *against* a resident,
-  because elderly, disabled and darker-skinned residents fail them for innocent reasons. There are Hindi, icon and
-  text-to-speech modes, and an infant mode.
-- **Insider-fraud analytics.** Per-operator z-scores are computed against the centre's own baseline. A resident
-  capture that matches the logged-in operator's face is hard-blocked.
-- **Signed policy and model bundles with anti-rollback**, so an operator cannot edit a threshold or replay an
-  expired bundle offline. The engine fails closed.
-- **An evaluation harness** that reports APCER and BPCER per attack type, with confidence intervals and DET plots.
-  ACER is deliberately not reported, because ISO/IEC 30107-3 deprecated it.
-- **An SBI Liveness Profile proposal**: an extension to the device standard that closes the preview/capture gap
-  at the source, with a client and two reference devices that implement it.
+PS04 asks for face liveness and PAD for the Desktop and Android Registration Clients: passive checks first, an automatic active
+challenge when needed, for residents, operators and supervisors, online and offline, configurable, with UI and tests. Where each
+requirement stands:
+
+| PS04 requirement | What PRAMAAN delivers | Status |
+|---|---|---|
+| Face frame streaming interface and a liveness/PAD interface | `FaceFrameSource` and `LivenessEngine` | Built; exercised against the reference device |
+| Passive liveness against a configurable threshold, then an automatic challenge | Fused probability against operating points in `config/`; zones accept, challenge, reject | Built; thresholds provisional |
+| PAD for prints, screens and replays | Passive model, moiré, flash, scene, stereo cues | Built; **no real attack corpus, so no measured APCER or BPCER** |
+| Dynamic, unpredictable, system-chosen challenge | Random pool incl. a 20.7-bit flash code, random onset | Built and tested |
+| Resident, operator and supervisor flows | Per-workflow policy (stricter for operators, strictest for supervisors); exception flow | Built in the engine and the scaffold |
+| Online and offline | Core runs locally; signed offline bundle updates | Built |
+| Configuration (enable, thresholds, challenge types, count, timeout, retries, per workflow, repeated failure) | `config/pramaan-policy.yaml`, strict parser | Built |
+| Error handling and retry | Error taxonomy; quality problems never use an attempt | Built |
+| UI/UX | Station screens, Hindi, accessibility modes, generic message on PAD failure | Built as a scaffold; **no user has tried it** |
+| L0/L1 device integration | SBI client, reference device that speaks the Liveness Profile | Built against the protocol; **not run on a certified device or a live camera** |
+| Changes in the Desktop and Android Registration Clients | A scaffold and an AAR | **Not done**: the MOSIP clients themselves are not patched |
+| Evaluate against ISO/IEC 30107 | Harness with per-PAIS APCER and BPCER and intervals | Method built; **no data** |
+| Bonus: mock device, attack tests, interoperability, model versions, offline updates, low-resource Android | Reference device, red team, signed bundles; Android tuning and acceleration code | Built; **Android not run on a phone** |
+| Good-to-have: metrics, diagnostic mode, capability discovery | Metrics module (`docs/metrics.md`), audited diagnostic mode, device discovery | Built |
+
+## Why this is different: six ideas
+
+| # | The usual shortcut | PRAMAAN |
+|---|---|---|
+| 1 | Judge the preview, store a separate capture | **Bind them**: four locks prove the signed capture is the face that was watched |
+| 2 | The client says pass or fail; the server must trust it | **Signed evidence** a server can re-check or re-score later |
+| 3 | One model, or a blink check | **Cues that fail differently**, fused; a cue that cannot run abstains |
+| 4 | A fixed challenge a recording can follow | A **random** one: a 20.7-bit flash code and a random onset |
+| 5 | Camera only; injected video is invisible | Device identity, OS camera registrations, stream fingerprint |
+| 6 | Blink and pulse checks that fail elderly, disabled and darker-skinned residents | Those cues **only ever vote for life**; Hindi, speech, a dual-control exception path |
+
+The first idea matters most. On Android the client never sees preview frames (the SBI app shows the stream in its own UI), and the
+stream that desktop clients do get is unsigned, so without binding, whoever controls the preview can pass liveness with one face and
+have another enrolled. Each swap attack is a test (`BindingAttacksTest`, 8 cases).
 
 ## Architecture
+
+![PRAMAAN architecture](docs/architecture/architecture.png)
+
+The same, as text. The sequence diagrams for each flow are in [`docs/architecture/sequence-diagrams.md`](docs/architecture/sequence-diagrams.md).
 
 ```
             ┌──────────── desktop (JavaFX scaffold, ADR 0003) ────────────┐
@@ -88,13 +151,14 @@ What *is* measured and reproducible:
 
 | | Number | Reproduce |
 |---|---|---|
-| Test suite | **694 JVM tests, 0 failures.** 2 skipped on the author's machine; **20 skipped on a fresh clone**, because the face models and the MockMDS fixtures are not in the repository and the tests that need them skip themselves. Full uncached build from a fresh clone: 8 min 36 s | `./gradlew build` |
+| Test suite | **694 JVM tests, 0 failures**, green on GitHub Actions (Ubuntu and Windows). 14 skipped after `python tools/setup.py` has fetched the models; 20 on a bare clone without them. The rest need the MockMDS fixtures, a corpus or a device. A clean clone built with `tools/setup.py` in 3 min 57 s (2026-10-25) | `python tools/setup.py`, or `./gradlew build` |
 | Flash-challenge unpredictability | 6 colours × 8 steps = 1,679,616 sequences = **20.7 bits** | `./gradlew :core:test --tests '*ChallengeGeneratorTest'` |
 | Challenge uniformity | χ² over 100,000 draws, every parameter, p = 0.001 critical value | same |
 | Photosensitivity | ≤ 3 colour changes/s, steps ≥ 333 ms, checked on 900 sequences | `./gradlew :core:test --tests '*FlashScheduleTest'` |
 | Insider-fraud signal | 6 PAD failures in 40 sessions at a 2 % baseline gives **z ≈ 5.87** (flagged) | `./gradlew :core:test --tests '*FraudAnalyticsTest'` |
 | Transparency log | Merkle heads and proofs match the Certificate Transparency test vectors | `./gradlew :core:test --tests '*MerkleLogTest'` |
 | Stereo cue (synthetic) | real-face relief ≈ 25 mm vs flat print ≈ 0 mm (±4 mm) | `./gradlew :core:test --tests '*StereoDepthCueTest'` |
+| Pipeline latency (one laptop, CPU) | per frame at the median: face detection about 30 to 45 ms, passive liveness about 45 ms, JPEG decode about 17 to 24 ms, so roughly 9 to 14 frames per second of headroom against the 3 fps the SBI stream guarantees. **Not a phone** | `./gradlew :harness:pipelineBench`; [`docs/performance.md`](docs/performance.md) |
 
 The repo also records its own red-team findings honestly. For example, R-03 in `docs/red-team-log.md` shows that
 without a flash cue, attacker-controlled cues can sum to an accept on a synthetic screen replay. It is fixed for operators and
@@ -108,14 +172,14 @@ and the registration scaffold (`desktop`). The Android AAR (Phase 12) builds but
 The Phase 13 differentiators (flash reflection, stereo depth, scene and illumination consistency, pupil light reflex,
 the SBI Liveness Profile) are wired into the engine. Each one switches on only when the station has the hardware it
 needs. They are tested with fakes and synthetic data, because **no station with the extra hardware, and no device
-that speaks the profile, exists yet**. The CI workflow has not yet run on GitHub. The desktop screens have a designed
+that speaks the profile, exists yet**. The CI workflow runs on GitHub (Ubuntu and Windows) and is green. The desktop screens have a designed
 theme, a step rail, Hindi, larger-text and high-contrast modes; they are checked by offscreen renders and tests, and **no
 operator or resident has used them yet**.
 
 ## Installation and usage
 
-Tested on Windows 11 with JDK 24. The CI workflow also targets Linux (Ubuntu, under `xvfb` for the JavaFX tests), but it has
-**never run**, so treat Linux and macOS as untried. No API keys, accounts or environment secrets are needed anywhere.
+Developed on Windows 11 with JDK 24. GitHub Actions builds and tests on Windows and on Ubuntu (under `xvfb` for the JavaFX tests),
+and both are green; macOS is untried. No API keys, accounts or environment secrets are needed anywhere.
 
 ### 1. What you need
 
@@ -135,7 +199,7 @@ Gradle comes with the repository (`./gradlew`); the first run downloads its depe
 ```bash
 git clone https://github.com/GargBhavya-tech/pramaan.git
 cd pramaan
-./gradlew build          # compiles with -Xlint:all -Werror, runs every test; about 9 minutes the first time
+./gradlew build          # compiles with -Xlint:all -Werror, runs every test; about 4 to 9 minutes the first time
 ```
 
 **One command instead (needs Python 3):** it fetches and verifies the models, then runs the same build.
@@ -153,8 +217,9 @@ the script takes them from there, checks every file's SHA-256, and says which ar
 development use only): the script gets it from OpenCV's zoo. With a model missing it still
 builds, the tests that need one skip themselves, and the showcase and the reference device need none.
 
-Expect `BUILD SUCCESSFUL`. On a fresh clone that is **694 tests, 0 failures, 20 skipped**: the skipped ones need the face
-models or MockMDS fixtures, which are not in the repository (see section 4). Details: `docs/test-report.md`.
+Expect `BUILD SUCCESSFUL`. On a bare clone that is **694 tests, 0 failures, 20 skipped**; after `python tools/setup.py` has placed
+the models it is **14 skipped**. The skipped ones need the face models, MockMDS fixtures, a corpus or a device (see section 4).
+Details: `docs/test-report.md`.
 
 ### 3. Five minutes, with nothing else (no camera, no models, no device)
 
@@ -170,8 +235,9 @@ bash docs/api/examples/try-the-device.sh    # in a second terminal: calls every 
 
 You need the **models** and a **device**.
 
-1. **Models.** Place the six files listed in [`models/README.md`](models/README.md) in `models/` (it gives each file's size,
-   SHA-256, source and licence, and how to regenerate the two we converted). Without them the engine refuses to start.
+1. **Models.** `python tools/setup.py --no-build` fetches and verifies all six (section 2). By hand, [`models/README.md`](models/README.md)
+   gives each file's size, SHA-256, source and licence, and how to regenerate the four we converted. Without them the engine
+   refuses to start.
 2. **A device**, either:
    - MOSIP's **MockMDS** on `127.0.0.1:4501` (setup: `docs/hardware-testing-guide.md`, section 2.2). It replays an image file,
      and its stock face never passes the quality gate, so the screen stays on guidance ("Please move closer"); give it a
@@ -216,7 +282,7 @@ The `check` passes; it has **not** run a liveness session on a phone.
 | The scaffold shows "Face verification is not available" | the policy, the operating-point table or a model did not verify. Check `--config` and `--models`, and the six hashes in `models/README.md`; the console has the details |
 | "Camera not connected. Please check the device." | no device answered on the ports in `--ports`. Start MockMDS or the reference device |
 | The scan stays on "Please move closer" | the stock MockMDS face is too small and unevenly lit for the quality gate; that is guidance working, not a fault |
-| About 20 tests skipped | expected without the models and fixtures; a skip is never counted as a pass |
+| About 20 tests skipped (14 after `tools/setup.py`) | expected without the models and fixtures; a skip is never counted as a pass |
 | Hindi shows empty boxes | the machine lacks a Devanagari font (Nirmala UI ships with Windows) |
 | `WARNING: A restricted method in java.lang.System has been called` | Gradle's own native library on JDK 24; harmless |
 | `Address already in use` | pick another `--port` for the reference device |
