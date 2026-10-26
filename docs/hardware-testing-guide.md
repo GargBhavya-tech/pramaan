@@ -481,17 +481,18 @@ Filming a screen causes spatial grid interference (moiré), measured as annular 
    - **Step 1 (Live face):** Look straight at the camera at standard distance (40–60 cm). Press SPACE to record 15 live face crops.
    - **Step 2 (Screen replay):** Hold up a phone or tablet replaying a photo/video of a face in front of the camera. Press SPACE to record 15 replay crops.
 
-3. **Output & Threshold Recommendation:**
-   The tool prints the empirical distribution (mean, standard deviation, range) for both genuine faces and replay attacks, verifies separation, and calculates the midpoint threshold:
+3. **Output & Threshold Recommendation (illustrative format, not measured):**
+   The tool prints the empirical distribution (mean, standard deviation, range) for both genuine faces and replay attacks, verifies separation, and calculates the midpoint threshold. Example of the terminal output format:
    ```
-   Live Face Peakiness (N=15):     Mean 12.8, Range [10.5, 15.2]
-   Replay Attack Peakiness (N=15): Mean 26.4, Range [21.8, 32.1]
-   Empirical Threshold Recommendation: 19.6
+   [Illustrative output format — run tools/calibrate_camera_moire.py for your camera's real numbers]
+   Live Face Peakiness (N=15):     Mean <val>, Range [<min>, <max>]
+   Replay Attack Peakiness (N=15): Mean <val>, Range [<min>, <max>]
+   Empirical Threshold Recommendation: <theta>
    ```
 
-4. **Run the scaffold or engine with the calibrated threshold:**
+4. **Run the scaffold or engine with your calibrated threshold:**
    ```bash
-   ./gradlew :desktop:runScaffold -Dpramaan.moire.threshold=19.6
+   ./gradlew :desktop:runScaffold -Dpramaan.moire.threshold=<your_calibrated_threshold>
    ```
 
 ---
