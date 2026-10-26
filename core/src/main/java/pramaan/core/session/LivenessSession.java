@@ -142,7 +142,7 @@ public final class LivenessSession {
         return context.startedAt();
     }
 
-    public SessionState state() {
+    public synchronized SessionState state() {
         tick();
         return state;
     }
@@ -646,8 +646,12 @@ public final class LivenessSession {
         return true;
     }
 
-    /** Fires every timeout that is due. Idempotent; safe to call on every frame. */
-    public void tick() {
+    /**
+     * Fires every timeout that is due. Idempotent; safe to call on every frame. Synchronised because timers, screens and the
+     * engine all read the state: two threads each reading the clock and then comparing against the other's later reading would
+     * otherwise see the clock run backwards and fail the session closed (found on a phone).
+     */
+    public synchronized void tick() {
         Instant t = now();
         if (t.isBefore(lastObserved)) {
             if (state != SessionState.UNAVAILABLE) {

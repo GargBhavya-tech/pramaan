@@ -116,6 +116,30 @@ val copyPramaanTestAssets by tasks.registering {
 android.sourceSets.getByName("androidTest").assets.srcDir(pramaanTestAssets)
 tasks.named("preBuild") { dependsOn(copyPramaanTestAssets) }
 
+// ---- One source of truth for the capture screen -------------------------------------------------------------
+// The desktop scaffold's session orchestrator (CaptureSession), its screen model (CaptureScreenModel, an EngineListener), the Text
+// and Messages helpers and the English and Hindi catalogues are plain Java over core. The Android app compiles them from
+// desktop/src rather than keeping a copy that could drift: whatever the desktop screen says, the phone says.
+val desktopShared = layout.buildDirectory.dir("generated/desktopShared")
+val copyDesktopShared by tasks.registering(Copy::class) {
+    val desktopMain = rootDir.parentFile.resolve("desktop/src/main")
+    from(desktopMain.resolve("java")) {
+        include("pramaan/desktop/capture/CaptureSession.java", "pramaan/desktop/capture/CaptureScreenModel.java",
+            "pramaan/desktop/capture/Text.java", "pramaan/desktop/capture/Messages.java")
+        into("java")
+    }
+    from(desktopMain.resolve("resources")) {
+        include("pramaan/desktop/capture/messages*.properties")
+        into("resources")
+    }
+    into(desktopShared)
+}
+android.sourceSets.getByName("main") {
+    java.srcDir(desktopShared.map { it.dir("java") })
+    resources.srcDir(desktopShared.map { it.dir("resources") })
+}
+tasks.named("preBuild") { dependsOn(copyDesktopShared) }
+
 // ---- Build Map #79: core must run on Android at minSdk -------------------------------------------------------
 // core targets Java 11, but Android is not Java 11: a Java 9-11 API that is missing at minSdk compiles and then
 // crashes at run time. D8 backports many of them (String.isBlank, List.of, ...), so the honest check is to dex
