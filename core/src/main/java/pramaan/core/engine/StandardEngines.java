@@ -128,10 +128,14 @@ public final class StandardEngines {
         FramePipeline pipeline = new FramePipeline(frames, detector,
                 new PassiveScorer(model(MINIFAS_V2), model(MINIFAS_V1SE)), caps.fps(), monotonicNanos);
         SFaceEmbedder sface = new SFaceEmbedder(model(SFACE));
+        // The moire threshold belongs to the camera, and to the signed table: a camera the table names gets its own calibration.
+        pramaan.core.policy.MoireCalibration moireCalibration = bundle.table().moireCalibration(device.device().make(),
+                device.device().model());
         LivenessEngine.Builder b = LivenessEngine.builder(bundle, session)
                 .device(source, deviceTrust, device.device().level())
                 .analysers(new PipelineFrameAnalyser(pipeline, landmarker(), sface,
-                        new pramaan.core.pad.ColorTextureCue(null, 0), station.scene()),
+                        new pramaan.core.pad.ColorTextureCue(null, 0), station.scene(),
+                        new pramaan.core.pad.MoireCue(moireCalibration)),
                         new SFaceCaptureAnalyser(deviceTrust, detector, sface, images))
                 .flashLight(station.flashLight())
                 .deviceIlluminator(station.illuminator())

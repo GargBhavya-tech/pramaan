@@ -31,6 +31,9 @@
   "binding": {
     "thetaSame": 0.363
   },
+  "moireCalibration": {
+    "default": {"mode": "abstain", "peakinessThreshold": 10.0, "slope": 0.6, "basis": "ABSTAIN until a camera shows separation. Measured 2026-10-26 on one phone selfie camera (Xiaomi 22071219AI), one person, a laptop screen at about 30 cm as the replay: live 29 frames median 14.7 (11.4 to 55.9), replay 39 frames median 17.2 (13.4 to 29.2), area under the curve 0.67. At the provisional threshold 10 every live frame and every replay frame was flagged as a screen; at 25 six of 29 live frames and one of 39 replay frames were. The laptop webcam's live faces ranged 10.5 to 20.1. No threshold separates them, so the cue does not vote. A camera that shows separation gets its own vote entry under cameras, with its sample counts in the basis."}
+  },
   "deviceClasses": {
     "default": {
       "resident-default":     { "tauAccept": 0.85, "tauReject": 0.20, "target": "BPCER <= 3% at APCER <= 5% (not yet measured)" },

@@ -46,9 +46,6 @@ tasks.register<JavaExec>("runScaffold") {
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("pramaan.desktop.scaffold.ScaffoldLauncher")
     workingDir = rootProject.projectDir
-    System.getProperties().filterKeys { it.toString().startsWith("pramaan.") }.forEach { (k, v) ->
-        systemProperty(k.toString(), v)
-    }
 }
 
 // Bible Part 43, Build Map #87: fingerprint this station's empty backdrop from one photograph of the empty room.

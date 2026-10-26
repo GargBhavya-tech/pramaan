@@ -72,7 +72,8 @@ public final class FramePipeline {
 
     public FramePipeline(FrameDecoder decoder, FaceDetector detector, PassiveScorer passive, double measuredFps,
             LongSupplier monotonicNanos) {
-        this(decoder, detector, passive, measuredFps, monotonicNanos, Integer.getInteger("pramaan.detect.stride", 1));
+        // Detecting on every frame is the calibrated path. Skipping frames is a choice the host app makes in code, never an ambient flag.
+        this(decoder, detector, passive, measuredFps, monotonicNanos, 1);
     }
 
     public FramePipeline(FrameDecoder decoder, FaceDetector detector, PassiveScorer passive, double measuredFps,

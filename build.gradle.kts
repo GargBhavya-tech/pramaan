@@ -34,17 +34,8 @@ subprojects {
         "testRuntimeOnly"(rootProject.libs.junit.platform.launcher)
     }
 
-    tasks.withType<JavaExec>().configureEach {
-        System.getProperties().filterKeys { it.toString().startsWith("pramaan.") }.forEach { (k, v) ->
-            systemProperty(k.toString(), v)
-        }
-    }
-
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
-        System.getProperties().filterKeys { it.toString().startsWith("pramaan.") }.forEach { (k, v) ->
-            systemProperty(k.toString(), v)
-        }
         testLogging {
             events("failed")
             exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

@@ -27,17 +27,38 @@ public final class MoireCue {
 
     public static final String NAME = "moire";
     public static final int N = 128;
-    /** PROVISIONAL: peakiness at which live and spoof are equally likely. */
-    public static final double PROVISIONAL_THRESHOLD = 10.0;
-    private static final double SLOPE = 0.6;
+    /** PROVISIONAL: peakiness at which live and spoof are equally likely, when no camera has been calibrated. */
+    public static final double PROVISIONAL_THRESHOLD = pramaan.core.policy.MoireCalibration.PROVISIONAL_THRESHOLD;
     private final double threshold;
+    private final double slope;
+    private final boolean votes;
 
+    /** The provisional calibration. A running engine takes its camera's calibration from the operating-point table instead. */
     public MoireCue() {
-        this(Double.parseDouble(System.getProperty("pramaan.moire.threshold", Double.toString(PROVISIONAL_THRESHOLD))));
+        this(PROVISIONAL_THRESHOLD, pramaan.core.policy.MoireCalibration.PROVISIONAL_SLOPE);
     }
 
-    public MoireCue(double threshold) {
+    /**
+     * @param threshold the peakiness at which a live face and a screen are equally likely
+     * @param slope how sharply the vote moves around it
+     */
+    public MoireCue(double threshold, double slope) {
+        this(threshold, slope, true);
+    }
+
+    private MoireCue(double threshold, double slope, boolean votes) {
         this.threshold = threshold;
+        this.slope = slope;
+        this.votes = votes;
+    }
+
+    /**
+     * The cue as the operating-point table calibrates it for the connected camera. When the table says "abstain" the cue measures
+     * nothing and abstains on every frame: on a camera where no measurement has shown that moire separates a live face from a screen,
+     * a vote either way would be a guess, and a confident wrong vote rejects live faces.
+     */
+    public MoireCue(pramaan.core.policy.MoireCalibration calibration) {
+        this(calibration.peakinessThreshold(), calibration.slope(), calibration.votes());
     }
 
     private static final int R1 = 12;
@@ -48,13 +69,16 @@ public final class MoireCue {
 
     /** @param nativeFaceCrop the face region cut from the decoded frame without any rescaling */
     public CueResult evaluate(RgbImage nativeFaceCrop) {
+        if (!votes) {
+            return CueResult.abstain(NAME, CueResult.AbstainReason.UNTRAINED);
+        }
         if (nativeFaceCrop.width() < N || nativeFaceCrop.height() < N) {
             return CueResult.abstain(NAME, CueResult.AbstainReason.INPUT_TOO_SMALL);
         }
         int x0 = (nativeFaceCrop.width() - N) / 2;
         int y0 = (nativeFaceCrop.height() - N) / 2;
         double peakiness = peakiness(ImageOps.luma(ImageOps.crop(nativeFaceCrop, x0, y0, x0 + N - 1, y0 + N - 1)));
-        double p = 1 / (1 + Math.exp(SLOPE * (peakiness - threshold)));
+        double p = 1 / (1 + Math.exp(slope * (peakiness - threshold)));
         return CueResult.vote(NAME, Math.max(1e-6, Math.min(1 - 1e-6, p)), peakiness);
     }
 

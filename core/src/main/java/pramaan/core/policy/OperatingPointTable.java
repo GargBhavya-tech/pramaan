@@ -51,10 +51,13 @@ public final class OperatingPointTable {
     private final double disagreementLogitGap;
     private final double thetaSame;
     private final Map<String, Map<String, OperatingPoint>> deviceClasses;
+    private final MoireCalibration moireDefault;
+    private final Map<String, MoireCalibration> moireByCamera;
 
     private OperatingPointTable(int tableVersion, boolean provisional, Map<String, String> models,
             Map<String, CueWeight> cues, Map<DeviceLevel, Double> bias, double disagreementLogitGap, double thetaSame,
-            Map<String, Map<String, OperatingPoint>> deviceClasses) {
+            Map<String, Map<String, OperatingPoint>> deviceClasses, MoireCalibration moireDefault,
+            Map<String, MoireCalibration> moireByCamera) {
         this.tableVersion = tableVersion;
         this.provisional = provisional;
         this.models = Collections.unmodifiableMap(models);
@@ -63,6 +66,8 @@ public final class OperatingPointTable {
         this.disagreementLogitGap = disagreementLogitGap;
         this.thetaSame = thetaSame;
         this.deviceClasses = Collections.unmodifiableMap(deviceClasses);
+        this.moireDefault = moireDefault;
+        this.moireByCamera = Collections.unmodifiableMap(moireByCamera);
     }
 
     /**
@@ -179,8 +184,61 @@ public final class OperatingPointTable {
         if (!classes.containsKey(DEFAULT_DEVICE_CLASS)) {
             throw new InvalidPolicyException("deviceClasses: a \"" + DEFAULT_DEVICE_CLASS + "\" class is required");
         }
+        MoireCalibration moireDefault = new MoireCalibration(MoireCalibration.PROVISIONAL_THRESHOLD, MoireCalibration.PROVISIONAL_SLOPE,
+                MoireCalibration.Mode.VOTE, "provisional: Bible Part 8.2 example ranges, never measured");
+        Map<String, MoireCalibration> moireByCamera = new TreeMap<>();
+        if (root.keys().contains("moireCalibration")) {
+            StrictNode moire = root.object("moireCalibration");
+            moireDefault = readMoire(moire.object("default"));
+            if (moire.keys().contains("cameras")) {
+                StrictNode cameras = moire.object("cameras");
+                for (String camera : cameras.keys()) {
+                    if (camera.trim().isEmpty()) {
+                        throw new InvalidPolicyException("moireCalibration.cameras: a camera needs a name");
+                    }
+                    moireByCamera.put(camera, readMoire(cameras.object(camera)));
+                }
+                cameras.finish();
+            }
+            moire.finish();
+        }
         root.finish();
-        return new OperatingPointTable(version, provisional, models, cues, bias, gap, thetaSame, classes);
+        return new OperatingPointTable(version, provisional, models, cues, bias, gap, thetaSame, classes, moireDefault, moireByCamera);
+    }
+
+    private static MoireCalibration readMoire(StrictNode n) {
+        double threshold = n.number("peakinessThreshold");
+        double slope = n.number("slope");
+        String mode = n.text("mode");
+        MoireCalibration.Mode parsed;
+        switch (mode) {
+            case "vote":
+                parsed = MoireCalibration.Mode.VOTE;
+                break;
+            case "abstain":
+                parsed = MoireCalibration.Mode.ABSTAIN;
+                break;
+            default:
+                throw new InvalidPolicyException("moireCalibration mode must be vote or abstain: " + mode);
+        }
+        MoireCalibration c = new MoireCalibration(threshold, slope, parsed, n.text("basis"));
+        n.finish();
+        return c;
+    }
+
+    /**
+     * The moire calibration for the connected camera: its own entry when the table has one for this make and model, the table's
+     * default otherwise. The camera name is {@code make + " " + model} as the device reports it.
+     */
+    public MoireCalibration moireCalibration(String make, String model) {
+        String key = (make == null ? "" : make.trim()) + " " + (model == null ? "" : model.trim());
+        MoireCalibration own = moireByCamera.get(key.trim());
+        return own != null ? own : moireDefault;
+    }
+
+    /** True when the table names this camera: a camera with no entry runs on the default, which may be provisional. */
+    public boolean hasMoireCalibrationFor(String make, String model) {
+        return moireByCamera.containsKey(((make == null ? "" : make.trim()) + " " + (model == null ? "" : model.trim())).trim());
     }
 
     private void checkModels(String origin, Map<String, String> loaded) {

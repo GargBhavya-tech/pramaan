@@ -31,7 +31,7 @@ public final class PipelineFrameAnalyser implements FrameAnalyser {
     private final FramePipeline pipeline;
     private final LandmarkProvider landmarks;
     private final SFaceEmbedder sface;
-    private final MoireCue moire = new MoireCue();
+    private final MoireCue moire;
     private final ColorTextureCue colorTexture;
     private final SceneContext scene;
 
@@ -51,6 +51,13 @@ public final class PipelineFrameAnalyser implements FrameAnalyser {
      */
     public PipelineFrameAnalyser(FramePipeline pipeline, LandmarkProvider landmarks, SFaceEmbedder sface,
             ColorTextureCue colorTexture, SceneContext scene) {
+        this(pipeline, landmarks, sface, colorTexture, scene, new MoireCue());
+    }
+
+    /** @param moire the moire cue calibrated for the connected camera (from the operating-point table) */
+    public PipelineFrameAnalyser(FramePipeline pipeline, LandmarkProvider landmarks, SFaceEmbedder sface,
+            ColorTextureCue colorTexture, SceneContext scene, MoireCue moire) {
+        this.moire = Objects.requireNonNull(moire, "moire");
         this.scene = scene;
         this.pipeline = Objects.requireNonNull(pipeline, "pipeline");
         this.landmarks = Objects.requireNonNull(landmarks, "landmarks");

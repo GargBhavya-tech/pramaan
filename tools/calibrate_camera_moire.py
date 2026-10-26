@@ -2,7 +2,8 @@
 """
 Camera Moiré Calibration Tool for PRAMAAN.
 Measures 2D FFT peakiness distribution on live faces vs. screen replays
-and calculates the empirical threshold for pramaan.moire.threshold.
+and says whether moire earns a vote on this camera at all. The result goes into the signed operating-point table
+(moireCalibration.cameras), never into a launch flag.
 Matches MoireCue.java exact frequency annulus, Hann window, and JPEG lattice exclusions.
 """
 
@@ -133,6 +134,7 @@ def main():
     parser.add_argument("--samples", type=int, default=15, help="Number of samples to capture per condition")
     parser.add_argument("--live-dir", type=str, help="Directory of 128x128 crop images of live faces")
     parser.add_argument("--replay-dir", type=str, help="Directory of 128x128 crop images of screen replays")
+    parser.add_argument("--name", type=str, help="The camera as the device reports it: make and model, for example \"Xiaomi 22071219AI\"")
     args = parser.parse_args()
 
     live_vals = []
@@ -181,16 +183,32 @@ def main():
         print(f"  Range:  [{np.min(replay_vals):.2f}, {np.max(replay_vals):.2f}]")
 
     if live_vals and replay_vals:
-        max_live = np.max(live_vals)
-        min_replay = np.min(replay_vals)
-        threshold = (np.mean(live_vals) + np.mean(replay_vals)) / 2.0
-        print(f"\nEmpirical Threshold Recommendation: {threshold:.2f}")
-        if max_live < min_replay:
-            print(f"Clean separation margin: +{min_replay - max_live:.2f}")
+        live = np.asarray(live_vals)
+        replay = np.asarray(replay_vals)
+        # Mann-Whitney: the chance that a random replay frame is peakier than a random live frame (0.5 = no information)
+        greater = sum(1 for r in replay for l in live if r > l) + 0.5 * sum(1 for r in replay for l in live if r == l)
+        auc = greater / (len(replay) * len(live))
+        # the threshold that flags at most 2% of the live frames, and what it then catches
+        candidate = float(np.percentile(live, 98))
+        caught = float(np.mean(replay > candidate))
+        print(f"\nSeparation: area under the curve {auc:.2f} (0.5 means moire tells live from replay no better than a coin).")
+        print(f"A threshold of {candidate:.1f} flags 2% of the live frames and catches {100 * caught:.0f}% of the replay frames.")
+        enough = len(live) >= 30 and len(replay) >= 30
+        if auc >= 0.95 and caught >= 0.80 and enough:
+            mode = "vote"
+            print("Moire separates on this camera, at this distance, in these conditions: it may vote.")
         else:
-            print("Note: Distributions overlap slightly; consider adjusting camera distance or lighting.")
-        print(f"\nTo configure in PRAMAAN runtime, set:")
-        print(f"  -Dpramaan.moire.threshold={threshold:.1f}")
+            mode = "abstain"
+            why = "separation is not good enough" if enough else "fewer than 30 frames of each kind"
+            print(f"Moire does NOT earn a vote on this camera ({why}): leave it abstaining.")
+        name = args.name or "<make> <model>"
+        basis = (f"Measured {len(live)} live and {len(replay)} replay frames: live median {np.median(live):.1f} "
+                 f"({live.min():.1f} to {live.max():.1f}), replay median {np.median(replay):.1f} "
+                 f"({replay.min():.1f} to {replay.max():.1f}), area under the curve {auc:.2f}.")
+        print("\nTo record this in the signed table, add under moireCalibration.cameras in config/operating-points.json,")
+        print("then rebuild the bundle (the table is hashed and signed with the rest; there is no launch flag):\n")
+        import json
+        print(json.dumps({name: {"mode": mode, "peakinessThreshold": round(candidate, 1), "slope": 0.6, "basis": basis}}, indent=2))
 
 if __name__ == "__main__":
     main()
