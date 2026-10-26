@@ -23,7 +23,7 @@ import pramaan.core.inference.OnnxModel;
  * <p>Input: the frame resized to 640x640, BGR, CHW, raw 0-255. Outputs per stride s in {8, 16, 32}:
  * cls, obj [N,1], bbox [N,4], kps [N,10] over an (640/s)^2 grid.
  */
-public final class YuNetDetector implements AutoCloseable {
+public final class YuNetDetector implements FaceDetector, AutoCloseable {
 
     public static final int INPUT = 640;
     private static final int[] STRIDES = {8, 16, 32};

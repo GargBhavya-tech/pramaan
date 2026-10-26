@@ -536,8 +536,9 @@ def slide_status(deck, n=7):
                "No error rate on real attacks; thresholds provisional",
                "No full session on a phone or a certified SBI device (models timed on one phone)",
                "A scaffold, not the Registration Client; no user has tried the screens",
-               [("We attacked ourselves: ", {"bold": True}), ("4 of 85 synthetic pitches accepted without a flash cue, 0 with "
-                                                               "one. Fixed for operators and supervisors, open for residents.", {})]])
+               [("We attacked ourselves (SYNTHETIC simulation): ", {"bold": True}),
+                ("4 of 85 simulated pitches accepted without a flash cue, 0 with one (SYNTHETIC data, not a measured field rate). "
+                 "Fixed for operators and supervisors, open for residents.", {})]])
     box(s, 8.9, 1.95, 3.8, 3.75, name="Impact", anchor=MSO_ANCHOR.TOP, size=14, color=INK, space_after=5,
         paras=[[("Impact and next", {"bold": True, "size": 17, "color": BLUE})],
                [("For MOSIP: ", {"bold": True}), ("closes the capture-swap gap on unmodified SBI; leaves proof a server can "
@@ -610,7 +611,8 @@ def slide_a2(deck, n):
         box(s, xs[1], yy, ws[1], 0.5, fill=ERR_BG, line=None, paras=[a], size=13, color=ERR, bold=True, align=PP_ALIGN.CENTER)
         box(s, xs[2], yy, ws[2], 0.5, fill=OK_BG, line=None, paras=[b], size=13, color=OK, bold=True, align=PP_ALIGN.CENTER)
     box(s, 0.6, 5.2, 7.4, 0.75, fill=INFO_BG, line=BLUE, name="Totals",
-        paras=[[("Of 85 pitches: ", {"bold": True}), ("4 accepted without the flash cue, 0 with it, 3 left to the challenge.", {})]],
+        paras=[[("Of 85 simulated pitches (SYNTHETIC simulation): ", {"bold": True}),
+                ("4 accepted without the flash cue, 0 with it, 3 left to the challenge (not a field rate).", {})]],
         size=15, color=INK)
     text(s, 0.6, 6.1, 7.4, 0.7, ["Synthetic data, the passive scorer assumed fooled, the challenge not modelled. "
                                  "Reproduce: ./gradlew :harness:fusedRedTeam"], size=12, color=INK2)

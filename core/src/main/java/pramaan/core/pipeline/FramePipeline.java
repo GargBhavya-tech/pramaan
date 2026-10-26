@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.LongSupplier;
 import pramaan.core.detect.FaceBox;
+import pramaan.core.detect.FaceDetector;
 import pramaan.core.detect.YuNetDetector;
 import pramaan.core.gate.FaceGate;
 import pramaan.core.gate.FaceTracker;
@@ -57,7 +58,7 @@ public final class FramePipeline {
     }
 
     private final FrameDecoder decoder;
-    private final YuNetDetector detector;
+    private final FaceDetector detector;
     private final PassiveScorer passive;
     private final QualityAssessor quality = new QualityAssessor();
     private final FaceGate gate = new FaceGate();
@@ -69,12 +70,12 @@ public final class FramePipeline {
     private FaceBox lastTrackedFace;
     private long frames;
 
-    public FramePipeline(FrameDecoder decoder, YuNetDetector detector, PassiveScorer passive, double measuredFps,
+    public FramePipeline(FrameDecoder decoder, FaceDetector detector, PassiveScorer passive, double measuredFps,
             LongSupplier monotonicNanos) {
         this(decoder, detector, passive, measuredFps, monotonicNanos, Integer.getInteger("pramaan.detect.stride", 1));
     }
 
-    public FramePipeline(FrameDecoder decoder, YuNetDetector detector, PassiveScorer passive, double measuredFps,
+    public FramePipeline(FrameDecoder decoder, FaceDetector detector, PassiveScorer passive, double measuredFps,
             LongSupplier monotonicNanos, int detectStride) {
         this.decoder = decoder;
         this.detector = detector;
