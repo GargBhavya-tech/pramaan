@@ -86,6 +86,11 @@ public class FullSessionOnDeviceTest {
         }
 
         List<String> trail = Collections.synchronizedList(new ArrayList<>());
+        java.util.function.Consumer<String> note = line -> {
+            trail.add(line);
+            Log.i(TAG, line);
+        };
+        final SessionState[] stateNow = {SessionState.IDLE};
         long started = System.currentTimeMillis();
         Bundle report = new Bundle();
         report.putString("device", android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL + ", Android "
@@ -102,11 +107,12 @@ public class FullSessionOnDeviceTest {
             JwsTrust trust = key.trust(clock);
             report.putString("signingKey", "Android Keystore RSA-2048, hardware-backed: " + key.hardwareBacked());
             CameraFrameSource camera = new CameraFrameSource(ctx, true, 640, 480, 3.0, clock);
+            camera.setPreviewSurface(ui.scanView().awaitPreviewSurface(8000));
             ModeDDevice device = new ModeDDevice(camera, key.payloadSigner(), trust, clock, "pramaan-mode-d", "Staging", () -> 0);
             StandardEngines engines = new StandardEngines(bundle, trust, random, new BitmapFrameDecoder(), new BitmapImageDecoder(),
                     System::nanoTime);
             LivenessSession session = bundle.newSession(Workflow.RESIDENT, "resident-1", "operator-1", "pramaan-mode-d", "10001",
-                    new SessionRegistry(), event -> trail.add("audit " + event), clock, random);
+                    new SessionRegistry(), event -> note.accept("audit " + event.type() + " " + event.fields()), clock, random);
 
             CaptureScreenModel model = new CaptureScreenModel(s -> {
                 StringBuilder text = new StringBuilder();
@@ -114,7 +120,7 @@ public class FullSessionOnDeviceTest {
                     text.append(messages.resolve(t)).append("\n\n");
                 }
                 ui.say(text.toString().trim());
-                trail.add(at(started) + " screen " + s.stage() + ": " + s.texts());
+                note.accept(at(started) + " screen " + s.stage() + ": " + s.texts());
                 if (s.tone()) {
                     tone.startTone(ToneGenerator.TONE_PROP_BEEP, 200);
                 }
@@ -122,42 +128,44 @@ public class FullSessionOnDeviceTest {
             EngineListener listener = new EngineListener() {
                 @Override
                 public void stateChanged(SessionState state) {
-                    trail.add(at(started) + " state " + state);
+                    stateNow[0] = state;
+                    note.accept(at(started) + " state " + state);
                     model.stateChanged(state);
                 }
 
                 @Override
                 public void guidance(Guidance g) {
+                    ui.scanView().setFaceOk(g == Guidance.NONE);
                     model.guidance(g);
                 }
 
                 @Override
                 public void message(String messageId) {
-                    trail.add(at(started) + " message " + messageId);
+                    note.accept(at(started) + " message " + messageId);
                     model.message(messageId);
                 }
 
                 @Override
                 public void prompt(ChallengePrompt prompt, int step, int steps) {
-                    trail.add(at(started) + " PROMPT " + prompt + " (" + step + "/" + steps + ")");
+                    note.accept(at(started) + " PROMPT " + prompt + " (" + step + "/" + steps + ")");
                     model.prompt(prompt, step, steps);
                 }
 
                 @Override
                 public void stepCompleted(int step, int steps) {
-                    trail.add(at(started) + " step done " + step + "/" + steps);
+                    note.accept(at(started) + " step done " + step + "/" + steps);
                     model.stepCompleted(step, steps);
                 }
 
                 @Override
                 public void attempt(int attempt, int maxAttempts) {
-                    trail.add(at(started) + " attempt " + attempt + "/" + maxAttempts);
+                    note.accept(at(started) + " attempt " + attempt + "/" + maxAttempts);
                     model.attempt(attempt, maxAttempts);
                 }
 
                 @Override
                 public void cooldown(long waitMillis) {
-                    trail.add(at(started) + " cooldown " + waitMillis + " ms");
+                    note.accept(at(started) + " cooldown " + waitMillis + " ms");
                     model.cooldown(waitMillis);
                 }
             };
@@ -168,20 +176,20 @@ public class FullSessionOnDeviceTest {
 
                 @Override
                 public void onDeviceEvent(pramaan.core.source.DeviceEvent event) {
-                    trail.add(at(started) + " device " + event.type() + " " + event.detail());
+                    note.accept(at(started) + " device " + event.type() + " " + event.detail());
                 }
             };
             capture = new CaptureSession(device, (caps, dev) -> engines.create(session, device, listener, 40, caps, dev, null, null),
                     noPreview, new CaptureSession.Problems() {
                         @Override
                         public void deviceUnavailable(Exception cause) {
-                            trail.add("DEVICE UNAVAILABLE " + cause);
+                            note.accept("DEVICE UNAVAILABLE " + cause);
                             model.deviceUnavailable();
                         }
 
                         @Override
                         public void engineUnavailable(Exception cause) {
-                            trail.add("ENGINE UNAVAILABLE " + cause);
+                            note.accept("ENGINE UNAVAILABLE " + cause);
                             model.engineUnavailable();
                         }
                     });
@@ -192,13 +200,13 @@ public class FullSessionOnDeviceTest {
             capture.startTicker(Duration.ofMillis(200));
 
             while (System.currentTimeMillis() - started < LIMIT_MS) {
-                last = session.state();
+                last = stateNow[0];
                 if (last == SessionState.ACCEPTED || last == SessionState.LOCKED_OUT || last == SessionState.UNAVAILABLE) {
                     break;
                 }
                 Thread.sleep(200);
             }
-            last = session.state();
+            last = stateNow[0];
             tone.startTone(ToneGenerator.TONE_PROP_ACK, 600);
             report.putString("finalState", last.toString());
             report.putString("elapsed", (System.currentTimeMillis() - started) / 1000 + " s");

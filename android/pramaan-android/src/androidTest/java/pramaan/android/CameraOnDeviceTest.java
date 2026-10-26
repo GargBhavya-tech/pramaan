@@ -103,6 +103,7 @@ public class CameraOnDeviceTest {
             long[] delivered = {0};
             int[] frameSize = {0, 0};
             CameraFrameSource camera = new CameraFrameSource(ctx, true, 640, 480, 3.0, Clock.systemUTC());
+            camera.setPreviewSurface(screen.scanView().awaitPreviewSurface(8000));
             ToneGenerator tone = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
             try {
                 camera.discover();
@@ -151,6 +152,7 @@ public class CameraOnDeviceTest {
                     long t0 = System.nanoTime();
                     FrameObservation o = analyser.analyse(f);
                     ms.add((System.nanoTime() - t0) / 1e6);
+                    screen.scanView().setFaceOk(o.qualityPasses());
                     processed++;
                     if (o.landmarks() != null) {
                         withFace++;

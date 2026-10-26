@@ -25,11 +25,13 @@ import android.media.ImageReader;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.view.Surface;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.EnumSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -79,6 +81,7 @@ public final class CameraFrameSource implements FaceFrameSource {
     private ImageReader reader;
     private volatile FrameSink sink;
     private volatile boolean stopping;
+    private volatile Surface previewSurface;
     private long index;
     private long lastEmitNanos;
 
@@ -95,6 +98,11 @@ public final class CameraFrameSource implements FaceFrameSource {
         this.height = height;
         this.intervalNanos = (long) (1_000_000_000L / targetFps);
         this.clock = clock;
+    }
+
+    /** A surface to show the camera's picture on, for a person who needs to see themselves; set before {@link #start}. */
+    public void setPreviewSurface(Surface preview) {
+        this.previewSurface = preview;
     }
 
     @Override
@@ -153,7 +161,12 @@ public final class CameraFrameSource implements FaceFrameSource {
                 public void onOpened(CameraDevice opened) {
                     camera = opened;
                     try {
-                        opened.createCaptureSession(Collections.singletonList(reader.getSurface()),
+                        List<Surface> outputs = new ArrayList<>();
+                        outputs.add(reader.getSurface());
+                        if (previewSurface != null) {
+                            outputs.add(previewSurface);
+                        }
+                        opened.createCaptureSession(outputs,
                                 new CameraCaptureSession.StateCallback() {
                                     @Override
                                     public void onConfigured(CameraCaptureSession configured) {
@@ -162,6 +175,9 @@ public final class CameraFrameSource implements FaceFrameSource {
                                             android.hardware.camera2.CaptureRequest.Builder b =
                                                     opened.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
                                             b.addTarget(reader.getSurface());
+                                            if (previewSurface != null) {
+                                                b.addTarget(previewSurface);
+                                            }
                                             b.set(android.hardware.camera2.CaptureRequest.CONTROL_AF_MODE,
                                                     android.hardware.camera2.CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                                             configured.setRepeatingRequest(b.build(), null, handler);
