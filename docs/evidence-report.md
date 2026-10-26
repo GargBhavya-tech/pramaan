@@ -37,7 +37,9 @@ face of the 63-frame clip (the clip's faces are small, so the quality gate would
 passive 27 ms, landmarks 63 ms, SFace embedding 91 ms, **409 ms in total at the median (95th percentile 1,255 ms)**. Moire was not timed (the faces are under its
 128 px window). That is more than the 333 ms an SBI stream at 3 fps allows, so **the phone does not keep up with the whole pipeline at 3 fps on the
 default 2-thread CPU profile**; the 4.8 fps above is for detection and passive scoring only. Process memory was about 170 MB (total PSS 167 to 178 MB, native
-heap 178 to 186 MB), not the 16 MB Java heap. All four on-device tests passed (0 failures, 0 skipped).
+heap 178 to 186 MB), not the 16 MB Java heap. All four on-device tests passed (0 failures, 0 skipped). Timed under five inference profiles, the chain's median was 351 ms (CPU, 2 threads), 447 ms (CPU, 4 threads), 325 ms
+(XNNPACK, 2 threads), 319 ms (XNNPACK, 4 threads) and 515 ms (NNAPI); the engine's one-in-three embedding takes about 52 to 58 ms off those, so the default profile is about 299 ms and
+XNNPACK about 267 ms at the median, under the 333 ms budget with little room and over it at the 95th percentile (`docs/android-low-resource.md`).
 
 ### 1.2 A real virtual-camera veto (2026-10-25)
 

@@ -124,6 +124,25 @@ To bring the pipeline comfortably within the 333 ms budget on low-resource mobil
 
 *Note: The 409 ms figure is the actual baseline measured on-device on the Xiaomi phone. The 164 ms figure is an arithmetic projection from component times when frame-skipping and 1-in-3 embedding are enabled; it has not yet been benchmarked in an on-device run.*
 
+**Under each inference profile** (`ChainByProfileOnDeviceTest`, same phone, same clip, each stage forced on every detected face, 183 measured
+frames per profile; every profile really ran on the provider it names, and the mean passive P(live) was identical to four decimals, 0.2575, in all five):
+
+| Profile | Detect | Passive | Landmarks | Embed | Whole chain, median (p95) |
+|---|---:|---:|---:|---:|---:|
+| CPU, 2 threads (the default profile) | 191 | 20 | 54 | 78 | 351 ms (434) |
+| CPU, 4 threads | 228 | 27 | 76 | 108 | 447 ms (539) |
+| XNNPACK, 2 threads | 156 | 20 | 56 | 87 | 325 ms (427) |
+| XNNPACK, 4 threads | 151 | 24 | 57 | 81 | 319 ms (399) |
+| NNAPI | 172 | 26 | 83 | 229 | 515 ms (757) |
+
+On this phone more CPU threads are **slower** (the extra threads land on slow cores or compete with each other), NNAPI is the slowest overall (its embedding
+is three times slower than the CPU's), and XNNPACK helps by only about 7 to 9 percent. The engine computes the embedding on one scored frame in three, which takes
+about 52 to 58 ms off the average of every row: roughly **299 ms** on the default CPU profile and **267 ms** with XNNPACK. Both are under the 333 ms an SBI stream at
+3 fps allows **at the median**, with little room, and the 95th percentile (about 380 ms after the same adjustment) is not. The runs vary by about 15 percent between
+runs (the same default profile gave 409 ms in the earlier run). Two ways to get real headroom are not built: a detector that takes a smaller input (the shipped YuNet
+model has a fixed 640 x 640 input, so that needs a re-exported model with its own SHA-256 in the operating-point table) and detection on every second frame with the
+landmark model tracking in between (which changes what evidence a frame carries, so it needs its own evaluation).
+
 Memory is larger than the Java heap number above suggests, because ONNX Runtime keeps the models outside the Java heap: after these runs the
 native heap was 178 to 186 MB and the process's total PSS 167 to 178 MB (Java heap about 16 MB). Treat about 170 MB as this phone's cost of the six
 models, not 16 MB. A third of that is whatever the test harness itself holds, which was not separated.
