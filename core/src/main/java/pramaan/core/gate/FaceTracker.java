@@ -81,6 +81,14 @@ public final class FaceTracker {
         return maxGap;
     }
 
+    public long currentTrackId() {
+        return trackId;
+    }
+
+    public FaceBox lastBox() {
+        return last;
+    }
+
     public Update update(FaceBox face, Instant at) {
         boolean lost = false;
         if (trackId != 0 && Duration.between(lastSeen, at).compareTo(maxGap) > 0) {

@@ -552,7 +552,7 @@ def slide_status(deck, n=7):
                [("For: ", {"bold": True}), ("registration centres, operators and supervisors, residents, and server operators.  ", {}),
                 ("Code: ", {"bold": True}), ("github.com/GargBhavya-tech/pramaan (MPL-2.0)", {})]])
     footer(s, deck, n)
-    notes(s, "What we verify and what we do not claim. Seven hundred three automated tests pass; on a fresh clone twenty "
+    notes(s, "What we verify and what we do not claim. Seven hundred eighteen automated tests pass; on a fresh clone twenty "
              "skip because the face models are not in the repository. We have not measured an error rate on real attacks because "
              "no real corpus exists. It has not run on a real device or a phone, it is a scaffold, and no user has tried the "
              "screens yet. Our own red team found that, on synthetic replays with no flash light, the fusion accepted four of "

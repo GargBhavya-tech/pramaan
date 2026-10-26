@@ -63,16 +63,24 @@ public final class FramePipeline {
     private final FaceGate gate = new FaceGate();
     private final FaceTracker tracker;
     private final LongSupplier nanoTime;
+    private final int detectStride;
     private final int passiveEvery;
     private final LatencyRecorder latency = new LatencyRecorder();
+    private FaceBox lastTrackedFace;
     private long frames;
 
     public FramePipeline(FrameDecoder decoder, YuNetDetector detector, PassiveScorer passive, double measuredFps,
             LongSupplier monotonicNanos) {
+        this(decoder, detector, passive, measuredFps, monotonicNanos, Integer.getInteger("pramaan.detect.stride", 1));
+    }
+
+    public FramePipeline(FrameDecoder decoder, YuNetDetector detector, PassiveScorer passive, double measuredFps,
+            LongSupplier monotonicNanos, int detectStride) {
         this.decoder = decoder;
         this.detector = detector;
         this.passive = passive;
         this.nanoTime = monotonicNanos;
+        this.detectStride = Math.max(1, detectStride);
         this.passiveEvery = Math.max(1, (int) Math.round(measuredFps / 10.0));
         this.tracker = new FaceTracker(FaceTracker.gapFor(measuredFps));
     }
@@ -81,10 +89,16 @@ public final class FramePipeline {
         long t0 = nanoTime.getAsLong();
         RgbImage image = decoder.decode(frame);
         long t1 = nanoTime.getAsLong();
-        List<FaceBox> faces = detector.detect(image);
+        List<FaceBox> faces;
+        if (detectStride > 1 && frames % detectStride != 0 && lastTrackedFace != null && tracker.currentTrackId() != 0) {
+            faces = java.util.Collections.singletonList(lastTrackedFace);
+        } else {
+            faces = detector.detect(image);
+        }
         long t2 = nanoTime.getAsLong();
         FaceGate.Result g = gate.update(faces, frame.hostArrival());
         FaceTracker.Update track = tracker.update(g.status() == FaceGate.Status.ONE_FACE ? g.primary() : null, frame.hostArrival());
+        lastTrackedFace = g.status() == FaceGate.Status.ONE_FACE ? g.primary() : null;
         latency.record("decode", t1 - t0);
         latency.record("detect", t2 - t1);
 

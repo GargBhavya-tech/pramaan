@@ -84,4 +84,16 @@ class GateAndTrackerTest {
         assertTrue(jump.previousTrackLost());
         assertFalse(tracker.update(face(602, 80), at(66)).previousTrackLost());
     }
+
+    @Test
+    void trackerExposesCurrentTrackIdAndLastBox() {
+        FaceTracker tracker = new FaceTracker();
+        assertEquals(0, tracker.currentTrackId());
+        assertEquals(null, tracker.lastBox());
+
+        FaceBox resident = face(100, 80);
+        FaceTracker.Update u = tracker.update(resident, at(0));
+        assertEquals(u.trackId(), tracker.currentTrackId());
+        assertEquals(resident, tracker.lastBox());
+    }
 }
