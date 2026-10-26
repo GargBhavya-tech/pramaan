@@ -137,11 +137,32 @@ frames per profile; every profile really ran on the provider it names, and the m
 
 On this phone more CPU threads are **slower** (the extra threads land on slow cores or compete with each other), NNAPI is the slowest overall (its embedding
 is three times slower than the CPU's), and XNNPACK helps by only about 7 to 9 percent. The engine computes the embedding on one scored frame in three, which takes
-about 52 to 58 ms off the average of every row: roughly **299 ms** on the default CPU profile and **267 ms** with XNNPACK. Both are under the 333 ms an SBI stream at
-3 fps allows **at the median**, with little room, and the 95th percentile (about 380 ms after the same adjustment) is not. The runs vary by about 15 percent between
+about 52 to 58 ms off the average of every row: roughly **299 ms** on the default CPU profile and **267 ms** with XNNPACK. That was a projection; **measured on live frames (next section) the median was 350 ms**, a little over the 333 ms an SBI stream at 3 fps allows, and the 95th percentile was 602 ms. The runs vary by about 15 percent between
 runs (the same default profile gave 409 ms in the earlier run). Two ways to get real headroom are not built: a detector that takes a smaller input (the shipped YuNet
 model has a fixed 640 x 640 input, so that needs a re-exported model with its own SHA-256 in the operating-point table) and detection on every second frame with the
 landmark model tracking in between (which changes what evidence a frame carries, so it needs its own evaluation).
+
+## The phone's own camera, live (2026-10-26)
+
+`CameraFrameSource` (Camera2, front camera, throttled to 3 fps, YUV to an upright JPEG) fed the whole analyser while the author held the phone in
+front of their face for 15 seconds (`CameraOnDeviceTest`, run from the shell because the system blocks a test process from starting a screen). This is the
+first time the Camera APIs and the quality, passive, moire and embedding stages ran on a phone with a live face. Default 2-thread CPU profile, nothing saved:
+
+| Measure | Result |
+|---|---|
+| Frames delivered | 43 in 15 s = 2.9 fps, 480 x 640 upright |
+| Frames analysed | 41 (the analyser is slightly slower than the stream, so a couple were dropped) |
+| Face and landmarks found | 41 of 41 |
+| Quality gate passed | 37 of 41; the rest were "face the camera" (3) and "move away from the light behind you" (1) |
+| Passive P(live) on the 37 scored frames | min 0.892, median 0.981, mean 0.978, max 0.996 |
+| Moire peakiness on the same frames | min 10.9, median 12.7, mean 13.2, max 22.2 (threshold 10.0): the cue reads a live face as a screen |
+| Analyser per frame | median 350 ms, 95th percentile 602 ms |
+| Embeddings computed | 13 (one scored frame in three) |
+
+Three readings. The passive model rates a live face live on the phone's camera as it did on the laptop's. The moire false-reject **reproduces on a second, different
+camera** (the laptop webcam gave 10.5 to 20), so it belongs to the provisional threshold and not to one device or to the JPEG re-encode. And the real per-frame cost with a
+live face is 350 ms at the median, a little over the 333 ms an SBI stream at 3 fps allows: the stream is delivered, the engine would keep up on most frames and drop the rest,
+which resets the evidence when the gap passes the track's limit. One person, one sitting, one phone.
 
 Memory is larger than the Java heap number above suggests, because ONNX Runtime keeps the models outside the Java heap: after these runs the
 native heap was 178 to 186 MB and the process's total PSS 167 to 178 MB (Java heap about 16 MB). Treat about 170 MB as this phone's cost of the six

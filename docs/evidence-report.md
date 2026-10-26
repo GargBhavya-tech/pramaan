@@ -39,7 +39,12 @@ passive 27 ms, landmarks 63 ms, SFace embedding 91 ms, **409 ms in total at the 
 default 2-thread CPU profile**; the 4.8 fps above is for detection and passive scoring only. Process memory was about 170 MB (total PSS 167 to 178 MB, native
 heap 178 to 186 MB), not the 16 MB Java heap. All four on-device tests passed (0 failures, 0 skipped). Timed under five inference profiles, the chain's median was 351 ms (CPU, 2 threads), 447 ms (CPU, 4 threads), 325 ms
 (XNNPACK, 2 threads), 319 ms (XNNPACK, 4 threads) and 515 ms (NNAPI); the engine's one-in-three embedding takes about 52 to 58 ms off those, so the default profile is about 299 ms and
-XNNPACK about 267 ms at the median, under the 333 ms budget with little room and over it at the 95th percentile (`docs/android-low-resource.md`).
+XNNPACK about 267 ms at the median, a projection that the live run below did not confirm (`docs/android-low-resource.md`).
+
+**The phone's own camera, live (2026-10-26).** `CameraFrameSource` (Camera2, front camera, 3 fps) fed the whole analyser while the author held the phone in front of their
+face for 15 s: 43 frames delivered (2.9 fps, 480 x 640), face found in 41 of 41 analysed frames, quality gate passed on 37, passive P(live) median 0.981 (min 0.892), **moire
+peakiness median 12.7 against a threshold of 10.0** (the false-reject reproduces on a second camera), analyser median **350 ms** (p95 602 ms), a little over the 333 ms budget.
+One person, one phone, one sitting.
 
 ### 1.2 A real virtual-camera veto (2026-10-25)
 

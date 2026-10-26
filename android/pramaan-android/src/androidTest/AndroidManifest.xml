@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The test APK only: the library itself needs no permission (the SBI app that embeds it owns the camera). The live-camera
+     test asks for it so CameraFrameSource can be exercised on a real phone. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+    <application>
+        <activity android:name="pramaan.android.CameraTestActivity" android:exported="true" />
+    </application>
+</manifest>
