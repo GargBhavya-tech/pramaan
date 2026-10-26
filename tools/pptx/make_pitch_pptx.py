@@ -525,7 +525,7 @@ def slide_status(deck, n=7):
           "rate near 6%.")
     box(s, 0.6, 1.95, 4.0, 3.75, fill=OK_BG, line=OK, name="Verified", anchor=MSO_ANCHOR.TOP, size=14, color=INK, space_after=5,
         paras=[[("Verified (one command each)", {"bold": True, "size": 17, "color": OK})],
-               [("718 automated tests pass", {"bold": True}), (" (20 skip on a fresh clone: no models)", {"size": 12})],
+               [("738 automated tests pass", {"bold": True}), (" (20 skip on a fresh clone: no models)", {"size": 12})],
                "Each capture-swap attack is a test",
                "Flash code: 20.7 bits; ≤ 3 changes a second",
                "Insider signal: 6 in 40 at 2% gives z ≈ 5.87",

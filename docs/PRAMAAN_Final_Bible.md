@@ -509,6 +509,8 @@ Recaptured images distort colour: limited gamut and blue shift on screens, low s
 
 ### 8.2 Moiré / frequency cue
 
+> **As measured, 2026-10-26.** The ranges below (bona fide about 3 to 6, recaptured about 15 to 40) were never measured. On two real cameras live faces read 10.5 to 55 and a laptop-screen replay read 10 to 33 with a large overlap (area under the curve 0.67 on a phone selfie camera), so a threshold of 10 flags every live face. The threshold now lives in the signed table per camera, and a camera that has not been shown to separate live from screen makes the cue abstain (`moireCalibration`, `docs/evidence-report.md` 1.3).
+
 Filming a screen creates interference between its pixel grid and the sensor grid → periodic moiré → sharp off-axis spectral peaks.
 
 $$\text{peakiness} = \frac{\max_{f \in \mathcal{A}} |F(f)|}{\text{median}_{f \in \mathcal{A}} |F(f)|}, \qquad \mathcal{A} = \{ r_1 \le |f| \le r_2 \} \setminus \text{axis-aligned bins}$$

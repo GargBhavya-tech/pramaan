@@ -86,7 +86,12 @@ public class CameraOnDeviceTest {
         Bundle report = new Bundle();
         report.putString("device", android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL + ", Android "
                 + android.os.Build.VERSION.RELEASE);
-        try (EngineBundle bundle = AndroidEngines.loadFromAssets(assets, "pramaan")) {
+        // -e accelerator XNNPACK on the instrument command line runs the same measurement on that provider
+        String accelerator = InstrumentationRegistry.getArguments().getString("accelerator", "CPU");
+        pramaan.core.inference.InferenceOptions options = pramaan.core.inference.InferenceOptions.lowResource(
+                Runtime.getRuntime().availableProcessors(), pramaan.core.inference.InferenceOptions.Accelerator.valueOf(accelerator));
+        report.putString("inference", accelerator);
+        try (EngineBundle bundle = AndroidEngines.loadFromAssets(assets, "pramaan", options)) {
             YuNetDetector detector = new YuNetDetector(bundle.models().get(StandardEngines.YUNET), StandardEngines.DETECT_SCORE,
                     StandardEngines.DETECT_NMS);
             FramePipeline pipeline = new FramePipeline(new BitmapFrameDecoder(), detector,
@@ -183,6 +188,7 @@ public class CameraOnDeviceTest {
                 report.putString("frameSize", frameSize[0] + "x" + frameSize[1] + " (upright)");
                 report.putString("deliveredInWindow", deliveredInWindow + " frames in " + MEASURE_MS / 1000 + " s = "
                         + String.format("%.1f", deliveredInWindow * 1000.0 / MEASURE_MS) + " fps");
+                report.putString("cameraConversionMeanMs", String.format("%.0f", camera.meanConversionMillis()));
                 report.putString("analysed", processed + " (the rest were dropped: the analyser is slower than the stream)");
                 report.putString("analyseMedianMs", median(ms));
                 report.putString("analyseP95Ms", p95(ms));
@@ -192,6 +198,16 @@ public class CameraOnDeviceTest {
                 report.putString("passive", passive.size() + " frames, P(live) " + stats(passive));
                 report.putString("moire", peaks.size() + " votes, peakiness " + stats(peaks) + "; " + moireAbstain + " abstained");
                 report.putString("embeddings", Integer.toString(embeddings));
+                StringBuilder values = new StringBuilder();
+                for (double v : peaks) {
+                    values.append(String.format("%.1f ", v));
+                }
+                report.putString("moirePeaks", values.toString().trim());
+                StringBuilder live = new StringBuilder();
+                for (double v : passive) {
+                    live.append(String.format("%.2f ", v));
+                }
+                report.putString("passiveValues", live.toString().trim());
                 report.putString("events", events.toString());
                 assertTrue("the camera delivered frames: " + events, deliveredInWindow > 3);
             } finally {

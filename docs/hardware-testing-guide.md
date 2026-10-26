@@ -107,7 +107,7 @@ that's intentional, not a bug.
 ```
 
 **Expected output:** `BUILD SUCCESSFUL`, with a test summary somewhere above it. As of this guide, the full suite
-is **718 tests, 0 failures**, with about 3 skipped on a machine that has the models and about 14 on a clean clone after
+is **738 tests, 0 failures**, with about 3 skipped on a machine that has the models and about 14 on a clean clone after
 `python tools/setup.py` (the skips are real-corpus, MockMDS-fixture and device tests that need files you may not have: see 1.2). If you see failures, stop here and fix them before going further; nothing past this point will
 work reliably on a broken build.
 
@@ -465,35 +465,29 @@ quality        : p50    2.xx ms   p95   12.xx ms   (n=N)
 passive        : p50   22.xx ms   p95   67.xx ms   (n=N)
 ```
 
-### 5.4 Calibrate the Moiré Cue on your Webcam
+### 5.4 Measure whether the moiré cue works on your camera
 
-Filming a screen causes spatial grid interference (moiré), measured as annular spectral peakiness in `MoireCue.java`. Because different webcam sensors, lenses, and sharpening filters produce different baseline peakiness on genuine live faces, the cue's threshold is configurable per-camera:
+Filming a screen can cause grid interference (moiré), which the cue measures as annular spectral peakiness (`MoireCue.java`). Whether it
+separates a live face from a screen depends on the camera, the screen and the distance, so it is **measured per camera and written into
+the signed operating-point table** (`moireCalibration` in `config/operating-points.json`). There is no launch flag for it: a flag would let
+anyone blind a security cue outside the signed table. A camera the table does not show separating live from screen **abstains**.
 
-1. **Inspect calibration tool arguments:**
-   ```bash
-   python tools/calibrate_camera_moire.py --help
-   ```
+1. **Collect live and replay peakiness from the same camera** (numbers only, nothing needs to be kept):
+   - On a phone: run `CameraOnDeviceTest` (see `docs/android-low-resource.md`). It logs one peakiness value per frame. Do it once with your
+     face in the oval (live), once with a screen showing a face in the oval (replay).
+   - On a laptop webcam: `python tools/calibrate_camera_moire.py --camera 0 --samples 30 --name "<make> <model>"` and follow the prompts.
+   Aim for at least 30 frames of each kind, at the distance real users will use.
 
-2. **Run live vs. replay calibration on your webcam:**
-   ```bash
-   python tools/calibrate_camera_moire.py --camera 0 --samples 15
-   ```
-   - **Step 1 (Live face):** Look straight at the camera at standard distance (40–60 cm). Press SPACE to record 15 live face crops.
-   - **Step 2 (Screen replay):** Hold up a phone or tablet replaying a photo/video of a face in front of the camera. Press SPACE to record 15 replay crops.
+2. **Read the verdict.** The tool reports the area under the curve (0.5 = no better than a coin) and what a threshold that flags 2% of
+   live frames would catch. It says "vote" only if the area is at least 0.95, at least 80% of replays are caught, and there are at least
+   30 frames of each kind. Otherwise it says the cue stays abstaining.
 
-3. **Output & Threshold Recommendation (illustrative format, not measured):**
-   The tool prints the empirical distribution (mean, standard deviation, range) for both genuine faces and replay attacks, verifies separation, and calculates the midpoint threshold. Example of the terminal output format:
-   ```
-   [Illustrative output format — run tools/calibrate_camera_moire.py for your camera's real numbers]
-   Live Face Peakiness (N=15):     Mean <val>, Range [<min>, <max>]
-   Replay Attack Peakiness (N=15): Mean <val>, Range [<min>, <max>]
-   Empirical Threshold Recommendation: <theta>
-   ```
+3. **Record it.** Paste the JSON the tool prints under `moireCalibration.cameras` in `config/operating-points.json` (the key is the make
+   and model the device reports), with the sample counts in `basis`. Then rebuild or re-sign the bundle: the table is hashed and signed
+   with the rest. Run `./gradlew :core:test` (the table is validated on load).
 
-4. **Run the scaffold or engine with your calibrated threshold:**
-   ```bash
-   ./gradlew :desktop:runScaffold -Dpramaan.moire.threshold=<your_calibrated_threshold>
-   ```
+*Measured on one phone's selfie camera (2026-10-26): live 29 frames, replay on a laptop screen 39 frames, area under the curve 0.67, so the
+cue abstains. See `docs/evidence-report.md`, section 1.3.*
 
 ---
 

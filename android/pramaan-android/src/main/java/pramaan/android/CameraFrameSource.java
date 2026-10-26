@@ -84,6 +84,8 @@ public final class CameraFrameSource implements FaceFrameSource {
     private volatile Surface previewSurface;
     private long index;
     private long lastEmitNanos;
+    private volatile long conversionNanosTotal;
+    private volatile long conversionCount;
 
     /**
      * @param front true for the selfie camera
@@ -98,6 +100,12 @@ public final class CameraFrameSource implements FaceFrameSource {
         this.height = height;
         this.intervalNanos = (long) (1_000_000_000L / targetFps);
         this.clock = clock;
+    }
+
+    /** Mean milliseconds the camera thread spent turning one camera image into an upright JPEG (it competes with the analysis for CPU). */
+    public double meanConversionMillis() {
+        long n = conversionCount;
+        return n == 0 ? 0 : conversionNanosTotal / 1e6 / n;
     }
 
     /** A surface to show the camera's picture on, for a person who needs to see themselves; set before {@link #start}. */
@@ -248,7 +256,10 @@ public final class CameraFrameSource implements FaceFrameSource {
                 return;
             }
             lastEmitNanos = now;
+            long c0 = System.nanoTime();
             byte[] jpeg = toUprightJpeg(image);
+            conversionNanosTotal += System.nanoTime() - c0;
+            conversionCount++;
             boolean swapped = sensorOrientation == 90 || sensorOrientation == 270;
             s.onFrame(new Frame(jpeg, PixelFormat.JPEG, swapped ? image.getHeight() : image.getWidth(),
                     swapped ? image.getWidth() : image.getHeight(), image.getTimestamp(), Instant.now(clock), index++, metadata));

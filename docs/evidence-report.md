@@ -97,10 +97,39 @@ Bible assumed. (The live sign-in implied 17 to 24; the live session's frames dif
 PROVISIONAL and `MoireCue` says it is device-specific; this is the device-specific case. One person, one camera, one sitting: it is a
 diagnosis, not a distribution.
 
-**What would fix it properly.** A per-camera calibration that measures peakiness on live faces *and* on screen replays from the same
-camera, then sets the threshold between them (`docs/research-plan-real-data.md`). Without replay data from this camera, moving the
-threshold would only make the cue blind. Until then the cue should not carry a strong vote on an uncalibrated camera: its calibrated
-probability here is not calibrated.
+**Outcome of the calibration (2026-10-26).** The experiment was then done properly on the phone's selfie camera, with the same cue and a
+per-frame log: the author's face live (two runs) and the author's own face fullscreen on a laptop screen about 30 cm away as the replay (two
+runs). The second runs, frame by frame:
+
+| Same camera, same cue | Frames | Median peakiness | Range | Passive P(live), median |
+|---|---:|---:|---|---:|
+| Live face | 29 | 14.7 | 11.4 to 55.9 (the first six frames, while the phone was still being lifted into place, were 28 to 56) | 0.99 |
+| Replay: face on a laptop screen | 39 | 17.2 | 13.4 to 29.2 | **0.99** |
+
+The first runs (summary only) agreed: live 37 frames, median 12.7 (10.9 to 22.2); replay 31 frames, median 15.2 (10.1 to 32.9). What a threshold
+would do on the second runs:
+
+| Threshold | Live frames flagged as "screen" | Replay frames flagged |
+|---:|---:|---:|
+| 10 (the provisional default) | 29 of 29 | 39 of 39 |
+| 18 | 8 of 29 | 14 of 39 |
+| 25 | 6 of 29 | 1 of 39 |
+
+The area under the curve is **0.67** (0.84 if the six moving frames are ignored); 0.5 would be a coin. At every threshold the share of live
+frames wrongly flagged is about the share of replays caught. This is expected physics: at about 30 cm a laptop screen's pixel grid is much
+finer than a 640 x 480 phone image, so little moiré is visible, and an attacker chooses the distance. **Two consequences:** (1) the provisional
+threshold of 10 flagged every live frame, which is why live faces were rejected on both cameras; (2) the passive model is fooled by this
+replay (0.975 to 0.999), so with moiré out, a screen replay on this phone has to be stopped by the challenge, the flash cue (which needs at least 3
+frames a second, and the phone delivered 2.7 to 2.9) and the other cues.
+
+**What was changed.** The cue's threshold moved out of code and out of a launch flag into the signed table: `moireCalibration` holds a default
+and per-camera entries, each with a mode (`vote` or `abstain`), the numbers and a `basis` saying where they came from. The shipped default is
+`abstain`, with this measurement as its basis, so a camera the table does not show separating live from screen no longer votes and no longer
+rejects live faces. `tools/calibrate_camera_moire.py` now reports the area under the curve and prints the table entry; it says "vote" only for
+an area of at least 0.95, at least 80% of replays caught and at least 30 frames of each kind. The earlier `-Dpramaan.moire.threshold` flag was
+removed. **Limits:** one person, one phone, one screen, one distance. A closer or higher-resolution setup might show real moiré; if it does, it
+earns a `vote` entry by the same procedure. Until then the project does **not** claim that moiré detects screen replays on real cameras.
+
 
 ### 1.4 Flash cue against a real replay (E1)
 
@@ -217,7 +246,9 @@ To turn section 3 into evidence, replace `build/results/rows.jsonl` with rows fr
 
 | Item | Why it is open |
 |---|---|
-| Moire false-reject on the real webcam (1.3) | the cue scores a live face as a screen on this camera; find the cause before any claim about real BPCER |
-| Full-pipeline speed | 183 ms per frame on a laptop after the fixes; the phone figure covers detection and passive scoring only |
+| Moire on real cameras (1.3) | resolved as far as one phone camera and one laptop screen go: it does not separate live from replay (area under the curve 0.67), so it abstains. Open: a camera and distance where it does |
+| Screen replay against the passive model | the passive model rated a laptop-screen replay 0.99 on the phone: a replay is stopped only by the other cues and the challenge, and nothing yet shows they stop it on real hardware |
+| Phone speed | the whole analyser took a median 350 ms a frame on live frames against 333 ms at 3 fps; see `docs/android-low-resource.md` for what is and is not measured |
+| Official 2026 event dates and the "developed during the event" rule | not found on any page that could be reached (the HackerEarth rules page that loads is the 2024-25 edition). A 2026 article (Biometric Update, 19 August 2026) dates the launch to August, team registration to 14 September and evaluation to November; the first commit in this repository is 2026-10-04. Confirm the official start date and the code rule with the organisers (decode@mosip.io) |
 | Section 3 on real rows | needs the consented corpus; until then no APCER or BPCER is claimed |
 | Section 2 on a real screen | needs a real phone replay: E1 repeated by more people and devices |

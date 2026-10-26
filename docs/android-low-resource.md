@@ -107,7 +107,7 @@ takes a median **409 ms** (95th percentile 1,255 ms), which does not keep up wit
 To bring the pipeline comfortably within the 333 ms budget on low-resource mobile hardware, the engine implements two algorithmic optimizations in code:
 
 1. **Amortized Embedding (1 in 3 frames)**: Implemented in `PipelineFrameAnalyser.java` (`EMBED_EVERY = 3`). SFace embedding is evaluated once every three frames, reducing amortized latency by ~60 ms since biometric identity does not drift across 333 ms intervals.
-2. **Stride-2 Detection (Frame-Skipping Box Reuse)**: Implemented in `FramePipeline.java` (`detectStride = 2` / `-Dpramaan.detect.stride=2`). When a face is active, YuNet face detection is skipped on alternate frames and the prior bounding box is reused directly without re-evaluating the new frame's pixels.
+2. **Stride-2 Detection (Frame-Skipping Box Reuse)**: A constructor argument of `FramePipeline` (`detectStride`); there is deliberately no launch flag, because a flag would let anyone weaken the evidence a frame carries without the host app choosing it. When a face is active, YuNet face detection is skipped on alternate frames and the prior bounding box is reused directly without re-evaluating the new frame's pixels.
    - **Trade-offs & Disclosures**: This is bounding-box reuse, **not** optical landmark tracking. Because the skipped frame does not inspect the image for a new box, landmarks, gate decisions, and downstream cues operate on the duplicated prior bounding box coordinates. This introduces a 1-frame latency before a face swap or face departure is noticed, and may soften rapid head-turn or blink dynamics during active challenges.
    - **Known Gap**: Full empirical verification of challenge detection accuracy (e.g. rapid blink and head-turn angular thresholds) under stride-2 box reuse has not yet been benchmarked against a ground-truth challenge motion dataset; active challenge flows therefore default strictly to `detectStride = 1`.
    - **Safe Default**: The pipeline defaults strictly to `detectStride = 1` (evaluating detection on every frame), ensuring standard deployments carry zero risk.
@@ -160,7 +160,7 @@ first time the Camera APIs and the quality, passive, moire and embedding stages 
 | Embeddings computed | 13 (one scored frame in three) |
 
 Three readings. The passive model rates a live face live on the phone's camera as it did on the laptop's. The moire false-reject **reproduces on a second, different
-camera** (the laptop webcam gave 10.5 to 20), so it belongs to the provisional threshold and not to one device or to the JPEG re-encode. And the real per-frame cost with a
+camera** (the laptop webcam gave 10.5 to 20), so it belongs to the provisional threshold and not to one device or to the JPEG re-encode. It was then measured against a real screen replay (a laptop screen about 30 cm from the selfie camera) and found **not to separate** live from replay (area under the curve 0.67), so the signed table now makes the cue abstain on every camera it does not show separating (`docs/evidence-report.md`, section 1.3). The passive model scored the same replay 0.99. And the real per-frame cost with a
 live face is 350 ms at the median, a little over the 333 ms an SBI stream at 3 fps allows: the stream is delivered, the engine would keep up on most frames and drop the rest,
 which resets the evidence when the gap passes the track's limit. One person, one sitting, one phone.
 

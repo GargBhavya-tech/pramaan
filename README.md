@@ -153,7 +153,7 @@ What *is* measured and reproducible:
 
 | | Number | Reproduce |
 |---|---|---|
-| Test suite | **718 JVM tests, 0 failures**, green on GitHub Actions (Ubuntu and Windows). 14 skipped after `python tools/setup.py` has fetched the models; 20 on a bare clone without them (those two counts were measured at 703 tests; the 15 tests added since need no models). The rest need the MockMDS fixtures, a corpus or a device. A clean clone built with `tools/setup.py` in 3 min 57 s (2026-10-25) | `python tools/setup.py`, or `./gradlew build` |
+| Test suite | **738 JVM tests, 0 failures**, green on GitHub Actions (Ubuntu and Windows). 14 skipped after `python tools/setup.py` has fetched the models; 20 on a bare clone without them (those two counts were measured at 703 tests; the 15 tests added since need no models). The rest need the MockMDS fixtures, a corpus or a device. A clean clone built with `tools/setup.py` in 3 min 57 s (2026-10-25) | `python tools/setup.py`, or `./gradlew build` |
 | Flash-challenge unpredictability | 6 colours × 8 steps = 1,679,616 sequences = **20.7 bits** | `./gradlew :core:test --tests '*ChallengeGeneratorTest'` |
 | Challenge uniformity | χ² over 100,000 draws, every parameter, p = 0.001 critical value | same |
 | Photosensitivity | ≤ 3 colour changes/s, steps ≥ 333 ms, checked on 900 sequences | `./gradlew :core:test --tests '*FlashScheduleTest'` |
@@ -224,7 +224,7 @@ the script takes them from there, checks every file's SHA-256, and says which ar
 development use only): the script gets it from OpenCV's zoo. With a model missing it still
 builds, the tests that need one skip themselves, and the showcase and the reference device need none.
 
-Expect `BUILD SUCCESSFUL`. On a bare clone that is **718 tests, 0 failures, 20 skipped** (the skip counts were last measured at 703 tests); after `python tools/setup.py` has placed
+Expect `BUILD SUCCESSFUL`. On a bare clone that is **738 tests, 0 failures, 20 skipped** (the skip counts were last measured at 703 tests); after `python tools/setup.py` has placed
 the models it is **14 skipped**. The skipped ones need the face models, MockMDS fixtures, a corpus or a device (see section 4).
 Details: `docs/test-report.md`.
 
@@ -325,10 +325,11 @@ Hardware evidence checklist (each item needs hardware or people, so none is fake
 
 - [x] `docs/media/injection-veto.png`: OBS Virtual Camera selected and vetoed (done 2026-10-25, from the real camera list)
 - [x] `docs/media/evaluation-report.png`: the harness HTML report. It is built from a **generated corpus** and the image says so
-- [x] A live-camera run of the scaffold, with the author's consent (2026-10-25). It found four faults, now fixed; the moiré threshold is made configurable via `pramaan.moire.threshold` (`MoireCue.java`) to accommodate diverse webcams. See [`docs/evidence-report.md`](docs/evidence-report.md), section 1.3
+- [x] A live-camera run of the scaffold, with the author's consent (2026-10-25). It found four faults, now fixed; the moiré cue was found to reject live faces, and it now abstains unless the signed operating-point table shows it separating live from screen on that camera (`moireCalibration`). See [`docs/evidence-report.md`](docs/evidence-report.md), section 1.3
 - [x] The flash experiment (E1) on a second laptop and phone, reported by the author: [`docs/e1-results.md`](docs/e1-results.md)
 - [ ] A short real clip of the scaffold signing a person in on a live webcam (blocked by the moire cue on an uncalibrated camera)
-- [ ] The moire threshold calibrated per camera on live faces and on screen replays from the same camera
+- [x] The moiré cue measured on one camera (a phone's selfie camera, live against a laptop-screen replay, 29 and 39 frames): it does not separate them (area under the curve 0.67), so the table makes it abstain: [`docs/evidence-report.md`](docs/evidence-report.md), section 1.3
+- [ ] A camera and distance at which moiré does separate live from screen, measured the same way, to earn a vote in the table
 
 The demo video's script is `docs/submission/07-demo-video-script.md` and `tools/video/make_video.ps1` rebuilds it (4 min 5 s,
 1080p, captions). It is provided with the submission; its voice is synthetic and its station scenes are labelled "simulated session".
