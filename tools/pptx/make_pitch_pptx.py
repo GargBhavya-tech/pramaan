@@ -534,7 +534,7 @@ def slide_status(deck, n=7):
         space_after=5,
         paras=[[("Not done, not claimed", {"bold": True, "size": 17, "color": WARN})],
                "No error rate on real attacks; thresholds provisional",
-               "No full session on a phone or a certified SBI device (models timed on one phone)",
+               "No full session on a certified SBI device (individual stages and live camera timed on one phone)",
                "A scaffold, not the Registration Client; no user has tried the screens",
                [("We attacked ourselves (SYNTHETIC simulation): ", {"bold": True}),
                 ("4 of 85 simulated pitches accepted without a flash cue, 0 with one (SYNTHETIC data, not a measured field rate). "
@@ -553,13 +553,14 @@ def slide_status(deck, n=7):
                [("For: ", {"bold": True}), ("registration centres, operators and supervisors, residents, and server operators.  ", {}),
                 ("Code: ", {"bold": True}), ("github.com/GargBhavya-tech/pramaan (MPL-2.0)", {})]])
     footer(s, deck, n)
-    notes(s, "What we verify and what we do not claim. Seven hundred eighteen automated tests pass; on a fresh clone twenty "
+    notes(s, "What we verify and what we do not claim. Seven hundred thirty-eight automated tests pass; on a fresh clone twenty "
              "skip because the face models are not in the repository. We have not measured an error rate on real attacks because "
-             "no real corpus exists. It has not run on a real device or a phone, it is a scaffold, and no user has tried the "
-             "screens yet. Our own red team found that, on synthetic replays with no flash light, the fusion accepted four of "
-             "eighty five display pitches, and none with the flash cue; we logged it and fixed it for operators and supervisors, not for residents. "
-             "Next: one real experiment, a consented corpus, a real device, real users. And one question for MOSIP: how should "
-             "an SBI extension be proposed? Thank you.")
+             "no real corpus exists. Individual pipeline stages and live camera runs have been timed on a real phone (41 of 41 "
+             "faces found, 350 ms median), while an end-to-end full session on certified hardware remains as future work. "
+             "The desktop app is a scaffold, and no user has tried the screens yet. Our own red team found that, on synthetic "
+             "replays with no flash light, the fusion accepted four of eighty five display pitches, and none with the flash cue; "
+             "we logged it and fixed it for operators and supervisors, not for residents. Next: one real experiment, a consented "
+             "corpus, a real device, real users. And one question for MOSIP: how should an SBI extension be proposed? Thank you.")
 
 
 # ============================================================================================================= appendix

@@ -224,6 +224,12 @@ public class FullSessionOnDeviceTest {
             tone.release();
         }
         report.putString("trail", String.join(" | ", trail));
+        java.io.File[] media = ctx.getExternalMediaDirs();
+        if (media.length > 0 && media[0] != null) {
+            // the whole trail, untruncated, for adb pull (the instrumentation status keeps only the first kilobytes)
+            java.nio.file.Files.write(new java.io.File(media[0], "session-trail.txt").toPath(),
+                    String.join("\n", trail).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
         for (String key : report.keySet()) {
             Log.i(TAG, key + " = " + report.get(key));
         }
