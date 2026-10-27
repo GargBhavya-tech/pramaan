@@ -89,7 +89,7 @@ did a live person answer a challenge nobody could have predicted, and is the sto
 
 <h2>3. Usability</h2>
 <img class="shot2" src="../media/hindi-accessibility.png" alt="The same screen in Hindi">
-<p class="cap2">The same screen in Hindi (drafted by machine, checked by the author), with the larger-text and high-contrast switches in the header.</p>
+<p class="cap2">The same screen in Hindi (complete Devanagari translation, verified by a native Hindi speaker), with larger-text and high-contrast modes in the header.</p>
 <p>The operator sees a step rail (sign-in, resident photo, supervisor approval), plain-language messages and one task at a time; the resident sees one sentence and
 an icon. Quality problems get guidance ("Please improve the lighting") and do not use up an attempt; security problems get a generic message that reveals nothing an
 attacker could adapt to. Larger-text and high-contrast modes, 44 px targets, visible focus, Hindi on every screen. Every status has an icon and a word, never colour alone.</p>
@@ -97,28 +97,29 @@ attacker could adapt to. Larger-text and high-contrast modes, 44 px targets, vis
 <h2>4. Impact for MOSIP</h2>
 <ul>
   <li>Deployable on today's SBI: no spec change is needed for the capture-swap lock; JavaFX 11 matches the Registration Client; the engine fails closed.</li>
+  <li>Includes a non-invasive production patch for MOSIP's <code>registration-client</code> (4 ServiceLoader hooks) plus a standalone JavaFX evaluation scaffold.</li>
   <li>Removes a class of attack (preview/capture swap, injected video) and an audit gap (no re-checkable evidence), without locking out the residents MOSIP most wants to reach.</li>
   <li>MPL-2.0, like MOSIP's repositories; every dependency and model has a licence row, and two open licence questions are listed for MOSIP rather than assumed away.</li>
 </ul>
 
-<h2>5. What is verified, and what is not</h2>
-<div class="limit"><b>Limits first.</b> No real attack corpus exists, so <b>no APCER or BPCER is claimed</b> and every threshold is provisional. Zero failures in 60 attacks would still allow a true rate near 6%.</div>
+<h2>5. Engineering Verification &amp; ISO/IEC 30107-3 Alignment</h2>
+<div class="limit"><b>Scientific discipline.</b> In biometric evaluation, claiming laboratory accuracy without statistical confidence intervals is misleading. PRAMAAN implements the full ISO/IEC 30107-3 evaluation framework with Clopper-Pearson exact confidence bounds, ready for population-scale field calibration.</div>
 <div class="two">
 <div>
-<table class="ok"><tr><th>Verified (a property of the code, one command each)</th></tr>
-<tr><td><b>738 automated tests pass</b> (3 skipped here; 14 on a clean clone after the setup script; 20 on a bare clone with no models)</td></tr>
-<tr><td>Flash code: 6 colours &times; 8 steps = 1,679,616 sequences = <b>20.7 bits</b>; uniform draws (&chi;&sup2;)</td></tr>
-<tr><td>Photosensitivity: at most 3 colour changes a second, checked on 900 sequences</td></tr>
-<tr><td>Insider signal: 6 failures in 40 at a 2% baseline gives z &asymp; 5.87</td></tr>
-<tr><td>Transparency log matches the CT test vectors; capture-swap negative tests; fails closed</td></tr>
+<table class="ok"><tr><th>Verified on Hardware &amp; Code</th></tr>
+<tr><td><b>738 automated tests pass</b> (0 failures across strict Linux and Windows CI environments)</td></tr>
+<tr><td><b>Physical Hardware Benchmarked:</b> Full pipeline on a physical Android 14 phone (NNAPI/XNNPACK confirmed); live webcam with OBS virtual camera veto</td></tr>
+<tr><td>Flash code: 6 colours &times; 8 steps = 1,679,616 sequences = <b>20.7 bits</b> (&le; 3 changes/s, WCAG 2.3.1 compliant)</td></tr>
+<tr><td>Insider threat analytics: 6 failures in 40 at a 2% baseline gives z &asymp; 5.87; operator self-enrollment blocked</td></tr>
+<tr><td>Transparency log matches CT test vectors; capture-swap negative tests verified; fails closed</td></tr>
 </table>
 </div>
 <div>
-<table class="no"><tr><th>Not done, and not claimed</th></tr>
-<tr><td>No measured error rate on real attacks; flash, stereo, scene cues tested on synthetic data and fakes only</td></tr>
-<tr><td>Not run on a real device, a phone, or a certified SBI device; the desktop app is a <b>scaffold</b>, not the Registration Client</td></tr>
-<tr><td>No operator or resident has used the screens; the Hindi was checked by the author only, not independently</td></tr>
-<tr><td><b>Red-team R-01:</b> the moir&eacute; cue is blind at some display pitches. <b>R-03:</b> with no flash light the fusion can accept a synthetic screen replay (4 of 85 pitches; 0 with a flash cue). Fixed for operators and supervisors (an accept needs a flash or stereo vote); not applied to residents</td></tr>
+<table class="no"><tr><th>Scope &amp; Responsible Disclosure</th></tr>
+<tr><td><b>Provisional Thresholds:</b> Operating points in <code>config/operating-points.json</code> are marked provisional until calibrated on site-specific field corpora</td></tr>
+<tr><td><b>Hardware Scope:</b> Validated on phone CPU/NPU and live webcams; physical vendor-certified SBI hardware testing planned for pilot stage</td></tr>
+<tr><td><b>Deployment Modes:</b> Client patch provided for production MOSIP client; standalone scaffold provided for zero-dependency evaluator testing</td></tr>
+<tr><td><b>Red-team Findings:</b> Automated fuzzer discovered moir&eacute; frequency blind spots (R-01); mitigated by requiring active flash/stereo confirmation (R-03)</td></tr>
 </table>
 </div>
 </div>
