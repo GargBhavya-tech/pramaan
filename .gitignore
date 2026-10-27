@@ -7,6 +7,9 @@ Thumbs.db
 .claude/
 .code-review-graph/
 code-review-graph/
+CLAUDE.md
+/04_Face_Liveness_Detection_and_Presentation*.pdf
+
 
 # ---- Python (training, harness, tooling) ----
 __pycache__/
