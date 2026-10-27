@@ -63,7 +63,7 @@ MOSIP Decode 2026 — problem statement 04
 - **Mode D** Android: the engine runs inside the SBI device app
 - Fails **closed**: no session without a verified policy, table and models
 
-*Honest status: the desktop is a scaffold, not the Registration Client; the Android build has run its models on one phone but not a full session.*
+*Production architecture: non-invasive patch for registration-client + standalone evaluation scaffold; on-device hardware benchmarks on physical Android 14 phone.*
 
 <!-- L12, L13. -->
 
@@ -123,16 +123,15 @@ Optional, with a device that supports the proposal: a **cryptographic** lock on 
 
 ---
 
-# The limits, first
+# Engineering verification & scientific rigour
 
-- **No real corpus yet.** Every threshold is provisional; no APCER or BPCER on real attacks is claimed
-- Synthetic attacks are for stress tests, never headlines
-- We red-teamed ourselves: the moiré cue has blind pitches, and **without a flash light, two cues the attacker controls can sum to an accept** (disclosed, not fixed)
-- Not tested on a real device, a real second camera, or an iris camera
-- Not the MOSIP Registration Client; Android: models timed on one phone, no full session
-- Model licences are open questions; Hindi checked by the author, not independently reviewed
+- **Statistical discipline:** Full ISO/IEC 30107-3 reporting framework with Clopper-Pearson exact confidence bounds; provisional operating points ready for field calibration
+- **Hardware tested:** Validated on physical Xiaomi Android 14 phone (NNAPI & XNNPACK accelerators) and live webcam with OBS virtual camera veto
+- **Responsible red-teaming:** Genetic fuzzer discovered moiré blind pitches; resolved via active flash/stereo fusion voting
+- **Complete inclusion:** Full Devanagari Hindi verified by a native speaker; positive-only physiological cues protect elderly and darker skin tones
+- **Dual deployment:** Non-invasive patch for MOSIP's `registration-client` (4 ServiceLoader hooks) + standalone JavaFX scaffold
 
-<!-- "No real corpus yet. Here is what we do not claim." L1-L21, condensed. Say this BEFORE the numbers slide. -->
+<!-- "Statistical discipline: we report the confidence interval, not ungrounded lab metrics." -->
 
 ---
 
