@@ -2,12 +2,20 @@ diff --git a/registration/registration-client/src/main/java/io/mosip/registratio
 index ede0259..a0a5005 100644
 --- a/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java
 +++ b/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java
-@@ -226,6 +226,9 @@ public class GenericBiometricsController extends BaseController {
+@@ -226,6 +226,17 @@ public class GenericBiometricsController extends BaseController {
  
  	private Service<List<BiometricsDto>> rCaptureTaskService;
  
 +	/** PRAMAAN: the transactionId and previousHash the liveness hook chose for this face scan, or null (the client's own). */
 +	private volatile io.mosip.registration.liveness.CaptureTicket livenessTicket;
++
++	/** PRAMAAN (P5): challenge prompt overlay and labels. */
++	@FXML
++	private javafx.scene.layout.StackPane livenessOverlayPane;
++	@FXML
++	private javafx.scene.control.Label livenessPromptLabel;
++	@FXML
++	private javafx.scene.control.Label livenessGuidanceLabel;
 +
  	private Service<MdmBioDevice> deviceSearchTask;
  
@@ -17,7 +25,20 @@ index ede0259..a0a5005 100644
  						return;
  					}
 +					if (isFace(currentModality)) {
++						if (livenessOverlayPane != null) {
++							livenessOverlayPane.setVisible(true);
++						}
 +						io.mosip.registration.liveness.LivenessHooks.get().beginFaceScan(RegistrationConstants.FACE_FULLFACE);
++						io.mosip.registration.liveness.LivenessHooks.get().setPromptListener((prompt, guidance) -> {
++							javafx.application.Platform.runLater(() -> {
++								if (livenessPromptLabel != null) {
++									livenessPromptLabel.setText(prompt != null ? prompt : "");
++								}
++								if (livenessGuidanceLabel != null) {
++									livenessGuidanceLabel.setText(guidance != null ? guidance : "");
++								}
++							});
++						});
 +					}
  					rCaptureTaskService();
  					streamer.startStream(urlStream, biometricImage, biometricImage);
@@ -48,6 +69,9 @@ index ede0259..a0a5005 100644
  					}
  
 +					if (isFace(currentModality)) {
++						if (livenessOverlayPane != null) {
++							livenessOverlayPane.setVisible(false);
++						}
 +						try {
 +							String evidence = io.mosip.registration.liveness.LivenessHooks.get().afterCapture(mdsCapturedBiometricsList);
 +							for (BiometricsDto face : mdsCapturedBiometricsList) {
@@ -192,6 +216,33 @@ index 0000000..7a3be79
 +	 * capture is not the face that passed liveness, in which case nothing is stored.
 +	 */
 +	String afterCapture(List<BiometricsDto> captured) throws LivenessRefusedException;
++
++	/**
++	 * Seam for live challenge prompts and guidance to be rendered on the client UI overlay (P5).
++	 */
++	default void setPromptListener(PromptListener listener) {
++	}
++}
+diff --git a/registration/registration-services/src/main/java/io/mosip/registration/liveness/PromptListener.java b/registration/registration-services/src/main/java/io/mosip/registration/liveness/PromptListener.java
+new file mode 100644
+index 0000000..83b8791
+--- /dev/null
++++ b/registration/registration-services/src/main/java/io/mosip/registration/liveness/PromptListener.java
+@@ -0,0 +1,15 @@
++/*
++ * This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
++ */
++
++package io.mosip.registration.liveness;
++
++/**
++ * Seam for live challenge prompts and guidance to be rendered on the client UI overlay (P5).
++ */
++@FunctionalInterface
++public interface PromptListener {
++	void onPrompt(String prompt, String guidance);
 +}
 diff --git a/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHooks.java b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHooks.java
 new file mode 100644
@@ -385,3 +436,16 @@ index f82d27e..bbe0dd5 100644
  	}
  
  	@SuppressWarnings("incomplete-switch")
+diff --git a/registration/registration-client/src/main/resources/fxml/GenericBiometricFXML.fxml b/registration/registration-client/src/main/resources/fxml/GenericBiometricFXML.fxml
+index 548dae3..429188e 100644
+--- a/registration/registration-client/src/main/resources/fxml/GenericBiometricFXML.fxml
++++ b/registration/registration-client/src/main/resources/fxml/GenericBiometricFXML.fxml
+@@ -145,6 +145,14 @@
+ 						<ImageView fx:id="biometricImage" fitHeight="340.0" fitWidth="440.0" pickOnBounds="true" preserveRatio="true" />
++						<StackPane fx:id="livenessOverlayPane" visible="false" mouseTransparent="true" style="-fx-background-color: rgba(20, 32, 46, 0.65); -fx-background-radius: 8;">
++							<VBox alignment="CENTER" spacing="10">
++								<Label fx:id="livenessPromptLabel" text="" style="-fx-text-fill: #f5a623; -fx-font-size: 16px; -fx-font-weight: bold;" />
++								<Label fx:id="livenessGuidanceLabel" text="" style="-fx-text-fill: white; -fx-font-size: 14px;" />
++							</VBox>
++						</StackPane>
+ 					</children>

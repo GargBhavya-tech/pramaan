@@ -45,4 +45,10 @@ public interface LivenessHook {
 	 * capture is not the face that passed liveness, in which case nothing is stored.
 	 */
 	String afterCapture(List<BiometricsDto> captured) throws LivenessRefusedException;
+
+	/**
+	 * Seam for live challenge prompts and guidance to be rendered on the client UI overlay (P5).
+	 */
+	default void setPromptListener(PromptListener listener) {
+	}
 }

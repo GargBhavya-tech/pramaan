@@ -507,6 +507,8 @@ Run these in order; each one should pass before you move to the next.
 | 8 | `./gradlew :harness:verifyEvidence --args="..."` on a written packet | `"route": "CONFIRMED"`, exit code 0 |
 | 9 | (Android) `./gradlew -p android :pramaan-android:connectedDebugAndroidTest` | `1 test, 0 failures` (or a clean "skipped" if assets weren't present) |
 | 10 | `./gradlew :harness:runCorpus` + `:harness:evaluate` on your own clips | A report is written; it may say confidence intervals are wide — that's expected with few clips |
+| 11 | Patched Desktop Client end-to-end: `./gradlew :harness:test --tests "*RegistrationClientAdapterTest"` | 5 end-to-end adapter tests pass; challenge-prompt overlay verified (`docs/media/challenge-prompt.png`) |
+| 12 | Patched Android Client stubs & adapter: `./gradlew :android-regclient-stub:test :android-regclient-adapter:test` | All tests pass, 100% parity against Android patch (`integration/android-registration-client/`) |
 
 ---
 

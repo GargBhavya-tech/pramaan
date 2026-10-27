@@ -23,13 +23,12 @@ PS04 asks for changes in the Desktop Registration Client. This folder holds a **
   failure ends in a refusal, not a capture without liveness. The engine's analysers in that test are the scripted resident, so it proves
   the plumbing and the binding, **not the detectors**.
 - **Not done:** the patch and the adapter have **not run inside the real Registration Client**, not against a certified device and not with a
-  person (the client's UI needs its full MOSIP stack). The client has **no screen for challenge prompts** ("please turn your head"): the
-  host must show them from the listener passed to `AdapterSettings` (the scaffold's capture screen does), and that screen is not
-  patched in. Binding is at the `HEURISTIC` level: the client's rCapture call does not use the SBI Liveness Profile. The Android
-  Registration Client is a different repository and is not patched: on Android the engine runs inside the SBI device app (deployment
-  Mode D, `docs/android-low-resource.md`).
+  person (the client's UI needs its full MOSIP stack). Binding is at the `HEURISTIC` level: the client's rCapture call does not use the
+  SBI Liveness Profile. The challenge prompt overlay node is patched in via **P5**, rendering prompt and guidance text directly over
+  `biometricImage` (see screenshot in `docs/media/challenge-prompt.png`). The Android Registration Client patch is maintained in
+  `integration/android-registration-client/`.
 
-## What the patch changes (ADR 0003, patches P1 to P4)
+## What the patch changes (ADR 0003, patches P1 to P5)
 
 | Patch | Where | Change |
 |---|---|---|
@@ -37,8 +36,9 @@ PS04 asks for changes in the Desktop Registration Client. This folder holds a **
 | P2 | `Streamer` | Every decoded preview frame (JPEG bytes and arrival time) is also handed to `LivenessHooks.frame(...)`; it never throws, so the preview cannot be stopped by the hook |
 | P3 | `MDMRequestDto`, `MosipDeviceSpecification_SBI_1_0_ProviderImpl.getRCaptureRequest` | The request can carry a `transactionId` and a `previousHash` (both from the `CaptureTicket` the hook returns); when set they replace the client's random UUID and its `null`, so the device signs our session nonce and frame hash chain inside the capture. The engine's nonce exists only once it reaches its capture step, which is why the ticket comes from `awaitCaptureClearance`, not from `beginFaceScan` |
 | P4 | `GenericBiometricsController` success handler, the provider, `BiometricsDto`, `BIRBuilder` | The client keeps only the decoded payload and the signature of the device's response and **drops the JWS header** (with the certificate chain), which a verifier needs: the provider now also keeps the device's raw response element in `BiometricsDto.sbiResponse`. Before the capture is stored, `LivenessHook.afterCapture(...)` verifies and binds it and returns signed evidence, or refuses it (the client shows its generic capture-failure message and stores nothing). The evidence goes in the face BIR `others` map as `PRAMAAN_LIVENESS`; the `bdb` is untouched |
+| P5 | `GenericBiometricFXML.fxml`, `GenericBiometricsController` | Challenge prompt and guidance overlay (`livenessOverlayPane`, `livenessPromptLabel`, `livenessGuidanceLabel`) wired via `LivenessHook.setPromptListener(...)` to display unpredictable active challenges ("please turn head left", "please blink") directly on the live camera stream |
 
-New files in the client: `io.mosip.registration.liveness.LivenessHook` (the four methods), `CaptureTicket`, `LivenessHooks` (finds an implementation with
+New files in the client: `io.mosip.registration.liveness.LivenessHook` (the hook methods), `CaptureTicket`, `PromptListener` (challenge prompt listener), `LivenessHooks` (finds an implementation with
 `java.util.ServiceLoader`; none means a no-op; one that fails to load refuses the scan rather than skipping liveness), and
 `LivenessRefusedException`.
 

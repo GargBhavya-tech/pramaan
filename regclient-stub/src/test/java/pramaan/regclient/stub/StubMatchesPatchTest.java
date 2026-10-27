@@ -44,7 +44,7 @@ class StubMatchesPatchTest {
     void everyLineOfEveryStandInIsAnAddedLineOfThePatch() throws IOException {
         Set<String> added = addedLines();
         assertFalse(added.isEmpty(), "the patch was not found or is empty: " + PATCH.toAbsolutePath());
-        for (String name : new String[] {"LivenessHook.java", "LivenessRefusedException.java", "CaptureTicket.java"}) {
+        for (String name : new String[] {"LivenessHook.java", "LivenessRefusedException.java", "CaptureTicket.java", "PromptListener.java"}) {
             for (String line : Files.readAllLines(STUBS.resolve(name), StandardCharsets.UTF_8)) {
                 String s = strip(line);
                 assertTrue(added.contains(s), name + " has a line the patch does not add: '" + s + "'");

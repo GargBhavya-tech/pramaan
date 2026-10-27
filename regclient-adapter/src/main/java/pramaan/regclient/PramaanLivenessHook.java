@@ -10,6 +10,7 @@ import io.mosip.registration.dto.packetmanager.BiometricsDto;
 import io.mosip.registration.liveness.CaptureTicket;
 import io.mosip.registration.liveness.LivenessHook;
 import io.mosip.registration.liveness.LivenessRefusedException;
+import io.mosip.registration.liveness.PromptListener;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -59,6 +60,7 @@ public final class PramaanLivenessHook implements LivenessHook {
     private static volatile AdapterSettings configured;
 
     private volatile Scan current;
+    private volatile PromptListener promptListener;
 
     /** The host calls this once at start-up, before the first face scan. */
     public static void configure(AdapterSettings settings) {
@@ -75,12 +77,17 @@ public final class PramaanLivenessHook implements LivenessHook {
     }
 
     @Override
+    public void setPromptListener(PromptListener listener) {
+        this.promptListener = listener;
+    }
+
+    @Override
     public void beginFaceScan(String modality) {
         Scan old;
         synchronized (this) {
             old = current;
             AdapterSettings s = configured;
-            current = s == null ? Scan.refused("PRAMAAN is installed but not configured") : new Scan(s);
+            current = s == null ? Scan.refused("PRAMAAN is installed but not configured") : new Scan(s, promptListener);
         }
         if (old != null) {
             old.close();
@@ -144,6 +151,7 @@ public final class PramaanLivenessHook implements LivenessHook {
         private final BlockingQueue<Frame> queue = new ArrayBlockingQueue<>(8);
         private final AtomicLong index = new AtomicLong();
         private final Thread pump;
+        private final PromptListener promptListener;
         private volatile String failure;
 
         /** A scan that can only refuse, because the hook was not set up: fail closed. */
@@ -158,11 +166,13 @@ public final class PramaanLivenessHook implements LivenessHook {
             this.capture = null;
             this.session = null;
             this.pump = null;
+            this.promptListener = null;
             this.failure = why;
         }
 
-        Scan(AdapterSettings settings) {
+        Scan(AdapterSettings settings, PromptListener promptListener) {
             this.s = settings;
+            this.promptListener = promptListener;
             LivenessSession built = null;
             HookFrameSource src = null;
             CaptureSession cs = null;
@@ -259,6 +269,10 @@ public final class PramaanLivenessHook implements LivenessHook {
             @Override
             public void guidance(Guidance guidance) {
                 s.listener.guidance(guidance);
+                PromptListener pl = promptListener;
+                if (pl != null && guidance != null && guidance != Guidance.NONE) {
+                    pl.onPrompt("", guidance.name());
+                }
             }
 
             @Override
@@ -269,6 +283,10 @@ public final class PramaanLivenessHook implements LivenessHook {
             @Override
             public void prompt(ChallengePrompt prompt, int step, int steps) {
                 s.listener.prompt(prompt, step, steps);
+                PromptListener pl = promptListener;
+                if (pl != null && prompt != null) {
+                    pl.onPrompt(prompt.messageId(), prompt.animationHint());
+                }
             }
 
             @Override
