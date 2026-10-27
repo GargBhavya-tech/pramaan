@@ -126,7 +126,8 @@ Optional, with a device that supports the proposal: a **cryptographic** lock on 
 # Engineering verification & scientific rigour
 
 - **Statistical discipline:** Full ISO/IEC 30107-3 reporting framework with Clopper-Pearson exact confidence bounds; provisional operating points ready for field calibration
-- **Hardware tested:** Validated on physical Xiaomi Android 14 phone (NNAPI & XNNPACK accelerators) and live webcam with OBS virtual camera veto
+- **Hardware measured:** Models & camera timed on one physical phone; OBS veto shown on Windows webcam list
+- **Android replay limit:** Passive model fooled by screen replay (0.98 score) and flash needs ≥ 3 fps (phone got 2.7–2.9 fps); replay defence on Android rests on challenge alone
 - **Responsible red-teaming:** Genetic fuzzer discovered moiré blind pitches; resolved via active flash/stereo fusion voting
 - **Complete inclusion:** Full Devanagari Hindi verified by a native speaker; positive-only physiological cues protect elderly and darker skin tones
 - **Dual deployment:** Non-invasive patch for MOSIP's `registration-client` (4 ServiceLoader hooks) + standalone JavaFX scaffold

@@ -57,7 +57,7 @@
     <div style="font-size:42px;margin-top:14px;font-weight:600">Proof, not a verdict.</div>
     <div style="font-size:27px;margin-top:20px;max-width:980px;line-height:1.4">Face liveness and presentation-attack detection for the MOSIP Registration Client, desktop and Android, that leaves evidence a server can re-check.</div>
     <div style="margin-top:44px;font-size:22px;line-height:1.6">MOSIP Decode 2026 &middot; Problem Statement 04<br>Team: Bhavya Garg &middot; github.com/GargBhavya-tech/pramaan &middot; MPL-2.0</div>
-    <div style="margin-top:30px"><span class="tag" style="background:#e6f4ea;border-color:#1b6e3c;color:#1b6e3c">Production-Ready Engine &middot; Verified on Hardware &middot; ISO/IEC 30107-3 Aligned</span></div>
+    <div style="margin-top:30px"><span class="tag" style="background:#e7eff8;border-color:#1b4f8a;color:#173f70">Evidence-first prototype</span></div>
   </div>
   <div class="num" style="color:#cfe0f2">1 / 7</div>
 </section>
@@ -113,7 +113,7 @@
   <div class="grid">
     <div><h3>Capture binding</h3><p>Four locks before any accept: nonce echoed in the device-signed capture, frame hash chain, identity continuity, time. Works on <b>unmodified SBI</b>.</p></div>
     <div><h3>Evidence, not a verdict</h3><p>A signed JWS in the face BIR. One command re-verifies it; a newer model can re-score stored crops. Merkle transparency log.</p></div>
-    <div><h3>Cues that fail differently</h3><p>Passive, moir&eacute;, flash reflection (20.7-bit random colour code), scene, stereo. Each abstains when the station lacks the hardware.</p></div>
+    <div><h3>Cues that fail differently</h3><p>Passive, moir&eacute;, flash reflection (20.7-bit random colour code; author-tested on 1 setup), scene, stereo. Each abstains when the station lacks hardware.</p></div>
     <div><h3>Injection defence</h3><p>Device identity chain, OS camera registrations (OBS found via DirectShow), JPEG stream fingerprint. Not a renamed-driver defence.</p></div>
     <div><h3>Inclusion by design</h3><p>Blink, pulse and pupil reflex only ever vote <i>for</i> life. Hindi, icons, speech, accessibility profiles, infant mode, dual-control exceptions.</p></div>
     <div><h3>An SBI proposal</h3><p>An optional Liveness Profile (signed preview, signed light log, signed burst) with a runnable reference device. Our own draft; not yet posted to MOSIP.</p></div>
@@ -141,7 +141,7 @@
     <div class="ok"><h3>Verified on Hardware & Code</h3>
       <ul>
         <li><b>738 automated tests pass</b> (0 failures, strict CI on Linux & Windows)</li>
-        <li><b>Hardware verified:</b> On-device Android run (Xiaomi phone) & live webcam with OBS virtual camera veto</li>
+        <li><b>Hardware measured:</b> Models and camera timed on one phone; OBS veto shown on a Windows webcam list</li>
         <li><b>Flash challenge:</b> 1,679,616 sequences = <b>20.7 bits</b> (&le; 3 changes/sec, WCAG 2.3.1 compliant)</li>
         <li><b>Capture binding:</b> 4 cryptographic locks; capture-swap attack blocked by construction</li>
         <li><b>Insider threat analytics:</b> 6 in 40 at 2% baseline yields z &asymp; 5.87; operator self-enrollment blocked</li>
@@ -150,8 +150,8 @@
     <div class="no"><h3>Scientific Discipline & Limits</h3>
       <ul>
         <li><b>Statistically honest:</b> Avoids pseudo-claims on small lab sets; ISO/IEC 30107-3 harness ready for field calibration</li>
-        <li><b>Hardware scope:</b> Models & camera pipelines timed on phone (350 ms median); certified SBI device testing planned</li>
-        <li><b>MOSIP Integration:</b> Real patch for <code>registration-client</code> (4 ServiceLoader hooks) + standalone JavaFX scaffold</li>
+        <li><b>Scaffold, not full Client:</b> Evaluation scaffold; no live session on certified SBI device yet</li>
+        <li><b>Android replay limit:</b> Passive model fooled by screen replay (0.98 score) & flash needs &ge; 3 fps (phone got 2.7&ndash;2.9 fps); replay defence on Android rests on challenge alone</li>
         <li><b>Inclusive UX:</b> Native Devanagari Hindi verified; accessibility profiles for elderly & disabled residents</li>
         <li><b>Red team findings:</b> Automated genetic fuzzer discovered moir&eacute; blind spots; resolved via flash/stereo fusion voting</li>
       </ul></div>

@@ -108,7 +108,7 @@ attacker could adapt to. Larger-text and high-contrast modes, 44 px targets, vis
 <div>
 <table class="ok"><tr><th>Verified on Hardware &amp; Code</th></tr>
 <tr><td><b>738 automated tests pass</b> (0 failures across strict Linux and Windows CI environments)</td></tr>
-<tr><td><b>Physical Hardware Benchmarked:</b> Full pipeline on a physical Android 14 phone (NNAPI/XNNPACK confirmed); live webcam with OBS virtual camera veto</td></tr>
+<tr><td><b>Hardware Measured:</b> Models &amp; camera timed on physical Android phone; OBS virtual camera veto shown on Windows webcam list</td></tr>
 <tr><td>Flash code: 6 colours &times; 8 steps = 1,679,616 sequences = <b>20.7 bits</b> (&le; 3 changes/s, WCAG 2.3.1 compliant)</td></tr>
 <tr><td>Insider threat analytics: 6 failures in 40 at a 2% baseline gives z &asymp; 5.87; operator self-enrollment blocked</td></tr>
 <tr><td>Transparency log matches CT test vectors; capture-swap negative tests verified; fails closed</td></tr>
@@ -116,16 +116,16 @@ attacker could adapt to. Larger-text and high-contrast modes, 44 px targets, vis
 </div>
 <div>
 <table class="no"><tr><th>Scope &amp; Responsible Disclosure</th></tr>
-<tr><td><b>Provisional Thresholds:</b> Operating points in <code>config/operating-points.json</code> are marked provisional until calibrated on site-specific field corpora</td></tr>
-<tr><td><b>Hardware Scope:</b> Validated on phone CPU/NPU and live webcams; physical vendor-certified SBI hardware testing planned for pilot stage</td></tr>
-<tr><td><b>Deployment Modes:</b> Client patch provided for production MOSIP client; standalone scaffold provided for zero-dependency evaluator testing</td></tr>
+<tr><td><b>Provisional Thresholds:</b> Operating points in <code>config/operating-points.json</code> are provisional until calibrated on site-specific field corpora</td></tr>
+<tr><td><b>Scaffold vs Client:</b> Client patch provided for MOSIP client; standalone scaffold provided for evaluator testing; certified SBI hardware testing planned</td></tr>
+<tr><td><b>Android Replay Limit:</b> Passive model fooled by screen replays (0.98 score) and flash needs &ge; 3 fps (phone got 2.7&ndash;2.9 fps); replay defence on Android rests on challenge alone</td></tr>
 <tr><td><b>Red-team Findings:</b> Automated fuzzer discovered moir&eacute; frequency blind spots (R-01); mitigated by requiring active flash/stereo confirmation (R-03)</td></tr>
 </table>
 </div>
 </div>
 
 <h2>6. Next</h2>
-<p>(1) Widen the one real experiment: the flash cue separated a live face from a replay in the author's test on a laptop and phone, with values moving by about 0.1 to 0.15 with brightness and distance; more people, phones and lights are next. (2) A consented corpus and the calibrator that is
+<p>(1) Widen the flash experiment: separated live from replay in author's test on laptop &amp; phone (moving 0.1 to 0.15 with brightness and distance); unmeasured on a multi-person corpus. (2) A consented corpus and the calibrator that is
 already written, so every threshold comes from data. (3) A real device, a second camera, a phone. (4) Ask MOSIP how an SBI extension should be proposed, and settle two model
 licences.</p>
 

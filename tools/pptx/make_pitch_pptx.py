@@ -204,8 +204,8 @@ def slide_title(deck):
     text(s, 0.7, 5.05, 7.4, 0.8,
          ["MOSIP Decode 2026  ·  Problem Statement 04", "Team: Bhavya Garg  ·  github.com/GargBhavya-tech/pramaan"],
          size=17, color="DCE8F5", name="Meta", space_after=3)
-    box(s, 0.7, 6.1, 7.8, 0.58, fill=OK_BG, line=OK, radius=0.25, name="Production status chip",
-        paras=["Production-Ready Engine · Verified on Hardware · ISO/IEC 30107-3 Aligned"], size=16, color=OK, bold=True,
+    box(s, 0.7, 6.1, 4.0, 0.58, fill=INFO_BG, line=BLUE, radius=0.25, name="Status chip",
+        paras=["Evidence-first prototype"], size=17, color=BLUE, bold=True,
         align=PP_ALIGN.CENTER)
     # the hero: two paths that never met, and the thing that joins them
     box(s, 8.7, 1.2, 4.0, 1.05, fill=WHITE, line=None, name="Hero: preview",
@@ -452,7 +452,7 @@ def slide_cues(deck, n=6):
     text(s, 1.05, 1.4, 4.7, 0.36, ["Cues that fail differently"], size=18, color=BLUE, bold=True, anchor=MSO_ANCHOR.MIDDLE)
     cues = [("Passive model", "print, screen", "what it was not trained on"),
             ("Moiré", "screen recapture", "some display pitches (we found them)"),
-            ("Flash reflection", "replay, injection (by design)", "needs a light; not yet shown on real replays"),
+            ("Flash reflection", "replay, injection (by design)", "needs a light; author test only, not a corpus"),
             ("Scene + light", "the wrong room", "a replay of the right room"),
             ("Stereo depth", "flat things", "needs a second camera"),
             ("Stream fingerprint", "a re-encoding virtual camera", "one that copies the encoder")]
@@ -522,20 +522,21 @@ def slide_status(deck, n=7):
     s = deck.slide()
     title(s, "Engineering Verification & Scientific Rigour",
           "ISO/IEC 30107-3 Clopper-Pearson confidence bounds, on-device hardware benchmarks, honest threat disclosure.")
-    box(s, 0.6, 1.95, 4.0, 3.75, fill=OK_BG, line=OK, name="Verified", anchor=MSO_ANCHOR.TOP, size=14, color=INK, space_after=5,
+    box(s, 0.6, 1.95, 4.0, 3.75, fill=OK_BG, line=OK, name="Verified", anchor=MSO_ANCHOR.TOP, size=14, color=INK, space_after=4,
         paras=[[("Verified on Hardware & Code", {"bold": True, "size": 17, "color": OK})],
                [("738 automated tests pass", {"bold": True}), (" (0 failures, strict CI on Linux & Windows)", {"size": 12})],
-               "Hardware verified: physical Android phone & webcam with OBS veto",
+               "Hardware measured: models & camera timed on one phone; OBS veto on Windows webcam list",
                "Flash code: 20.7 bits; ≤ 3 changes a second (WCAG 2.3.1)",
                "Capture binding: 4 cryptographic locks; capture swap blocked",
                "Insider signal: 6 in 40 at 2% gives z ≈ 5.87; self-enroll blocked",
                "Transparency log matches Certificate Transparency vectors"])
-    box(s, 4.75, 1.95, 4.0, 3.75, fill=WARN_BG, line=WARN, name="Scope", anchor=MSO_ANCHOR.TOP, size=14, color=INK,
-        space_after=5,
-        paras=[[("Scientific Discipline & Scope", {"bold": True, "size": 17, "color": WARN})],
+    box(s, 4.75, 1.95, 4.0, 3.75, fill=WARN_BG, line=WARN, name="Scope", anchor=MSO_ANCHOR.TOP, size=13, color=INK,
+        space_after=4,
+        paras=[[("Scientific Discipline & Limits", {"bold": True, "size": 17, "color": WARN})],
                "Statistically honest: ISO/IEC 30107-3 harness ready for field calibration",
-               "Hardware scope: models & camera timed on phone (350 ms median)",
-               "MOSIP Integration: patch for registration-client + standalone scaffold",
+               "Scaffold, not full Registration Client; no live certified SBI device session",
+               [("Android replay limit: ", {"bold": True}),
+                ("passive model fooled by replay (0.98 score) and flash needs ≥ 3 fps (phone got 2.7–2.9 fps); replay defence rests on challenge alone.", {})],
                "Inclusive UX: native Devanagari Hindi verified; accessibility profiles",
                [("Self-Red-Teaming: ", {"bold": True}),
                 ("genetic fuzzer found moiré blind spots; resolved via active flash/stereo fusion voting.", {})]])
@@ -552,11 +553,11 @@ def slide_status(deck, n=7):
                 ("Code: ", {"bold": True}), ("github.com/GargBhavya-tech/pramaan (MPL-2.0)", {})]])
     footer(s, deck, n)
     notes(s, "Engineering verification and scientific rigour. Seven hundred thirty-eight automated tests pass with zero failures. "
-             "The full pipeline has been verified on physical hardware, including an Android phone and live webcam with OBS virtual "
-             "camera injection veto. Rather than claiming uncalibrated lab numbers, we built an end-to-end ISO/IEC 30107-3 reporting "
-             "framework with exact Clopper-Pearson intervals, ready for field calibration. A complete production patch for MOSIP "
-             "registration-client is provided alongside our standalone evaluation scaffold. Next: field calibration with a consented "
-             "corpus, certified SBI vendor testing, and community review of the SBI Liveness Profile. Thank you.")
+             "Hardware measurements: models and camera pipelines were timed on one physical phone, and the OBS virtual camera injection "
+             "veto was shown on a Windows webcam list. Limits are stated plainly: on Android, the passive model is fooled by a screen "
+             "replay and the flash cue needs at least three fps while the phone delivers two point seven to two point nine, so the "
+             "screen replay defence on Android rests on the challenge alone. The desktop app is a scaffold, and certified SBI device "
+             "testing remains as next step. Thank you.")
 
 
 # ============================================================================================================= appendix
