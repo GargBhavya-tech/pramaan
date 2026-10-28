@@ -45,7 +45,11 @@ jobs:
           mkdir -p "$UPSTREAM_DIR"
           git clone --depth 1 --branch v1.2.0.2 https://github.com/mosip/registration-client.git "$UPSTREAM_DIR/registration-client"
           git -C "$UPSTREAM_DIR/registration-client" apply --check "$GITHUB_WORKSPACE/integration/registration-client/0001-pramaan-liveness-hooks.patch"
-          git clone --depth 1 https://github.com/mosip/android-registration-client.git "$UPSTREAM_DIR/android-registration-client"
+          mkdir -p "$UPSTREAM_DIR/android-registration-client"
+          git -C "$UPSTREAM_DIR/android-registration-client" init
+          git -C "$UPSTREAM_DIR/android-registration-client" remote add origin https://github.com/mosip/android-registration-client.git
+          git -C "$UPSTREAM_DIR/android-registration-client" fetch --depth 1 origin 8f4643a694f3b5e66e0491f077a8630ab5667658
+          git -C "$UPSTREAM_DIR/android-registration-client" checkout FETCH_HEAD
           git -C "$UPSTREAM_DIR/android-registration-client" apply --check "$GITHUB_WORKSPACE/integration/android-registration-client/0001-pramaan-android-liveness-hooks.patch"
 
       - name: Build and test (Linux, under a virtual display for the JavaFX tests)

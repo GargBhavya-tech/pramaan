@@ -6,14 +6,16 @@ PS04 asks for face liveness detection and presentation attack detection across b
 | | |
 |---|---|
 | Repository | https://github.com/mosip/android-registration-client |
+| Pinned commit | `8f4643a694f3b5e66e0491f077a8630ab5667658` (`8f4643a`) |
 | Architecture | Flutter UI with native Java services under `android/app` and `android/clientmanager` |
-| Apply | `git clone https://github.com/mosip/android-registration-client && cd android-registration-client && git apply --check <path>/0001-pramaan-android-liveness-hooks.patch` |
+| Apply | `git init arc && cd arc && git remote add origin https://github.com/mosip/android-registration-client.git && git fetch --depth 1 origin 8f4643a694f3b5e66e0491f077a8630ab5667658 && git checkout FETCH_HEAD && git apply --check <path>/0001-pramaan-android-liveness-hooks.patch` |
 | Behaviour with nothing plugged in | **Unchanged.** The hooks default to a no-op singleton (`LivenessHooks.NONE`), so the patched client behaves exactly like the original. |
 
 ## Status, stated first
 
-- **Patch integrity and verification.** The patch applies cleanly with zero warnings or errors (`git apply --check` exits with code 0) against an actual checkout of upstream `mosip/android-registration-client`. This verification runs automatically in CI on every push.
-- **The PRAMAAN side is written and tested.** `android-regclient-stub/` contains compile-time stand-in classes matching the patch; `StubMatchesAndroidPatchTest` proves 100% line-for-line parity with the patch file. `android-regclient-adapter/` holds `PramaanAndroidLivenessHook`, which implements the five hook methods against `pramaan:core` and `pramaan:android`.
+- **Patch integrity and verification.** The patch applies cleanly with zero warnings or errors (`git apply --check` exits with code 0) against pinned upstream commit `8f4643a`. This verification runs automatically in CI on every push. Full upstream Android app compile is not yet verified; in-tree stubs (`android-regclient-stub`) and adapter (`android-regclient-adapter`) compile and pass 100% of tests.
+- **Android is hooks only (no UI screen, no session on phone).** The patch touches only native Java services (`BiometricsDetailsApi.java`, `BiometricsDto.java`, `Biometrics095Service.java`). It changes **no Flutter or XML layout files**, so unlike desktop there is **no challenge-prompt screen** rendered on Android. Furthermore, no liveness session has run on a physical phone with the patched Android Registration Client.
+- **The PRAMAAN side is written and tested.** `android-regclient-stub/` contains compile-time stand-in classes matching the patch; `StubMatchesAndroidPatchTest` proves 100% line-for-line parity with the patch file. `android-regclient-adapter/` holds `PramaanAndroidLivenessHook`, which implements the hook methods against `pramaan:core` and `pramaan:android`.
 - **Fail-closed guarantees.** Without configuration, missing hooks, or upon timeout/spoof detection, every scan is refused (`LivenessRefusedException`). Capture proceeds only when cryptographic clearance (`CaptureTicket`) is granted.
 - **Hardware acceleration.** On low-resource Android devices, PRAMAAN supports CPU, XNNPACK, and NNAPI acceleration via `InferenceOptions` (see [`docs/android-low-resource.md`](../../docs/android-low-resource.md)).
 

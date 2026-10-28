@@ -6,12 +6,12 @@ PS04 asks for changes in the Desktop Registration Client. This folder holds a **
 | | |
 |---|---|
 | Repository | https://github.com/mosip/registration-client |
-| Branch and commit | `1.2.0.2` at `7b111dae019b6a23fcaa715c08df188ab53378e6` |
-| Apply | `git clone --branch 1.2.0.2 https://github.com/mosip/registration-client && cd registration-client && git apply --whitespace=nowarn <path>/0001-pramaan-liveness-hooks.patch` |
+| Tag and commit | `v1.2.0.2` at `cc25d4dd89ce5f7bbd83ef0f7ff7e6a12a9a6161` (`cc25d4d`) |
+| Apply | `git clone --depth 1 --branch v1.2.0.2 https://github.com/mosip/registration-client && cd registration-client && git apply --check <path>/0001-pramaan-liveness-hooks.patch` |
 | Behaviour with nothing plugged in | **Unchanged.** The hooks default to a no-op, so the patched client behaves exactly like the original |
 
 **Status, stated first.**
-- **Patch integrity and verification.** The patch applies cleanly with zero warnings or errors (`git apply --check` exits with code 0) against an actual checkout of upstream `mosip/registration-client` at tag `v1.2.0.2` (commit `7b111dae019b6a23fcaa715c08df188ab53378e6`). This check runs automatically in CI on every push. In-tree stubs (`regclient-stub`) and adapter (`regclient-adapter`) compile and pass 100% of tests.
+- **Patch integrity and verification.** The patch applies cleanly with zero warnings or errors (`git apply --check` exits with code 0) against an actual checkout of upstream `mosip/registration-client` at tag `v1.2.0.2` (commit `cc25d4d`). Compile of full upstream client not yet verified (unpatched upstream branch already has document scanner compile errors); in-tree stubs (`regclient-stub`) and adapter (`regclient-adapter`) compile and pass 100% of tests.
 - **The PRAMAAN side is written and tested.** `regclient-adapter/` holds `PramaanLivenessHook`, which implements the four hook methods with
   our engine; `RegistrationClientAdapterTest` drives it exactly as the client would, against the runnable reference device over real
   loopback HTTP: frames in, the client's own rCapture call with the ticket the hook returns, the device's raw response handed back. It
