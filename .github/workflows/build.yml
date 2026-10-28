@@ -4,9 +4,6 @@
 
 # Builds and tests the JVM modules on every push and pull request. The Android build needs the Android SDK and is not run
 # here. Model files and the vendored MockMDS are not in the repository, so tests that need them skip themselves.
-#
-# NOT YET RUN: this file was written without a remote to run it on. The first push may show failures that are about the
-# CI machine (a missing display, a model a test assumed) and not about the code; fix those, do not silence the tests.
 name: build
 
 on:
@@ -41,13 +38,23 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ffmpeg -y --no-progress
 
+      - name: Verify registration-client patches apply cleanly against upstream checkouts
+        shell: bash
+        run: |
+          UPSTREAM_DIR="${RUNNER_TEMP:-/tmp}/upstream-repos"
+          mkdir -p "$UPSTREAM_DIR"
+          git clone --depth 1 --branch v1.2.0.2 https://github.com/mosip/registration-client.git "$UPSTREAM_DIR/registration-client"
+          git -C "$UPSTREAM_DIR/registration-client" apply --check "$GITHUB_WORKSPACE/integration/registration-client/0001-pramaan-liveness-hooks.patch"
+          git clone --depth 1 https://github.com/mosip/android-registration-client.git "$UPSTREAM_DIR/android-registration-client"
+          git -C "$UPSTREAM_DIR/android-registration-client" apply --check "$GITHUB_WORKSPACE/integration/android-registration-client/0001-pramaan-android-liveness-hooks.patch"
+
       - name: Build and test (Linux, under a virtual display for the JavaFX tests)
         if: runner.os == 'Linux'
-        run: xvfb-run -a ./gradlew checkModelLicences :core:build :sbi:build :harness:build :desktop:build :regclient-stub:build :regclient-adapter:build --no-daemon
+        run: xvfb-run -a ./gradlew checkModelLicences :core:build :sbi:build :harness:build :desktop:build :regclient-stub:build :regclient-adapter:build :android-regclient-stub:build :android-regclient-adapter:build --no-daemon
 
       - name: Build and test (Windows)
         if: runner.os == 'Windows'
-        run: ./gradlew checkModelLicences :core:build :sbi:build :harness:build :desktop:build :regclient-stub:build :regclient-adapter:build --no-daemon
+        run: ./gradlew checkModelLicences :core:build :sbi:build :harness:build :desktop:build :regclient-stub:build :regclient-adapter:build :android-regclient-stub:build :android-regclient-adapter:build --no-daemon
 
       - name: Keep the test reports
         if: failure()
