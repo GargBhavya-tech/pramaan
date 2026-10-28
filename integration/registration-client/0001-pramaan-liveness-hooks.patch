@@ -1,8 +1,8 @@
 diff --git a/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java b/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java
-index ede0259..a0a5005 100644
+index c810563..dd8a620 100644
 --- a/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java
 +++ b/registration/registration-client/src/main/java/io/mosip/registration/controller/device/GenericBiometricsController.java
-@@ -226,6 +226,17 @@ public class GenericBiometricsController extends BaseController {
+@@ -200,6 +200,17 @@ public class GenericBiometricsController extends BaseController {
  
  	private Service<List<BiometricsDto>> rCaptureTaskService;
  
@@ -20,7 +20,7 @@ index ede0259..a0a5005 100644
  	private Service<MdmBioDevice> deviceSearchTask;
  
  	public Modality getCurrentModality() {
-@@ -514,10 +517,13 @@ public class GenericBiometricsController extends BaseController {
+@@ -488,10 +499,26 @@ public class GenericBiometricsController extends BaseController {
  						generateAlert(RegistrationConstants.ERROR, RegistrationUIConstants.getMessageLanguageSpecific(RegistrationUIConstants.STREAMING_ERROR));
  						return;
  					}
@@ -48,7 +48,7 @@ index ede0259..a0a5005 100644
  					LOGGER.error("Error while streaming : " + currentModality,  exception);
  					generateAlert(RegistrationConstants.ERROR, RegistrationUIConstants.getMessageLanguageSpecific(RegistrationUIConstants.STREAMING_ERROR));
  
-@@ -587,6 +593,15 @@ public class GenericBiometricsController extends BaseController {
+@@ -561,6 +588,15 @@ public class GenericBiometricsController extends BaseController {
  					@Override
  					protected List<BiometricsDto> call() throws RegBaseCheckedException, IOException {
  
@@ -64,7 +64,7 @@ index ede0259..a0a5005 100644
  						LOGGER.info("Capture request started {}", System.currentTimeMillis());
  						return rCapture(fxControl.getUiSchemaDTO().getId(), currentModality);
  
-@@ -628,6 +643,19 @@ public class GenericBiometricsController extends BaseController {
+@@ -602,6 +638,22 @@ public class GenericBiometricsController extends BaseController {
  						return;
  					}
  
@@ -87,7 +87,7 @@ index ede0259..a0a5005 100644
  					LOGGER.debug("Started local de-dup validation");// validate local de-dup check
  					if(identifyInLocalGallery(mdsCapturedBiometricsList,
  							Biometric.getSingleTypeByModality(isFace(currentModality) || isExceptionPhoto(currentModality) ?
-@@ -778,6 +806,9 @@ public class GenericBiometricsController extends BaseController {
+@@ -764,6 +816,9 @@ public class GenericBiometricsController extends BaseController {
  				io.mosip.registration.context.ApplicationContext.getStringValueFromApplicationMap(
  						RegistrationConstants.SERVER_ACTIVE_PROFILE),
  				Integer.valueOf(getCaptureTimeOut()), count, (int) bioService.getMDMQualityThreshold(modality));
@@ -109,6 +109,23 @@ index 105567a..aa21cc3 100644
  						ByteArrayInputStream imageStream = new ByteArrayInputStream(imageBytes);
  						Image img = new Image(imageStream);
  						streamImage.setImage(img);
+diff --git a/registration/registration-client/src/main/resources/fxml/GenericBiometricFXML.fxml b/registration/registration-client/src/main/resources/fxml/GenericBiometricFXML.fxml
+index e768a55..80aeeba 100644
+--- a/registration/registration-client/src/main/resources/fxml/GenericBiometricFXML.fxml
++++ b/registration/registration-client/src/main/resources/fxml/GenericBiometricFXML.fxml
+@@ -121,6 +121,12 @@
+                                                       <GridPane fx:id="biometricPane" prefHeight="108.0" prefWidth="81.0" styleClass="biometricPaneSelected">
+                                                          <children>
+                                                             <ImageView fx:id="biometricImage" fitHeight="${biometricPane.height-10}" fitWidth="${biometricPane.width-10}" pickOnBounds="true" preserveRatio="false" GridPane.halignment="CENTER" GridPane.valignment="TOP" />
++                                                             <StackPane fx:id="livenessOverlayPane" visible="false" mouseTransparent="true" style="-fx-background-color: rgba(20, 32, 46, 0.65); -fx-background-radius: 8;" GridPane.halignment="CENTER" GridPane.valignment="CENTER">
++                                                                <VBox alignment="CENTER" spacing="10">
++                                                                   <Label fx:id="livenessPromptLabel" text="" style="-fx-text-fill: #f5a623; -fx-font-size: 16px; -fx-font-weight: bold;" />
++                                                                   <Label fx:id="livenessGuidanceLabel" text="" style="-fx-text-fill: white; -fx-font-size: 14px;" />
++                                                                </VBox>
++                                                             </StackPane>
+                                                          </children>
+                                                          <columnConstraints>
+                                                             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="100.0" />
 diff --git a/registration/registration-services/src/main/java/io/mosip/registration/dto/packetmanager/BiometricsDto.java b/registration/registration-services/src/main/java/io/mosip/registration/dto/packetmanager/BiometricsDto.java
 index c05b52f..50d452e 100644
 --- a/registration/registration-services/src/main/java/io/mosip/registration/dto/packetmanager/BiometricsDto.java
@@ -165,10 +182,10 @@ index 0000000..5559cbe
 +}
 diff --git a/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHook.java b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHook.java
 new file mode 100644
-index 0000000..7a3be79
+index 0000000..d5b13dc
 --- /dev/null
 +++ b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHook.java
-@@ -0,0 +1,48 @@
+@@ -0,0 +1,54 @@
 +/*
 + * This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -222,27 +239,6 @@ index 0000000..7a3be79
 +	 */
 +	default void setPromptListener(PromptListener listener) {
 +	}
-+}
-diff --git a/registration/registration-services/src/main/java/io/mosip/registration/liveness/PromptListener.java b/registration/registration-services/src/main/java/io/mosip/registration/liveness/PromptListener.java
-new file mode 100644
-index 0000000..83b8791
---- /dev/null
-+++ b/registration/registration-services/src/main/java/io/mosip/registration/liveness/PromptListener.java
-@@ -0,0 +1,15 @@
-+/*
-+ * This Source Code Form is subject to the terms of the Mozilla Public
-+ * License, v. 2.0. If a copy of the MPL was not distributed with this
-+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
-+ */
-+
-+package io.mosip.registration.liveness;
-+
-+/**
-+ * Seam for live challenge prompts and guidance to be rendered on the client UI overlay (P5).
-+ */
-+@FunctionalInterface
-+public interface PromptListener {
-+	void onPrompt(String prompt, String guidance);
 +}
 diff --git a/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHooks.java b/registration/registration-services/src/main/java/io/mosip/registration/liveness/LivenessHooks.java
 new file mode 100644
@@ -363,6 +359,27 @@ index 0000000..720d2e2
 +		super(message);
 +	}
 +}
+diff --git a/registration/registration-services/src/main/java/io/mosip/registration/liveness/PromptListener.java b/registration/registration-services/src/main/java/io/mosip/registration/liveness/PromptListener.java
+new file mode 100644
+index 0000000..72d7cf1
+--- /dev/null
++++ b/registration/registration-services/src/main/java/io/mosip/registration/liveness/PromptListener.java
+@@ -0,0 +1,15 @@
++/*
++ * This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
++ */
++
++package io.mosip.registration.liveness;
++
++/**
++ * Seam for live challenge prompts and guidance to be rendered on the client UI overlay (P5).
++ */
++@FunctionalInterface
++public interface PromptListener {
++	void onPrompt(String prompt, String guidance);
++}
 diff --git a/registration/registration-services/src/main/java/io/mosip/registration/mdm/dto/MDMRequestDto.java b/registration/registration-services/src/main/java/io/mosip/registration/mdm/dto/MDMRequestDto.java
 index a23da8d..26bc1f2 100644
 --- a/registration/registration-services/src/main/java/io/mosip/registration/mdm/dto/MDMRequestDto.java
@@ -409,10 +426,10 @@ index 76ee4bf..e1a2339 100644
  
  		return sbiRCaptureRequestDTO;
 diff --git a/registration/registration-services/src/main/java/io/mosip/registration/util/common/BIRBuilder.java b/registration/registration-services/src/main/java/io/mosip/registration/util/common/BIRBuilder.java
-index f82d27e..bbe0dd5 100644
+index 775c2e3..6b6f846 100644
 --- a/registration/registration-services/src/main/java/io/mosip/registration/util/common/BIRBuilder.java
 +++ b/registration/registration-services/src/main/java/io/mosip/registration/util/common/BIRBuilder.java
-@@ -68,7 +68,7 @@ public class BIRBuilder {
+@@ -72,7 +72,7 @@ public class BIRBuilder {
  		otherEntries.add(new Entry(OtherKey.PAYLOAD, payLoad == null ? RegistrationConstants.EMPTY : payLoad));
  		otherEntries.add(new Entry(OtherKey.SPEC_VERSION, bioDto.getSpecVersion() == null ? RegistrationConstants.EMPTY : bioDto.getSpecVersion()));*/
  
@@ -421,7 +438,7 @@ index f82d27e..bbe0dd5 100644
  				.withVersion(versionType)
  				.withCbeffversion(versionType)
  				.withBirInfo(new BIRInfo.BIRInfoBuilder().withIntegrity(false).build())
-@@ -83,8 +83,12 @@ public class BIRBuilder {
+@@ -87,8 +87,12 @@ public class BIRBuilder {
  				.withOthers(OtherKey.SDK_SCORE, bioDto.getSdkScore()+RegistrationConstants.EMPTY)
  				.withOthers(OtherKey.FORCE_CAPTURED, bioDto.isForceCaptured()+RegistrationConstants.EMPTY)
  				.withOthers(OtherKey.PAYLOAD, payLoad == null ? RegistrationConstants.EMPTY : payLoad)
@@ -434,18 +451,5 @@ index f82d27e..bbe0dd5 100644
 +		}
 +		return birBuilder.build();
  	}
- 
- 	@SuppressWarnings("incomplete-switch")
-diff --git a/registration/registration-client/src/main/resources/fxml/GenericBiometricFXML.fxml b/registration/registration-client/src/main/resources/fxml/GenericBiometricFXML.fxml
-index 548dae3..429188e 100644
---- a/registration/registration-client/src/main/resources/fxml/GenericBiometricFXML.fxml
-+++ b/registration/registration-client/src/main/resources/fxml/GenericBiometricFXML.fxml
-@@ -145,6 +145,14 @@
- 						<ImageView fx:id="biometricImage" fitHeight="340.0" fitWidth="440.0" pickOnBounds="true" preserveRatio="true" />
-+						<StackPane fx:id="livenessOverlayPane" visible="false" mouseTransparent="true" style="-fx-background-color: rgba(20, 32, 46, 0.65); -fx-background-radius: 8;">
-+							<VBox alignment="CENTER" spacing="10">
-+								<Label fx:id="livenessPromptLabel" text="" style="-fx-text-fill: #f5a623; -fx-font-size: 16px; -fx-font-weight: bold;" />
-+								<Label fx:id="livenessGuidanceLabel" text="" style="-fx-text-fill: white; -fx-font-size: 14px;" />
-+							</VBox>
-+						</StackPane>
- 					</children>
+ 	
+ 	public BIR buildBir(String bioAttribute, long qualityScore, byte[] iso, ProcessedLevelType processedLevelType) {

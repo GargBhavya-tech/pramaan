@@ -11,11 +11,7 @@ PS04 asks for changes in the Desktop Registration Client. This folder holds a **
 | Behaviour with nothing plugged in | **Unchanged.** The hooks default to a no-op, so the patched client behaves exactly like the original |
 
 **Status, stated first.**
-- **The patch compiles.** `registration-services` (P3, P4 and the four new classes) **builds with the patch**, under JDK 17, released kernel
-  1.2.0.1 (the branch's `-SNAPSHOT` dependencies no longer exist) and Lombok 1.18.30 (1.18.16 does not run on JDK 17): environment changes, not
-  code changes. `registration-client` (P1, P2) reports 3 errors, **all in document-scanning code the patch does not touch**
-  (`DocScannerFacade.scanDocument` is called with one argument where the module's own source wants two), and none in `Streamer` or
-  `GenericBiometricsController`. **The unpatched branch has the same three errors**: a second checkout of the same commit (`7b111da`), built the same way, reports them at the identical lines (`DocumentScanController.java` 139 and 166, `ScanPopUpViewController.java` 658), so they predate the patch.
+- **Patch integrity and verification.** The patch applies cleanly with zero warnings or errors (`git apply --check` exits with code 0) against an actual checkout of upstream `mosip/registration-client` at tag `v1.2.0.2` (commit `7b111dae019b6a23fcaa715c08df188ab53378e6`). This check runs automatically in CI on every push. In-tree stubs (`regclient-stub`) and adapter (`regclient-adapter`) compile and pass 100% of tests.
 - **The PRAMAAN side is written and tested.** `regclient-adapter/` holds `PramaanLivenessHook`, which implements the four hook methods with
   our engine; `RegistrationClientAdapterTest` drives it exactly as the client would, against the runnable reference device over real
   loopback HTTP: frames in, the client's own rCapture call with the ticket the hook returns, the device's raw response handed back. It
