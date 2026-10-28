@@ -4,10 +4,10 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package io.mosip.registration.client.liveness;
+package io.mosip.registration_client.liveness;
 
 /**
- * Seam for live challenge prompts and guidance to be rendered on the Android client UI overlay (P5).
+ * Seam for live challenge prompts and guidance to be rendered on the client UI overlay (P5).
  */
 @FunctionalInterface
 public interface PromptListener {

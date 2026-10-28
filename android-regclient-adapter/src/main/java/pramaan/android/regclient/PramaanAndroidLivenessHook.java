@@ -6,11 +6,11 @@
 
 package pramaan.android.regclient;
 
-import io.mosip.registration.client.liveness.CaptureTicket;
-import io.mosip.registration.client.liveness.LivenessHook;
-import io.mosip.registration.client.liveness.LivenessRefusedException;
-import io.mosip.registration.client.liveness.PromptListener;
-import io.mosip.registration.client.model.biometrics.BiometricsDto;
+import io.mosip.registration_client.liveness.CaptureTicket;
+import io.mosip.registration_client.liveness.LivenessHook;
+import io.mosip.registration_client.liveness.LivenessRefusedException;
+import io.mosip.registration_client.liveness.PromptListener;
+import io.mosip.registration.clientmanager.dto.registration.BiometricsDto;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;

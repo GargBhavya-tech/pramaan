@@ -4,18 +4,18 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package io.mosip.registration.client.liveness;
+package io.mosip.registration_client.liveness;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.ServiceLoader;
 
-import io.mosip.registration.client.model.biometrics.BiometricsDto;
+import io.mosip.registration.clientmanager.dto.registration.BiometricsDto;
 
 /**
  * Finds the {@link LivenessHook} implementation, if any, once. With none, {@link #NONE} does nothing, so the client is
  * unchanged. If an implementation is present but cannot be loaded, the face scan is refused rather than run without
- * liveness: a mobile station that was meant to check liveness must not silently stop checking.
+ * liveness: a station that was meant to check liveness must not silently stop checking.
  */
 public final class LivenessHooks {
 
@@ -62,7 +62,7 @@ public final class LivenessHooks {
 						Iterator<LivenessHook> it = ServiceLoader.load(LivenessHook.class).iterator();
 						h = it.hasNext() ? it.next() : NONE;
 					} catch (Throwable t) {
-						loadFailure = new LivenessRefusedException("a liveness hook is installed on Android but did not load: " + t);
+						loadFailure = new LivenessRefusedException("a liveness hook is installed but did not load: " + t);
 						throw loadFailure;
 					}
 					hook = h;

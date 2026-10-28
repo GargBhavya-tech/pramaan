@@ -12,11 +12,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.mosip.registration.client.liveness.CaptureTicket;
-import io.mosip.registration.client.liveness.LivenessHook;
-import io.mosip.registration.client.liveness.LivenessHooks;
-import io.mosip.registration.client.liveness.LivenessRefusedException;
-import io.mosip.registration.client.model.biometrics.BiometricsDto;
+import io.mosip.registration_client.liveness.CaptureTicket;
+import io.mosip.registration_client.liveness.LivenessHook;
+import io.mosip.registration_client.liveness.LivenessHooks;
+import io.mosip.registration_client.liveness.LivenessRefusedException;
+import io.mosip.registration.clientmanager.dto.registration.BiometricsDto;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;

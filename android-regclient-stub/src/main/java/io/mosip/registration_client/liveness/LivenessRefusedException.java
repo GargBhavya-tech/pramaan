@@ -4,12 +4,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package io.mosip.registration.client.liveness;
+package io.mosip.registration_client.liveness;
 
 /**
  * Thrown by a {@link LivenessHook} to stop a face capture: liveness could not be established, or the signed capture is
- * not the face that was checked. The client shows its generic capture-failure message and stores nothing; the reason
- * belongs in the hook's own audit log, not on the screen.
+ * not the face that was checked.
  */
 public class LivenessRefusedException extends Exception {
 

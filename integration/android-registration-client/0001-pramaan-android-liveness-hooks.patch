@@ -1,201 +1,70 @@
-diff --git a/app/src/main/java/io/mosip/registration/client/view/biometrics/FaceCaptureActivity.java b/app/src/main/java/io/mosip/registration/client/view/biometrics/FaceCaptureActivity.java
-index 1a8b9c0..3d4e5f6 100644
---- a/app/src/main/java/io/mosip/registration/client/view/biometrics/FaceCaptureActivity.java
-+++ b/app/src/main/java/io/mosip/registration/client/view/biometrics/FaceCaptureActivity.java
-@@ -112,6 +112,14 @@ public class FaceCaptureActivity extends AppCompatActivity {
- 
- 	private String currentModality = "FACE_FULLFACE";
- 
-+	/** PRAMAAN: the transactionId and previousHash the liveness hook chose for this face scan, or null. */
-+	private volatile io.mosip.registration.client.liveness.CaptureTicket livenessTicket;
-+
-+	/** PRAMAAN: challenge prompt and guidance views on Android mobile client. */
-+	private View livenessOverlayView;
-+	private TextView livenessPromptText;
-+	private TextView livenessGuidanceText;
-+
- 	@Override
- 	protected void onCreate(Bundle savedInstanceState) {
- 		super.onCreate(savedInstanceState);
-@@ -145,6 +153,24 @@ public class FaceCaptureActivity extends AppCompatActivity {
- 	private void startStreamAndCapture() {
- 		try {
-+			if ("FACE_FULLFACE".equals(currentModality)) {
-+				if (livenessOverlayView != null) {
-+					livenessOverlayView.setVisibility(View.VISIBLE);
-+				}
-+				io.mosip.registration.client.liveness.LivenessHooks.get().beginFaceScan(currentModality);
-+				io.mosip.registration.client.liveness.LivenessHooks.get().setPromptListener((prompt, guidance) -> {
-+					runOnUiThread(() -> {
-+						if (livenessPromptText != null) {
-+							livenessPromptText.setText(prompt != null ? prompt : "");
-+						}
-+						if (livenessGuidanceText != null) {
-+							livenessGuidanceText.setText(guidance != null ? guidance : "");
-+						}
-+					});
-+				});
-+			}
- 			streamer.startStream(streamUrl, previewImageView);
- 			executeCaptureAsync();
- 		} catch (Exception e) {
-@@ -210,6 +236,15 @@ public class FaceCaptureActivity extends AppCompatActivity {
- 	private List<BiometricsDto> executeCaptureTask() throws Exception {
-+		livenessTicket = null;
-+		if ("FACE_FULLFACE".equals(currentModality)) {
-+			try {
-+				livenessTicket = io.mosip.registration.client.liveness.LivenessHooks.get().awaitCaptureClearance();
-+			} catch (io.mosip.registration.client.liveness.LivenessRefusedException | InterruptedException e) {
-+				Log.e("FaceCaptureActivity", "Liveness did not clear the capture", e);
-+				throw new Exception("Liveness verification did not complete");
-+			}
-+		}
- 		MDMRequestDto requestDto = buildCaptureRequest();
- 		return sbiProvider.captureModality(requestDto);
- 	}
-@@ -250,6 +285,22 @@ public class FaceCaptureActivity extends AppCompatActivity {
- 	private void onCaptureCompleted(List<BiometricsDto> capturedList) {
-+		if ("FACE_FULLFACE".equals(currentModality)) {
-+			if (livenessOverlayView != null) {
-+				livenessOverlayView.setVisibility(View.GONE);
-+			}
-+			try {
-+				String evidence = io.mosip.registration.client.liveness.LivenessHooks.get().afterCapture(capturedList);
-+				for (BiometricsDto face : capturedList) {
-+					face.setLivenessEvidence(evidence);
-+				}
-+			} catch (io.mosip.registration.client.liveness.LivenessRefusedException refused) {
-+				Log.e("FaceCaptureActivity", "The signed capture was refused by liveness hook", refused);
-+				showToast("Biometric capture failed liveness verification");
-+				return;
-+			}
-+		}
- 		saveBiometricsAndFinish(capturedList);
- 	}
-@@ -310,6 +361,9 @@ public class FaceCaptureActivity extends AppCompatActivity {
- 		MDMRequestDto dto = new MDMRequestDto(currentModality, timeout, requestedScore);
-+		io.mosip.registration.client.liveness.CaptureTicket ticket = "FACE_FULLFACE".equals(currentModality) ? livenessTicket : null;
-+		dto.setTransactionId(ticket == null ? null : ticket.transactionId());
-+		dto.setPreviousHash(ticket == null ? null : ticket.previousHash());
- 		return dto;
- 	}
-diff --git a/app/src/main/java/io/mosip/registration/client/view/biometrics/Streamer.java b/app/src/main/java/io/mosip/registration/client/view/biometrics/Streamer.java
-index 2b3c4d5..4e5f6a7 100644
---- a/app/src/main/java/io/mosip/registration/client/view/biometrics/Streamer.java
-+++ b/app/src/main/java/io/mosip/registration/client/view/biometrics/Streamer.java
-@@ -85,6 +85,7 @@ public class Streamer {
- 				while (isStreaming && (imageBytes = fetchNextFrame(streamUrl)) != null) {
-+					io.mosip.registration.client.liveness.LivenessHooks.frame(imageBytes, System.currentTimeMillis());
- 					Bitmap bmp = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
- 					mainHandler.post(() -> targetView.setImageBitmap(bmp));
- 				}
-diff --git a/app/src/main/java/io/mosip/registration/client/model/biometrics/BiometricsDto.java b/app/src/main/java/io/mosip/registration/client/model/biometrics/BiometricsDto.java
-index 7a8b9c0..8b9c0d1 100644
---- a/app/src/main/java/io/mosip/registration/client/model/biometrics/BiometricsDto.java
-+++ b/app/src/main/java/io/mosip/registration/client/model/biometrics/BiometricsDto.java
-@@ -20,6 +20,10 @@ public class BiometricsDto {
- 	private String payLoad;
- 	private String signature;
- 	private String specVersion;
-+	/** Signed liveness evidence (a JWS) for a face capture, stored in the BIR others map; null when no hook ran. */
-+	private String livenessEvidence;
-+	/** The device's raw rCapture response element (JSON: data, hash, specVersion, ...), kept so a liveness hook can verify it. */
-+	private String sbiResponse;
- 	private boolean captured;
- 	private String modalityName;
-diff --git a/app/src/main/java/io/mosip/registration/client/sbi/dto/MDMRequestDto.java b/app/src/main/java/io/mosip/registration/client/sbi/dto/MDMRequestDto.java
-index 9a0b1c2..0b1c2d3 100644
---- a/app/src/main/java/io/mosip/registration/client/sbi/dto/MDMRequestDto.java
-+++ b/app/src/main/java/io/mosip/registration/client/sbi/dto/MDMRequestDto.java
-@@ -15,6 +15,10 @@ public class MDMRequestDto {
- 	private String modality;
- 	private int timeout;
- 	private int requestedScore;
-+	/** Optional SBI transactionId to send instead of a random one (liveness binding); null keeps the client's own. */
-+	private String transactionId;
-+	/** Optional SBI previousHash for the bio element (liveness binding); null keeps the client's own (null). */
-+	private String previousHash;
- 
- 	public MDMRequestDto(String modality, int timeout, int requestedScore) {
- 		this.modality = modality;
-diff --git a/app/src/main/java/io/mosip/registration/client/sbi/service/impl/MosipDeviceSpecification_SBI_1_0_ProviderImpl.java b/app/src/main/java/io/mosip/registration/client/sbi/service/impl/MosipDeviceSpecification_SBI_1_0_ProviderImpl.java
-index 1c2d3e4..2d3e4f5 100644
---- a/app/src/main/java/io/mosip/registration/client/sbi/service/impl/MosipDeviceSpecification_SBI_1_0_ProviderImpl.java
-+++ b/app/src/main/java/io/mosip/registration/client/sbi/service/impl/MosipDeviceSpecification_SBI_1_0_ProviderImpl.java
-@@ -180,6 +180,7 @@ public class MosipDeviceSpecification_SBI_1_0_ProviderImpl {
- 				bioDto.setPayLoad(decodedPayload);
- 				bioDto.setSignature(signature);
- 				bioDto.setSpecVersion(bioResponse.getSpecVersion());
-+				bioDto.setSbiResponse(jsonMapper.writeValueAsString(bioResponse));
- 				bioDto.setCaptured(true);
- 				bioDto.setModalityName(mdmRequestDto.getModality());
- 				resultList.add(bioDto);
-@@ -215,8 +216,9 @@ public class MosipDeviceSpecification_SBI_1_0_ProviderImpl {
- 			SbiRCaptureRequestDTO request = new SbiRCaptureRequestDTO();
- 			request.setEnvironment(mdmRequestDto.getEnvironment());
- 			request.setTimeout(String.valueOf(mdmRequestDto.getTimeout()));
--			request.setTransactionId(UUID.randomUUID().toString());
-+			request.setTransactionId(mdmRequestDto.getTransactionId() != null ? mdmRequestDto.getTransactionId() : UUID.randomUUID().toString());
-+			bioRequest.setPreviousHash(mdmRequestDto.getPreviousHash());
- 			return request;
- 		}
-diff --git a/app/src/main/java/io/mosip/registration/client/util/BIRBuilder.java b/app/src/main/java/io/mosip/registration/client/util/BIRBuilder.java
-index 3e4f5a6..4f5a6b7 100644
---- a/app/src/main/java/io/mosip/registration/client/util/BIRBuilder.java
-+++ b/app/src/main/java/io/mosip/registration/client/util/BIRBuilder.java
-@@ -45,6 +45,10 @@ public class BIRBuilder {
- 		BIR.BIRBuilder birBuilder = new BIR.BIRBuilder()
- 				.withBdb(bioDto.getPayLoad() == null ? new byte[0] : bioDto.getPayLoad().getBytes())
- 				.withOthers("SPEC_VERSION", bioDto.getSpecVersion() == null ? "" : bioDto.getSpecVersion());
-+		if (bioDto.getLivenessEvidence() != null) {
-+			// PRAMAAN: the signed liveness evidence travels with the face record; the bdb is untouched
-+			birBuilder.withOthers("PRAMAAN_LIVENESS", bioDto.getLivenessEvidence());
-+		}
- 		return birBuilder.build();
- 	}
-diff --git a/app/src/main/res/layout/activity_face_capture.xml b/app/src/main/res/layout/activity_face_capture.xml
-index 5a6b7c8..6b7c8d9 100644
---- a/app/src/main/res/layout/activity_face_capture.xml
-+++ b/app/src/main/res/layout/activity_face_capture.xml
-@@ -42,6 +42,21 @@
- 		android:layout_width="match_parent"
- 		android:layout_height="match_parent"
- 		android:scaleType="centerCrop" />
-+
-+	<!-- PRAMAAN (P5): challenge prompt overlay on Android mobile client -->
-+	<FrameLayout
-+		android:id="@+id/liveness_overlay_container"
-+		android:layout_width="match_parent"
-+		android:layout_height="match_parent"
-+		android:visibility="gone"
-+		android:background="#A014202E">
-+		<LinearLayout
-+			android:layout_width="wrap_content"
-+			android:layout_height="wrap_content"
-+			android:layout_gravity="center"
-+			android:orientation="vertical"
-+			android:gravity="center">
-+			<TextView
-+				android:id="@+id/liveness_prompt_text"
-+				android:layout_width="wrap_content"
-+				android:layout_height="wrap_content"
-+				android:textColor="#F5A623"
-+				android:textSize="20sp"
-+				android:textStyle="bold" />
-+			<TextView
-+				android:id="@+id/liveness_guidance_text"
-+				android:layout_width="wrap_content"
-+				android:layout_height="wrap_content"
-+				android:textColor="#FFFFFF"
-+				android:textSize="16sp"
-+				android:layout_marginTop="8dp" />
-+		</LinearLayout>
-+	</FrameLayout>
-diff --git a/app/src/main/java/io/mosip/registration/client/liveness/CaptureTicket.java b/app/src/main/java/io/mosip/registration/client/liveness/CaptureTicket.java
+diff --git a/android/app/src/main/java/io/mosip/registration_client/api_services/BiometricsDetailsApi.java b/android/app/src/main/java/io/mosip/registration_client/api_services/BiometricsDetailsApi.java
+index 640ac66..99830f0 100644
+--- a/android/app/src/main/java/io/mosip/registration_client/api_services/BiometricsDetailsApi.java
++++ b/android/app/src/main/java/io/mosip/registration_client/api_services/BiometricsDetailsApi.java
+@@ -910,6 +910,13 @@ public class BiometricsDetailsApi implements BiometricsPigeon.BiometricsApi {
+     private void discoverSBI() {
+         try {
+             Log.i("SBI", "Started to discover SBI");
++            if (currentModality == Modality.FACE) {
++                try {
++                    io.mosip.registration_client.liveness.LivenessHooks.get().beginFaceScan(currentModality.name());
++                } catch (Exception e) {
++                    Log.w(TAG, "Liveness hook beginFaceScan failed", e);
++                }
++            }
+             Intent intent = new Intent();
+             intent.setAction(RegistrationConstants.DISCOVERY_INTENT_ACTION);
+             queryPackage(intent);
+@@ -962,6 +969,24 @@ public class BiometricsDetailsApi implements BiometricsPigeon.BiometricsApi {
+             Log.e(TAG, "Initiating capture request : ");
+             CaptureRequest captureRequest = biometricsService.getRCaptureRequest(currentModality, deviceId,
+                     getExceptionAttributes());
++            if (currentModality == Modality.FACE) {
++                try {
++                    io.mosip.registration_client.liveness.CaptureTicket ticket =
++                            io.mosip.registration_client.liveness.LivenessHooks.get().awaitCaptureClearance();
++                    if (ticket != null) {
++                        if (ticket.transactionId() != null) {
++                            captureRequest.setTransactionId(ticket.transactionId());
++                        }
++                        if (ticket.previousHash() != null && captureRequest.getBio() != null && !captureRequest.getBio().isEmpty()) {
++                            captureRequest.getBio().get(0).setPreviousHash(ticket.previousHash());
++                        }
++                    }
++                } catch (io.mosip.registration_client.liveness.LivenessRefusedException | InterruptedException e) {
++                    auditManagerService.audit(AuditEvent.R_CAPTURE_FAILED, Components.REGISTRATION, e.getMessage());
++                    Toast.makeText(activity.getApplicationContext(), "Liveness verification refused: " + e.getMessage(), Toast.LENGTH_SHORT).show();
++                    return;
++                }
++            }
+             if (fieldId.equals(OPERATOR_BIOMETRICS)) {
+                 userOnboardService.setCaptureTransactionId(captureRequest.getTransactionId());
+             } else {
+@@ -1075,6 +1100,18 @@ public class BiometricsDetailsApi implements BiometricsPigeon.BiometricsApi {
+                     : registrationService.getRegistrationDto().getCaptureTransactionId();
+             List<BiometricsDto> biometricsDtoList = biometricsService.handleRCaptureResponse(currentModality, respData,
+                     getExceptionAttributes(), transactionId, isOperatorOnboarding);
++            if (currentModality == Modality.FACE) {
++                try {
++                    String evidence = io.mosip.registration_client.liveness.LivenessHooks.get().afterCapture(biometricsDtoList);
++                    for (BiometricsDto dto : biometricsDtoList) {
++                        dto.setLivenessEvidence(evidence);
++                    }
++                } catch (io.mosip.registration_client.liveness.LivenessRefusedException refused) {
++                    auditManagerService.audit(AuditEvent.R_CAPTURE_FAILED, Components.REGISTRATION, refused.getMessage());
++                    Toast.makeText(activity.getApplicationContext(), "Liveness verification failed: " + refused.getMessage(), Toast.LENGTH_SHORT).show();
++                    return;
++                }
++            }
+             // if attempts is zero, there is no need to maintain the counter
+             if (fieldId.equals(OPERATOR_BIOMETRICS)) {
+                 removeDuplicatesFromOperatorBiometricList(currentModality);
+diff --git a/android/app/src/main/java/io/mosip/registration_client/liveness/CaptureTicket.java b/android/app/src/main/java/io/mosip/registration_client/liveness/CaptureTicket.java
 new file mode 100644
-index 0000000..5559cbe
+index 0000000..33d7a8d
 --- /dev/null
-+++ b/app/src/main/java/io/mosip/registration/client/liveness/CaptureTicket.java
++++ b/android/app/src/main/java/io/mosip/registration_client/liveness/CaptureTicket.java
 @@ -0,0 +1,33 @@
 +/*
 + * This Source Code Form is subject to the terms of the Mozilla Public
@@ -203,12 +72,12 @@ index 0000000..5559cbe
 + * file, You can obtain one at https://mozilla.org/MPL/2.0/.
 + */
 +
-+package io.mosip.registration.client.liveness;
++package io.mosip.registration_client.liveness;
 +
 +/**
-+ * What a liveness hook hands the Android Registration Client when it clears a capture: the two values the client must
-+ * put in its rCapture request/intent so the device signs them inside the capture (SBI 1.0: {@code transactionId} and the bio
-+ * element's {@code previousHash}). Either may be {@code null}, which keeps the client's own behaviour for that value.
++ * What a liveness hook hands the client when it clears a capture: the two values the client must put in its rCapture
++ * request so the device signs them into the capture (SBI 1.0: {@code transactionId} and the bio element's
++ * {@code previousHash}). Either may be {@code null}, which keeps the client's own behaviour for that value.
 + */
 +public final class CaptureTicket {
 +
@@ -230,26 +99,26 @@ index 0000000..5559cbe
 +		return previousHash;
 +	}
 +}
-diff --git a/app/src/main/java/io/mosip/registration/client/liveness/LivenessHook.java b/app/src/main/java/io/mosip/registration/client/liveness/LivenessHook.java
+diff --git a/android/app/src/main/java/io/mosip/registration_client/liveness/LivenessHook.java b/android/app/src/main/java/io/mosip/registration_client/liveness/LivenessHook.java
 new file mode 100644
-index 0000000..7a3be79
+index 0000000..6581c31
 --- /dev/null
-+++ b/app/src/main/java/io/mosip/registration/client/liveness/LivenessHook.java
-@@ -0,0 +1,55 @@
++++ b/android/app/src/main/java/io/mosip/registration_client/liveness/LivenessHook.java
+@@ -0,0 +1,53 @@
 +/*
 + * This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at https://mozilla.org/MPL/2.0/.
 + */
 +
-+package io.mosip.registration.client.liveness;
++package io.mosip.registration_client.liveness;
 +
 +import java.util.List;
 +
-+import io.mosip.registration.client.model.biometrics.BiometricsDto;
++import io.mosip.registration.clientmanager.dto.registration.BiometricsDto;
 +
 +/**
-+ * The four seams a face liveness engine needs in the Android Registration Client (PRAMAAN, ADR 0003, patches P1 to P5).
++ * The four seams a face liveness engine needs in the Android Registration Client (PRAMAAN, ADR 0003, patches P1 to P4).
 + *
 + * <p>The client calls these only for the FACE modality. With no implementation on the classpath the client behaves exactly
 + * as it did before: see {@link LivenessHooks#NONE}. An implementation is found with {@link java.util.ServiceLoader}.
@@ -284,37 +153,16 @@ index 0000000..7a3be79
 +	String afterCapture(List<BiometricsDto> captured) throws LivenessRefusedException;
 +
 +	/**
-+	 * Seam for live challenge prompts and guidance to be rendered on the Android UI overlay (P5).
++	 * Seam for live challenge prompts and guidance to be rendered on the client UI overlay (P5).
 +	 */
 +	default void setPromptListener(PromptListener listener) {
 +	}
 +}
-diff --git a/app/src/main/java/io/mosip/registration/client/liveness/PromptListener.java b/app/src/main/java/io/mosip/registration/client/liveness/PromptListener.java
+diff --git a/android/app/src/main/java/io/mosip/registration_client/liveness/LivenessHooks.java b/android/app/src/main/java/io/mosip/registration_client/liveness/LivenessHooks.java
 new file mode 100644
-index 0000000..83b8791
+index 0000000..b32edd5
 --- /dev/null
-+++ b/app/src/main/java/io/mosip/registration/client/liveness/PromptListener.java
-@@ -0,0 +1,15 @@
-+/*
-+ * This Source Code Form is subject to the terms of the Mozilla Public
-+ * License, v. 2.0. If a copy of the MPL was not distributed with this
-+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
-+ */
-+
-+package io.mosip.registration.client.liveness;
-+
-+/**
-+ * Seam for live challenge prompts and guidance to be rendered on the Android client UI overlay (P5).
-+ */
-+@FunctionalInterface
-+public interface PromptListener {
-+	void onPrompt(String prompt, String guidance);
-+}
-diff --git a/app/src/main/java/io/mosip/registration/client/liveness/LivenessHooks.java b/app/src/main/java/io/mosip/registration/client/liveness/LivenessHooks.java
-new file mode 100644
-index 0000000..472a942
---- /dev/null
-+++ b/app/src/main/java/io/mosip/registration/client/liveness/LivenessHooks.java
++++ b/android/app/src/main/java/io/mosip/registration_client/liveness/LivenessHooks.java
 @@ -0,0 +1,86 @@
 +/*
 + * This Source Code Form is subject to the terms of the Mozilla Public
@@ -322,18 +170,18 @@ index 0000000..472a942
 + * file, You can obtain one at https://mozilla.org/MPL/2.0/.
 + */
 +
-+package io.mosip.registration.client.liveness;
++package io.mosip.registration_client.liveness;
 +
 +import java.util.Iterator;
 +import java.util.List;
 +import java.util.ServiceLoader;
 +
-+import io.mosip.registration.client.model.biometrics.BiometricsDto;
++import io.mosip.registration.clientmanager.dto.registration.BiometricsDto;
 +
 +/**
 + * Finds the {@link LivenessHook} implementation, if any, once. With none, {@link #NONE} does nothing, so the client is
 + * unchanged. If an implementation is present but cannot be loaded, the face scan is refused rather than run without
-+ * liveness: a mobile station that was meant to check liveness must not silently stop checking.
++ * liveness: a station that was meant to check liveness must not silently stop checking.
 + */
 +public final class LivenessHooks {
 +
@@ -380,7 +228,7 @@ index 0000000..472a942
 +						Iterator<LivenessHook> it = ServiceLoader.load(LivenessHook.class).iterator();
 +						h = it.hasNext() ? it.next() : NONE;
 +					} catch (Throwable t) {
-+						loadFailure = new LivenessRefusedException("a liveness hook is installed on Android but did not load: " + t);
++						loadFailure = new LivenessRefusedException("a liveness hook is installed but did not load: " + t);
 +						throw loadFailure;
 +					}
 +					hook = h;
@@ -402,24 +250,23 @@ index 0000000..472a942
 +		}
 +	}
 +}
-diff --git a/app/src/main/java/io/mosip/registration/client/liveness/LivenessRefusedException.java b/app/src/main/java/io/mosip/registration/client/liveness/LivenessRefusedException.java
+diff --git a/android/app/src/main/java/io/mosip/registration_client/liveness/LivenessRefusedException.java b/android/app/src/main/java/io/mosip/registration_client/liveness/LivenessRefusedException.java
 new file mode 100644
-index 0000000..720d2e2
+index 0000000..ff2414a
 --- /dev/null
-+++ b/app/src/main/java/io/mosip/registration/client/liveness/LivenessRefusedException.java
-@@ -0,0 +1,21 @@
++++ b/android/app/src/main/java/io/mosip/registration_client/liveness/LivenessRefusedException.java
+@@ -0,0 +1,20 @@
 +/*
 + * This Source Code Form is subject to the terms of the Mozilla Public
 + * License, v. 2.0. If a copy of the MPL was not distributed with this
 + * file, You can obtain one at https://mozilla.org/MPL/2.0/.
 + */
 +
-+package io.mosip.registration.client.liveness;
++package io.mosip.registration_client.liveness;
 +
 +/**
 + * Thrown by a {@link LivenessHook} to stop a face capture: liveness could not be established, or the signed capture is
-+ * not the face that was checked. The client shows its generic capture-failure message and stores nothing; the reason
-+ * belongs in the hook's own audit log, not on the screen.
++ * not the face that was checked.
 + */
 +public class LivenessRefusedException extends Exception {
 +
@@ -429,3 +276,51 @@ index 0000000..720d2e2
 +		super(message);
 +	}
 +}
+diff --git a/android/app/src/main/java/io/mosip/registration_client/liveness/PromptListener.java b/android/app/src/main/java/io/mosip/registration_client/liveness/PromptListener.java
+new file mode 100644
+index 0000000..e7c43ab
+--- /dev/null
++++ b/android/app/src/main/java/io/mosip/registration_client/liveness/PromptListener.java
+@@ -0,0 +1,15 @@
++/*
++ * This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
++ */
++
++package io.mosip.registration_client.liveness;
++
++/**
++ * Seam for live challenge prompts and guidance to be rendered on the client UI overlay (P5).
++ */
++@FunctionalInterface
++public interface PromptListener {
++	void onPrompt(String prompt, String guidance);
++}
+diff --git a/android/clientmanager/src/main/java/io/mosip/registration/clientmanager/dto/registration/BiometricsDto.java b/android/clientmanager/src/main/java/io/mosip/registration/clientmanager/dto/registration/BiometricsDto.java
+index 3e7853f..12e98b0 100644
+--- a/android/clientmanager/src/main/java/io/mosip/registration/clientmanager/dto/registration/BiometricsDto.java
++++ b/android/clientmanager/src/main/java/io/mosip/registration/clientmanager/dto/registration/BiometricsDto.java
+@@ -24,6 +24,10 @@ public class BiometricsDto {
+     private boolean isForceCaptured;
+     private int numOfRetries;
+     private double sdkScore;
++    /** Signed liveness evidence (a JWS) for a face capture; null when no hook ran. */
++    private String livenessEvidence;
++    /** The device's raw rCapture response element, kept so a liveness hook can verify it. */
++    private String sbiResponse;
+ 
+     public float getQualityScore() {
+         return qualityScore;
+diff --git a/android/clientmanager/src/main/java/io/mosip/registration/clientmanager/service/Biometrics095Service.java b/android/clientmanager/src/main/java/io/mosip/registration/clientmanager/service/Biometrics095Service.java
+index 295ed69..a24aa76 100644
+--- a/android/clientmanager/src/main/java/io/mosip/registration/clientmanager/service/Biometrics095Service.java
++++ b/android/clientmanager/src/main/java/io/mosip/registration/clientmanager/service/Biometrics095Service.java
+@@ -180,6 +180,7 @@ public class Biometrics095Service extends BiometricsService {
+                         false,
+                         1, 0,
+                         captureDto.getQualityScore());
++                biometricsDto.setSbiResponse(bio.getData());
+ 
+                 biometricsDtoList.add(biometricsDto);
+ 

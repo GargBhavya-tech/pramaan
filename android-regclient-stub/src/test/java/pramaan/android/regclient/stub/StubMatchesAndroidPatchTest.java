@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 class StubMatchesAndroidPatchTest {
 
     private static final Path PATCH = Path.of("..", "integration", "android-registration-client", "0001-pramaan-android-liveness-hooks.patch");
-    private static final Path STUBS = Path.of("src", "main", "java", "io", "mosip", "registration", "client", "liveness");
+    private static final Path STUBS = Path.of("src", "main", "java", "io", "mosip", "registration_client", "liveness");
 
     private static Set<String> addedLines() throws IOException {
         Set<String> added = new HashSet<>();

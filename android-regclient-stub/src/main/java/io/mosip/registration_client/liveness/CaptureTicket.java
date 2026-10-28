@@ -4,12 +4,12 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package io.mosip.registration.client.liveness;
+package io.mosip.registration_client.liveness;
 
 /**
- * What a liveness hook hands the Android Registration Client when it clears a capture: the two values the client must
- * put in its rCapture request/intent so the device signs them inside the capture (SBI 1.0: {@code transactionId} and the bio
- * element's {@code previousHash}). Either may be {@code null}, which keeps the client's own behaviour for that value.
+ * What a liveness hook hands the client when it clears a capture: the two values the client must put in its rCapture
+ * request so the device signs them into the capture (SBI 1.0: {@code transactionId} and the bio element's
+ * {@code previousHash}). Either may be {@code null}, which keeps the client's own behaviour for that value.
  */
 public final class CaptureTicket {
 

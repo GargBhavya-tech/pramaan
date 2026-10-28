@@ -4,14 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package io.mosip.registration.client.liveness;
+package io.mosip.registration_client.liveness;
 
 import java.util.List;
 
-import io.mosip.registration.client.model.biometrics.BiometricsDto;
+import io.mosip.registration.clientmanager.dto.registration.BiometricsDto;
 
 /**
- * The four seams a face liveness engine needs in the Android Registration Client (PRAMAAN, ADR 0003, patches P1 to P5).
+ * The four seams a face liveness engine needs in the Android Registration Client (PRAMAAN, ADR 0003, patches P1 to P4).
  *
  * <p>The client calls these only for the FACE modality. With no implementation on the classpath the client behaves exactly
  * as it did before: see {@link LivenessHooks#NONE}. An implementation is found with {@link java.util.ServiceLoader}.
@@ -46,7 +46,7 @@ public interface LivenessHook {
 	String afterCapture(List<BiometricsDto> captured) throws LivenessRefusedException;
 
 	/**
-	 * Seam for live challenge prompts and guidance to be rendered on the Android UI overlay (P5).
+	 * Seam for live challenge prompts and guidance to be rendered on the client UI overlay (P5).
 	 */
 	default void setPromptListener(PromptListener listener) {
 	}
