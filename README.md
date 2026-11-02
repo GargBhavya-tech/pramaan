@@ -330,8 +330,7 @@ Hardware evidence checklist (each item needs hardware or people, so none is fake
 - [x] The moiré cue measured on one camera (a phone's selfie camera, live against a laptop-screen replay, 29 and 39 frames): it does not separate them (area under the curve 0.67), so the table makes it abstain: [`docs/evidence-report.md`](docs/evidence-report.md), section 1.3
 - [x] Calibration log & threshold tool: [`tools/calibrate_camera_moire.py`](tools/calibrate_camera_moire.py) and documented phone selfie camera run (29 live vs 39 replay frames) in [`docs/evidence-report.md`](docs/evidence-report.md) §1.3
 
-The demo video's script is `docs/submission/07-demo-video-script.md` and `tools/video/make_video.ps1` rebuilds it (4 min 5 s,
-1080p, captions). It is provided with the submission; its voice is synthetic and its station scenes are labelled "simulated session".
+The demo video is [`docs/submission/PRAMAAN-demo.mp4`](docs/submission/PRAMAAN-demo.mp4) (subtitles: [`docs/submission/PRAMAAN-demo.srt`](docs/submission/PRAMAAN-demo.srt), storyboard: [`docs/submission/07-demo-video-script.md`](docs/submission/07-demo-video-script.md)). It is rebuilt by `tools/video/make_video.ps1` (4 min 20 s, 1080p, captions, synthetic voice) and its station scenes are labelled "simulated session".
 
 ## Submission (MOSIP Decode 2026, problem statement 04)
 
@@ -344,7 +343,7 @@ Where each deliverable the Decode submission guidelines name is:
 | Working prototype or demo | `./gradlew :desktop:showcase` (the real screens, a simulated session, no hardware); the reference device and tools in "Installation and usage" section 3; the registration scaffold in section 4 |
 | Pitch deck (7 slides) | [`docs/submission/PRAMAAN-pitch-7slides.pdf`](docs/submission/PRAMAAN-pitch-7slides.pdf) and an editable [PowerPoint](docs/submission/PRAMAAN-pitch-7slides.pptx) with speaker notes (plus a [10-slide version](docs/submission/PRAMAAN-pitch-full-10slides.pptx) with a three-slide appendix) (rebuilt by `tools/pptx/make_pitch_pptx.py`) |
 | Solution document (2 pages) | [`docs/submission/PRAMAAN-solution-2page.pdf`](docs/submission/PRAMAAN-solution-2page.pdf) |
-| Video demo | provided with the submission; its script is [`docs/submission/07-demo-video-script.md`](docs/submission/07-demo-video-script.md) and it is rebuilt by `tools/video/make_video.ps1` from the real screens, with a synthetic voice and an on-screen "simulated session" label |
+| Video demo | [`docs/submission/PRAMAAN-demo.mp4`](docs/submission/PRAMAAN-demo.mp4) (captions: [`docs/submission/PRAMAAN-demo.srt`](docs/submission/PRAMAAN-demo.srt); rebuilt by `tools/video/make_video.ps1` from the real screens, with an on-screen "simulated session" label) |
 | Usage and installation instructions | "Installation and usage" above |
 | API documentation | [`docs/api/README.md`](docs/api/README.md) (Java API, the device interface over HTTP with real captured exchanges, tools and files) |
 | Architecture diagram | [`docs/architecture/README.md`](docs/architecture/README.md) |

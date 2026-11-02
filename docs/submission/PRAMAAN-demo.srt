@@ -1,0 +1,204 @@
+1
+00:00:00,000 --> 00:00:02,045
+PRAMAAN, which means proof.
+
+2
+00:00:02,045 --> 00:00:11,813
+Face liveness and presentation attack detection for the MOSIP Registration Client, for MOSIP Decode 2026, problem statement four.
+
+3
+00:00:11,813 --> 00:00:19,006
+One honest note first: this is a working engine that has not yet been measured on real attacks.
+
+4
+00:00:19,710 --> 00:00:21,501
+The preview is unsigned.
+
+5
+00:00:21,501 --> 00:00:24,261
+The capture that is stored is signed.
+
+6
+00:00:24,261 --> 00:00:25,903
+Nothing links the two.
+
+7
+00:00:25,903 --> 00:00:32,991
+So whoever controls the preview can pass liveness with one face while another face is enrolled.
+
+8
+00:00:32,991 --> 00:00:36,796
+On Android, the client never even sees the preview.
+
+9
+00:00:37,500 --> 00:00:51,822
+PRAMAAN defines the two interfaces the problem statement asks for: a frame source that returns frames and the signed capture from the same object, and a liveness engine that takes frames in and gives states, guidance and a decision out.
+
+10
+00:00:52,520 --> 00:00:58,844
+The next screens are the real station user interface, driven by a simulated session.
+
+11
+00:00:58,844 --> 00:01:01,328
+No camera or device is connected.
+
+12
+00:01:02,030 --> 00:01:04,947
+The operator signs in with their face.
+
+13
+00:01:04,947 --> 00:01:10,933
+If the framing is poor, the screen gives guidance, such as please move closer.
+
+14
+00:01:10,933 --> 00:01:13,543
+It is never reported as an attack.
+
+15
+00:01:14,240 --> 00:01:18,857
+For the resident, the operator can tick accessibility needs.
+
+16
+00:01:18,857 --> 00:01:21,166
+The system chooses the checks.
+
+17
+00:01:21,166 --> 00:01:24,013
+The resident never picks a challenge.
+
+18
+00:01:24,710 --> 00:01:34,523
+If the passive checks are not enough, the engine asks for something a recording cannot contain, chosen at random, with an icon and a spoken prompt.
+
+19
+00:01:35,220 --> 00:01:38,414
+When the action is detected, the screen says so.
+
+20
+00:01:38,414 --> 00:01:46,332
+There is no score and no progress bar, because the number of steps must not tell the resident how the system sees them.
+
+21
+00:01:47,030 --> 00:01:54,358
+On success, the packet is written with signed liveness evidence, so a server can re-check the decision later.
+
+22
+00:01:55,060 --> 00:02:05,045
+When an attempt fails, the resident sees one generic sentence, the attempt number, and a wait that depends only on how many attempts were used.
+
+23
+00:02:05,045 --> 00:02:06,233
+Never on a score.
+
+24
+00:02:06,930 --> 00:02:17,443
+If a resident cannot pass, a supervisor, not the operator, approves an exception with a reason, by passing their own fresh liveness check.
+
+25
+00:02:17,443 --> 00:02:19,043
+That is dual control.
+
+26
+00:02:19,740 --> 00:02:24,316
+Finally, a supervisor approves the packet with their own face.
+
+27
+00:02:24,316 --> 00:02:27,638
+The operator cannot approve their own packet.
+
+28
+00:02:28,340 --> 00:02:32,266
+Every screen is also in Hindi, switched with one click.
+
+29
+00:02:32,266 --> 00:02:36,478
+The Hindi was drafted by machine and checked by the author.
+
+30
+00:02:37,180 --> 00:02:38,649
+And it fails closed.
+
+31
+00:02:38,649 --> 00:02:47,463
+If the policy, a model or the certificate does not verify, nothing can be registered, and the screen says what to check.
+
+32
+00:02:48,160 --> 00:02:49,976
+Now the capture binding.
+
+33
+00:02:49,976 --> 00:03:01,553
+Four locks run before any accept: the session nonce echoed inside the device signed capture, a hash chain over the frames, identity continuity, and time.
+
+34
+00:03:01,553 --> 00:03:04,882
+Each attack is a test, and each is rejected.
+
+35
+00:03:04,882 --> 00:03:07,682
+These locks work on unmodified S B I.
+
+36
+00:03:08,380 --> 00:03:10,434
+We also attacked ourselves.
+
+37
+00:03:10,434 --> 00:03:12,184
+This is synthetic data.
+
+38
+00:03:12,184 --> 00:03:20,859
+With the passive model assumed fooled and no flash light, the fusion accepted four of eighty five display pitches.
+
+39
+00:03:20,859 --> 00:03:22,761
+With the flash cue, none.
+
+40
+00:03:22,761 --> 00:03:27,022
+We logged it and fixed it for operators and supervisors.
+
+41
+00:03:27,720 --> 00:03:30,771
+What we verify, and what we do not claim.
+
+42
+00:03:30,771 --> 00:03:34,344
+Seven hundred thirty eight automated tests pass.
+
+43
+00:03:34,344 --> 00:03:40,447
+We have not measured an error rate on real attacks, because no real corpus exists.
+
+44
+00:03:40,447 --> 00:03:46,922
+The models and camera were timed on one phone, but no full session has run on a device.
+
+45
+00:03:46,922 --> 00:03:53,620
+The moire cue, measured on one camera, does not separate live from replay, so it abstains.
+
+46
+00:03:54,320 --> 00:04:01,517
+Patches for the desktop and Android Registration Clients apply cleanly to MOSIP's code.
+
+47
+00:04:01,517 --> 00:04:03,337
+Android is hooks only.
+
+48
+00:04:03,337 --> 00:04:08,714
+Next: one real experiment, a consented corpus, and a real device.
+
+49
+00:04:08,714 --> 00:04:14,421
+We would like to ask MOSIP how an S B I extension should be proposed.
+
+50
+00:04:14,421 --> 00:04:18,144
+The code is M P L two point zero, like MOSIP.
+
+51
+00:04:18,144 --> 00:04:18,971
+Thank you.
+
