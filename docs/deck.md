@@ -123,7 +123,7 @@ Optional, with a device that supports the proposal: a **cryptographic** lock on 
 
 ---
 
-# Engineering verification & scientific rigour
+# Evidence and limits
 
 - **Statistical discipline:** Full ISO/IEC 30107-3 reporting framework with Clopper-Pearson exact confidence bounds; provisional operating points ready for field calibration
 - **Hardware measured:** Models & camera timed on one physical phone; OBS veto shown on Windows webcam list
