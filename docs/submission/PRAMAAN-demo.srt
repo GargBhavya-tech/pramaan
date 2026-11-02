@@ -107,98 +107,98 @@ Finally, a supervisor approves the packet with their own face.
 The operator cannot approve their own packet.
 
 28
-00:02:28,340 --> 00:02:32,266
+00:02:28,340 --> 00:02:32,291
 Every screen is also in Hindi, switched with one click.
 
 29
-00:02:32,266 --> 00:02:36,478
-The Hindi was drafted by machine and checked by the author.
+00:02:32,291 --> 00:02:37,463
+The Hindi was drafted by machine and verified by a native Hindi speaker.
 
 30
-00:02:37,180 --> 00:02:38,649
+00:02:38,160 --> 00:02:39,629
 And it fails closed.
 
 31
-00:02:38,649 --> 00:02:47,463
+00:02:39,629 --> 00:02:48,443
 If the policy, a model or the certificate does not verify, nothing can be registered, and the screen says what to check.
 
 32
-00:02:48,160 --> 00:02:49,976
+00:02:49,140 --> 00:02:50,956
 Now the capture binding.
 
 33
-00:02:49,976 --> 00:03:01,553
+00:02:50,956 --> 00:03:02,533
 Four locks run before any accept: the session nonce echoed inside the device signed capture, a hash chain over the frames, identity continuity, and time.
 
 34
-00:03:01,553 --> 00:03:04,882
+00:03:02,533 --> 00:03:05,862
 Each attack is a test, and each is rejected.
 
 35
-00:03:04,882 --> 00:03:07,682
+00:03:05,862 --> 00:03:08,662
 These locks work on unmodified S B I.
 
 36
-00:03:08,380 --> 00:03:10,434
+00:03:09,360 --> 00:03:11,414
 We also attacked ourselves.
 
 37
-00:03:10,434 --> 00:03:12,184
+00:03:11,414 --> 00:03:13,164
 This is synthetic data.
 
 38
-00:03:12,184 --> 00:03:20,859
+00:03:13,164 --> 00:03:21,839
 With the passive model assumed fooled and no flash light, the fusion accepted four of eighty five display pitches.
 
 39
-00:03:20,859 --> 00:03:22,761
+00:03:21,839 --> 00:03:23,741
 With the flash cue, none.
 
 40
-00:03:22,761 --> 00:03:27,022
+00:03:23,741 --> 00:03:28,002
 We logged it and fixed it for operators and supervisors.
 
 41
-00:03:27,720 --> 00:03:30,771
+00:03:28,700 --> 00:03:31,751
 What we verify, and what we do not claim.
 
 42
-00:03:30,771 --> 00:03:34,344
+00:03:31,751 --> 00:03:35,324
 Seven hundred thirty eight automated tests pass.
 
 43
-00:03:34,344 --> 00:03:40,447
+00:03:35,324 --> 00:03:41,427
 We have not measured an error rate on real attacks, because no real corpus exists.
 
 44
-00:03:40,447 --> 00:03:46,922
+00:03:41,427 --> 00:03:47,902
 The models and camera were timed on one phone, but no full session has run on a device.
 
 45
-00:03:46,922 --> 00:03:53,620
+00:03:47,902 --> 00:03:54,600
 The moire cue, measured on one camera, does not separate live from replay, so it abstains.
 
 46
-00:03:54,320 --> 00:04:01,517
+00:03:55,300 --> 00:04:02,497
 Patches for the desktop and Android Registration Clients apply cleanly to MOSIP's code.
 
 47
-00:04:01,517 --> 00:04:03,337
+00:04:02,497 --> 00:04:04,317
 Android is hooks only.
 
 48
-00:04:03,337 --> 00:04:08,714
+00:04:04,317 --> 00:04:09,694
 Next: one real experiment, a consented corpus, and a real device.
 
 49
-00:04:08,714 --> 00:04:14,421
+00:04:09,694 --> 00:04:15,401
 We would like to ask MOSIP how an S B I extension should be proposed.
 
 50
-00:04:14,421 --> 00:04:18,144
+00:04:15,401 --> 00:04:19,124
 The code is M P L two point zero, like MOSIP.
 
 51
-00:04:18,144 --> 00:04:18,971
+00:04:19,124 --> 00:04:19,951
 Thank you.
 

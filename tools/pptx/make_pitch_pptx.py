@@ -529,7 +529,7 @@ def slide_status(deck, n=7):
                "Flash code: 20.7 bits; ≤ 3 changes a second (WCAG 2.3.1)",
                "Capture binding: 4 cryptographic locks; capture-swap attack rejected in every test",
                "Insider signal: 6 in 40 at 2% gives z ≈ 5.87; self-enroll blocked",
-               "Transparency log matches Certificate Transparency vectors"])
+               "Transparency log matches CT test vectors"])
     box(s, 4.75, 1.95, 4.0, 3.75, fill=WARN_BG, line=WARN, name="Scope", anchor=MSO_ANCHOR.TOP, size=12, color=INK,
         space_after=4,
         paras=[[("Scientific Discipline & Limits", {"bold": True, "size": 17, "color": WARN})],

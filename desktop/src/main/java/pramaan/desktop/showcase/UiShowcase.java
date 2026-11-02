@@ -296,8 +296,8 @@ public final class UiShowcase extends Application {
                 }));
 
         b.add(new Beat("hindi", 7,
-                "Hindi on every screen, switched in one click. What was typed and answered stays. (Checked by the author.)",
-                "Every screen is also in Hindi, switched with one click. The Hindi was drafted by machine and checked by the author.",
+                "Hindi on every screen, switched in one click. What was typed and answered stays. (Verified by a native Hindi speaker.)",
+                "Every screen is also in Hindi, switched with one click. The Hindi was drafted by machine and verified by a native Hindi speaker.",
                 s -> {
                     s.station.setStep(StationView.Step.RESIDENT);
                     resident[0].next.setDisable(false);
