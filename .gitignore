@@ -21,6 +21,7 @@ venv/
 *.egg-info/
 
 # ---- Java / Gradle / Maven (desktop engine, Android) ----
+bin/
 target/
 build/
 .gradle/

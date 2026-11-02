@@ -97,7 +97,7 @@ attacker could adapt to. Larger-text and high-contrast modes, 44 px targets, vis
 <h2>4. Impact for MOSIP</h2>
 <ul>
   <li>Deployable on today's SBI: no spec change is needed for the capture-swap lock; JavaFX 11 matches the Registration Client; the engine fails closed.</li>
-  <li>Includes a non-invasive production patch for MOSIP's <code>registration-client</code> (4 ServiceLoader hooks) plus a standalone JavaFX evaluation scaffold.</li>
+  <li>Includes a non-invasive patch for MOSIP's <code>registration-client</code> (4 ServiceLoader hooks) plus a standalone JavaFX evaluation scaffold.</li>
   <li>Removes a class of attack (preview/capture swap, injected video) and an audit gap (no re-checkable evidence), without locking out the residents MOSIP most wants to reach.</li>
   <li>MPL-2.0, like MOSIP's repositories; every dependency and model has a licence row, and two open licence questions are listed for MOSIP rather than assumed away.</li>
 </ul>

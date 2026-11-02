@@ -520,29 +520,29 @@ def slide_cues(deck, n=6):
 # ============================================================================================================= slide 7
 def slide_status(deck, n=7):
     s = deck.slide()
-    title(s, "Engineering Verification & Scientific Rigour",
-          "ISO/IEC 30107-3 Clopper-Pearson confidence bounds, on-device hardware benchmarks, honest threat disclosure.")
+    title(s, "Evidence and limits",
+          "Measured, tested and disclosed: what we can show, and what we cannot yet.")
     box(s, 0.6, 1.95, 4.0, 3.75, fill=OK_BG, line=OK, name="Verified", anchor=MSO_ANCHOR.TOP, size=14, color=INK, space_after=4,
-        paras=[[("Verified on Hardware & Code", {"bold": True, "size": 17, "color": OK})],
+        paras=[[("Tested and measured", {"bold": True, "size": 17, "color": OK})],
                [("738 automated tests pass", {"bold": True}), (" (0 failures, strict CI on Linux & Windows)", {"size": 12})],
                "Hardware measured: models & camera timed on one phone; OBS veto on Windows webcam list",
                "Flash code: 20.7 bits; ≤ 3 changes a second (WCAG 2.3.1)",
-               "Capture binding: 4 cryptographic locks; capture swap blocked",
+               "Capture binding: 4 cryptographic locks; capture-swap attack rejected in every test",
                "Insider signal: 6 in 40 at 2% gives z ≈ 5.87; self-enroll blocked",
                "Transparency log matches Certificate Transparency vectors"])
-    box(s, 4.75, 1.95, 4.0, 3.75, fill=WARN_BG, line=WARN, name="Scope", anchor=MSO_ANCHOR.TOP, size=13, color=INK,
+    box(s, 4.75, 1.95, 4.0, 3.75, fill=WARN_BG, line=WARN, name="Scope", anchor=MSO_ANCHOR.TOP, size=12, color=INK,
         space_after=4,
         paras=[[("Scientific Discipline & Limits", {"bold": True, "size": 17, "color": WARN})],
-               "Statistically honest: ISO/IEC 30107-3 harness ready for field calibration",
                "Scaffold, not full Registration Client; no live certified SBI device session",
                [("Android replay limit: ", {"bold": True}),
                 ("passive model fooled by replay (0.98 score) and flash needs ≥ 3 fps (phone got 2.7–2.9 fps); replay defence rests on challenge alone.", {})],
                "Inclusive UX: native Devanagari Hindi verified; accessibility profiles",
-               [("Self-Red-Teaming: ", {"bold": True}),
-                ("genetic fuzzer found moiré blind spots; resolved via active flash/stereo fusion voting.", {})]])
-    box(s, 8.9, 1.95, 3.8, 3.75, name="Impact", anchor=MSO_ANCHOR.TOP, size=14, color=INK, space_after=5,
+               [("Red team findings: ", {"bold": True}),
+                ("automated fuzzer found moiré blind spots; fusion voting mitigates them on synthetic replays. The moiré cue measured on one phone camera does not separate live from replay (AUC 0.67), so it abstains.", {})]])
+    box(s, 8.9, 1.95, 3.8, 3.75, name="Impact", anchor=MSO_ANCHOR.TOP, size=13, color=INK, space_after=4,
         paras=[[("Impact for MOSIP", {"bold": True, "size": 17, "color": BLUE})],
                [("For MOSIP: ", {"bold": True}), ("closes capture-swap on unmodified SBI; leaves signed proof a server can re-verify.", {})],
+               [("Patches: ", {"bold": True}), ("apply cleanly in CI to desktop v1.2.0.2 & Android at 8f4643a.", {})],
                [("Standards proposal: ", {"bold": True}), ("SBI Liveness Profile extension ready for working group review.", {})],
                [("Next: ", {"bold": True}), ("field calibration with consented corpus, certified SBI vendor testing.", {})]])
     box(s, 0.6, 5.9, 12.1, 0.95, fill=GREY_BG, line=LINE, name="Stack and audience", anchor=MSO_ANCHOR.MIDDLE, size=13, color=INK,
@@ -552,7 +552,7 @@ def slide_status(deck, n=7):
                [("For: ", {"bold": True}), ("registration centres, operators and supervisors, residents, and server operators.  ", {}),
                 ("Code: ", {"bold": True}), ("github.com/GargBhavya-tech/pramaan (MPL-2.0)", {})]])
     footer(s, deck, n)
-    notes(s, "Engineering verification and scientific rigour. Seven hundred thirty-eight automated tests pass with zero failures. "
+    notes(s, "Evidence and limits. Seven hundred thirty-eight automated tests pass with zero failures. "
              "Hardware measurements: models and camera pipelines were timed on one physical phone, and the OBS virtual camera injection "
              "veto was shown on a Windows webcam list. Limits are stated plainly: on Android, the passive model is fooled by a screen "
              "replay and the flash cue needs at least three fps while the phone delivers two point seven to two point nine, so the "

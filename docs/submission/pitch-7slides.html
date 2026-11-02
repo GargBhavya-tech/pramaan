@@ -135,25 +135,24 @@
 
 <!-- 6 -->
 <section class="slide">
-  <h1>Engineering Verification & Scientific Rigour</h1>
-  <h2>ISO/IEC 30107-3 Clopper-Pearson confidence bounds, on-device hardware benchmarks, honest threat disclosure.</h2>
+  <h1>Evidence and limits</h1>
+  <h2>Measured, tested and disclosed: what we can show, and what we cannot yet.</h2>
   <div class="cols">
-    <div class="ok"><h3>Verified on Hardware & Code</h3>
+    <div class="ok"><h3>Tested and measured</h3>
       <ul>
         <li><b>738 automated tests pass</b> (0 failures, strict CI on Linux & Windows)</li>
         <li><b>Hardware measured:</b> Models and camera timed on one phone; OBS veto shown on a Windows webcam list</li>
         <li><b>Flash challenge:</b> 1,679,616 sequences = <b>20.7 bits</b> (&le; 3 changes/sec, WCAG 2.3.1 compliant)</li>
-        <li><b>Capture binding:</b> 4 cryptographic locks; capture-swap attack blocked by construction</li>
+        <li><b>Capture binding:</b> 4 cryptographic locks; capture-swap attack rejected in every test</li>
         <li><b>Insider threat analytics:</b> 6 in 40 at 2% baseline yields z &asymp; 5.87; operator self-enrollment blocked</li>
         <li><b>Audit trail:</b> Merkle transparency log matching Certificate Transparency test vectors</li>
       </ul></div>
     <div class="no"><h3>Scientific Discipline & Limits</h3>
       <ul>
-        <li><b>Statistically honest:</b> Avoids pseudo-claims on small lab sets; ISO/IEC 30107-3 harness ready for field calibration</li>
         <li><b>Scaffold, not full Client:</b> Evaluation scaffold; no live session on certified SBI device yet</li>
         <li><b>Android replay limit:</b> Passive model fooled by screen replay (0.98 score) & flash needs &ge; 3 fps (phone got 2.7&ndash;2.9 fps); replay defence on Android rests on challenge alone</li>
         <li><b>Inclusive UX:</b> Native Devanagari Hindi verified; accessibility profiles for elderly & disabled residents</li>
-        <li><b>Red team findings:</b> Automated genetic fuzzer discovered moir&eacute; blind spots; resolved via flash/stereo fusion voting</li>
+        <li><b>Red team findings:</b> automated fuzzer found moir&eacute; blind spots; fusion voting mitigates them on synthetic replays. The moir&eacute; cue measured on one phone camera does not separate live from replay (AUC 0.67), so it abstains.</li>
       </ul></div>
   </div>
   <p style="margin-top:14px;font-size:21px"><b>Self-Red-Teaming.</b> On synthetic screen replays with the passive model assumed fooled and no flash light, the fusion accepted <b>4 of 85</b> display pitches; with the flash cue, <b>0</b>. Logged as R-03 with R-01 (moir&eacute; blind pitches); the fix (an accept needs a flash or stereo vote, else a challenge) is enforced for operators and supervisors.</p>
@@ -163,13 +162,13 @@
 <!-- 7 -->
 <section class="slide">
   <h1>Impact and next steps</h1>
-  <h2>Production architecture deployable on today's SBI ecosystem, verified against real attack vectors.</h2>
+  <h2>A hook-based design for today's SBI ecosystem. Evidence so far: synthetic replays and one-phone timings; field calibration is next.</h2>
   <div class="cols">
     <div>
       <h3 style="color:#1b4f8a;margin-bottom:4px">For MOSIP</h3>
       <ul>
         <li>Closes the capture-swap gap on unmodified SBI; leaves signed proof a server can re-verify</li>
-        <li>Production patch for <code>registration-client</code> 1.2.0.2 with non-invasive hooks + standalone evaluation scaffold</li>
+        <li>Patches that apply cleanly (checked in CI) to MOSIP registration-client v1.2.0.2 and android-registration-client at 8f4643a. Desktop adds a challenge-prompt screen; Android is hooks only. Plus a standalone evaluation scaffold.</li>
         <li>MPL-2.0 licence; JavaFX 11 matching MOSIP Registration Client runtime</li>
         <li>Asymmetric physiological cues (positive-only) prevent accidental exclusion of darker skin or elderly residents</li>
       </ul>
